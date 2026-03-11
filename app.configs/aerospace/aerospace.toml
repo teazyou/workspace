@@ -95,7 +95,7 @@ on-mode-changed = []
     outer.left =       10
     outer.bottom =     10
     # Top gap for SketchyBar on all monitors
-    outer.top =        42
+    outer.top =        [{ monitor."hdmi.*" = 42 }, { monitor."built-in.*" = 15 }, 42]
     outer.right =      10
 
 # 'main' binding mode declaration
@@ -208,7 +208,13 @@ on-mode-changed = []
     # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
     #s = ['layout sticky tiling', 'mode main']
 
+    p = ['exec-and-forget ~/workspace/app.configs/aerospace/performance-mode.sh', 'mode main'] # Performance mode toggle
     alt-shift-h = ['join-with left', 'mode main']
     alt-shift-j = ['join-with down', 'mode main']
     alt-shift-k = ['join-with up', 'mode main']
     alt-shift-l = ['join-with right', 'mode main']
+
+# Float CrossOver windows so AeroSpace doesn't try to tile game windows
+[[on-window-detected]]
+if.app-id = 'com.codeweavers.CrossOver'
+run = 'layout floating'

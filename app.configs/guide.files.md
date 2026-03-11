@@ -8,6 +8,7 @@
 - ./app.configs/aerospace/doc.aerospace.md
 - ./app.configs/aerospace/features.aerospace.md
 - ./app.configs/aerospace/open-dock-app.sh
+- ./app.configs/aerospace/performance-mode.sh
 - ./app.configs/borders/bordersrc
 - ./app.configs/sketchybar/sketchybarrc
 - ./app.configs/sketchybar/colors.sh
@@ -24,6 +25,8 @@
 - Configures gaps, monitors assignment, startup commands
 - Launches sketchybar+borders on startup
 - App launchers via cmd+1-9 use open-dock-app.sh to open Dock apps by position
+- alt+shift+p triggers aerospace/performance-mode.sh (toggles UI overhead reduction)
+- CrossOver auto-floated via on-window-detected rule (prevents tiling conflicts with games)
 - Edit for: keybindings, workspace layout, monitor assignment, gaps
 
 `./app.configs/aerospace/apply-display-profile.sh`
@@ -53,6 +56,14 @@
 - Called by aerospace.toml cmd+1-9 keybindings
 - Reads persistent-apps from Dock plist, decodes URL, opens app
 - Edit for: changing how app path is resolved
+
+`./app.configs/aerospace/performance-mode.sh`
+- Toggles performance mode on/off (alt+shift+p via aerospace.toml)
+- ON: kills JankyBorders, unloads display-profile LaunchAgent, hides sketchybar polling items (cpu, ram, network, battery, volume, headset, vpn, wifi, ethernet) and their brackets
+- OFF: restores everything, restarts borders, reloads LaunchAgent, re-enables all items
+- Keeps workspace spaces (left) and time/date (right) always visible
+- State tracked via /tmp/performance-mode.state
+- Edit for: which items to hide/show, notification messages
 
 `./app.configs/borders/bordersrc`
 - JankyBorders config (window border styling)
