@@ -1,0 +1,14 @@
+{
+  "haptic": false,
+  "natural_swipe": false,
+  "wrap_around": true,
+  "skip_empty": true,
+  "fingers": 3,
+  "distance_pct": 0.04,
+  "velocity_pct": 0.15,
+  "min_step": 0.003,
+  "min_travel": 0.01,
+  "min_step_fast": 0.0,
+  "min_travel_fast": 0.002,
+  "settle_factor": 0.10
+}
