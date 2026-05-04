@@ -2,7 +2,7 @@
 
 ## Rules
 
-- All window manager related configs (AeroSpace, SketchyBar, JankyBorders, aerospace-swipe, etc.) MUST live in `./configs/<app-name>/` as the source of truth.
+- All window manager related configs (AeroSpace, SketchyBar, JankyBorders, etc.) MUST live in `./configs/<app-name>/` as the source of truth.
 - Symlinks from the expected system location (e.g. `~/.config/<app>`, `~/.aerospace.toml`) MUST point to the corresponding file/folder in `./configs/`.
 - Never edit configs directly in `~/.config/` or system paths — always edit the source in `./configs/` and ensure symlinks are in place.
 - When adding a new WM-related tool, create its folder in `./configs/`, place configs there, then symlink.
@@ -14,7 +14,6 @@
 | `./configs/aerospace/aerospace.toml` | `~/.aerospace.toml` |
 | `./configs/borders/` | `~/.config/borders` |
 | `./configs/sketchybar/` | `~/.config/sketchybar` |
-| `./configs/aerospace-swipe/` | `~/.config/aerospace-swipe` |
 
 ## File List
 
@@ -31,7 +30,6 @@
 - ./configs/sketchybar/icons.sh
 - ./configs/sketchybar/items/*.sh (18 files)
 - ./configs/sketchybar/plugins/*.sh (25 files)
-- ./configs/aerospace-swipe/config.json
 - ./configs/vscode/settings.json
 
 ## Descriptions
@@ -122,13 +120,6 @@
 - Key files: aerospace.sh (workspace state with app name display), battery.sh, cpu.sh, wifi.sh
 - aerospace.sh: simplified workspace display, shows app names next to workspace number, uses shorten_app_name() for common apps, multi-monitor support with distinct colors per monitor
 - Edit for: logic of what's displayed, data sources, formatting
-
-`./configs/aerospace-swipe/config.json`
-- Config for aerospace-swipe (trackpad gesture workspace switching)
-- Enables 3-finger swipe left/right to navigate AeroSpace workspaces
-- Options: fingers, natural_swipe, wrap_around, skip_empty, haptic
-- Symlinked from ~/.config/aerospace-swipe/
-- Edit for: gesture sensitivity, swipe direction, wrap behavior
 
 `./configs/vscode/settings.json`
 - VSCode editor settings
