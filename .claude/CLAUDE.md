@@ -4,11 +4,11 @@ This repository `~/workspace` is my macbook environment configuration.
 
 The system/environment use link to file in this folders. Any similar config files should be saved here and linked where they belong. The purpose is to centralise all my system setups in one repository for easy backup/export/edit tasks.
 
-## ./app-configs
+## ./configs
 
 Various app configs ( vscode, aerospace, borders, etc..).
 
-### ./app-configs/guide-window-manager.md
+### ./configs/guide-window-manager.md
 
 Guide of my aerospace + borders + sketchybar setup.
 

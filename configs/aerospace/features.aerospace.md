@@ -46,7 +46,7 @@ This setup creates a keyboard-driven window management workflow for macOS, simil
 
 **Depends on:**
 - AeroSpace application
-- Configuration file: `~/.aerospace.toml` or `./app-configs/aerospace/aerospace.toml`
+- Configuration file: `~/.aerospace.toml` or `./configs/aerospace/aerospace.toml`
 
 **Behavior:**
 - New windows split the available space with existing windows
@@ -300,8 +300,8 @@ after-startup-command = [
 
 **Depends on:**
 - SketchyBar application
-- Configuration: `./app-configs/sketchybar/sketchybarrc`
-- Plugin scripts: `./app-configs/sketchybar/plugins/`
+- Configuration: `./configs/sketchybar/sketchybarrc`
+- Plugin scripts: `./configs/sketchybar/plugins/`
 
 ---
 
@@ -313,7 +313,7 @@ after-startup-command = [
 - SketchyBar
 - AeroSpace
 - Custom event integration
-- Plugin script: `./app-configs/sketchybar/plugins/aerospace.sh`
+- Plugin script: `./configs/sketchybar/plugins/aerospace.sh`
 
 **Required AeroSpace Configuration:**
 ```toml
@@ -387,7 +387,7 @@ click_script="aerospace workspace $sid"
 **Description:** Persistent border configuration via file.
 
 **Depends on:**
-- Configuration file: `./app-configs/borders/bordersrc`
+- Configuration file: `./configs/borders/bordersrc`
 
 **Example:**
 ```bash
@@ -467,9 +467,9 @@ outer.top = 48  # Adjust based on SketchyBar height
 | File | Purpose |
 |------|---------|
 | `~/.aerospace.toml` | AeroSpace main configuration |
-| `./app-configs/sketchybar/sketchybarrc` | SketchyBar main configuration |
-| `./app-configs/sketchybar/plugins/` | SketchyBar plugin scripts |
-| `./app-configs/borders/bordersrc` | JankyBorders configuration |
+| `./configs/sketchybar/sketchybarrc` | SketchyBar main configuration |
+| `./configs/sketchybar/plugins/` | SketchyBar plugin scripts |
+| `./configs/borders/bordersrc` | JankyBorders configuration |
 
 ### System Requirements
 
