@@ -33,10 +33,24 @@ fi
 # mysql_secure_installation is interactive (root password, remove anon
 # users, etc.). The README intentionally has you type the password — no
 # credentials in this public repo.
-log_wait "Next: mysql_secure_installation (interactive — sets root password, removes anon users, etc.)"
-log_wait "Press ENTER below to launch it here in this terminal."
-prompt_continue "Press ENTER to run mysql_secure_installation now (do NOT open a new terminal)."
-mysql_secure_installation || log_err "mysql_secure_installation exited non-zero (carry on if it was just 'no changes needed')"
+# mysql_secure_installation has no daemon-side "already done" check, so we
+# drop a marker file on first successful run and short-circuit afterwards.
+# To re-run by hand: `rm ~/.workspace_mysql_secured` then re-run the
+# installer (or just run `mysql_secure_installation` directly).
+MYSQL_MARKER="$HOME/.workspace_mysql_secured"
+if [[ -f "$MYSQL_MARKER" ]]; then
+    log_ok "mysql_secure_installation already done (marker: $MYSQL_MARKER)"
+else
+    log_wait "Next: mysql_secure_installation (interactive — sets root password, removes anon users, etc.)"
+    log_wait "Press ENTER below to launch it here in this terminal."
+    prompt_continue "Press ENTER to run mysql_secure_installation now (do NOT open a new terminal)."
+    if mysql_secure_installation; then
+        touch "$MYSQL_MARKER"
+        log_ok "mysql_secure_installation done (marker written)"
+    else
+        log_err "mysql_secure_installation exited non-zero — not writing marker, will retry next run"
+    fi
+fi
 
 # --- PostgreSQL ---------------------------------------------------------
 # The brew service is named "postgresql@N". We detect which version is
