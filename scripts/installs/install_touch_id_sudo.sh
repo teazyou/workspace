@@ -43,12 +43,25 @@ if [[ ! -f "$SUDO_LOCAL" ]]; then
     sudo cp "$SUDO_TEMPLATE" "$SUDO_LOCAL"
 fi
 
-# Uncomment the pam_tid.so line. The default template ships it commented
-# out as: "#auth       sufficient     pam_tid.so".
-sudo sed -i '' 's|^#auth\([[:space:]]\+\)sufficient\([[:space:]]\+\)pam_tid\.so|auth\1sufficient\2pam_tid.so|' "$SUDO_LOCAL"
+# Try the targeted uncomment first (cheapest, preserves Apple's formatting).
+# The template historically ships the line as: "#auth   sufficient   pam_tid.so"
+# but the exact whitespace and the leading "# " vs "#" varies across macOS
+# releases — that's why this used to fail on some machines.
+sudo sed -i '' -E \
+    's|^#[[:space:]]*auth[[:space:]]+sufficient[[:space:]]+pam_tid\.so|auth       sufficient     pam_tid.so|' \
+    "$SUDO_LOCAL"
 
-# Verify.
-if grep -E '^\s*auth\s+sufficient\s+pam_tid\.so' "$SUDO_LOCAL" &>/dev/null; then
+# If after the sed there's still no active pam_tid.so line, just append one.
+# sudo_local is explicitly meant for user-managed entries, so appending is
+# safe and survives macOS upgrades.
+if ! grep -E '^[[:space:]]*auth[[:space:]]+sufficient[[:space:]]+pam_tid\.so' "$SUDO_LOCAL" &>/dev/null; then
+    log_wait "Template format unrecognised — appending pam_tid.so line directly"
+    printf '\n# Touch ID for sudo (added by workspace install)\nauth       sufficient     pam_tid.so\n' \
+        | sudo tee -a "$SUDO_LOCAL" >/dev/null
+fi
+
+# Final verify.
+if grep -E '^[[:space:]]*auth[[:space:]]+sufficient[[:space:]]+pam_tid\.so' "$SUDO_LOCAL" &>/dev/null; then
     log_ok "Touch ID for sudo enabled (try: 'sudo -k && sudo true' to test)"
 else
     log_err "sudo_local edit did not take effect — check $SUDO_LOCAL manually"
