@@ -13,7 +13,7 @@ config-version = 2
 # Launch JankyBorders with Tokyo Night theme
 after-startup-command = [
     'exec-and-forget sketchybar',
-    'exec-and-forget borders active_color=0xffe08030 inactive_color=0xff3a2a35 width=2.0 style=round hidpi=on order=above'
+    'exec-and-forget borders active_color=0xffe08030 inactive_color=0xff3a2a35 width=1.0 style=round hidpi=on order=above'
 ]
 
 # Notify Sketchybar about workspace change

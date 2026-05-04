@@ -40,7 +40,7 @@ gaming_mode_on() {
 
 gaming_mode_off() {
   # Restart JankyBorders
-  borders active_color=0xffe08030 inactive_color=0xff3a2a35 width=2.0 style=round hidpi=on order=above &
+  borders active_color=0xffe08030 inactive_color=0xff3a2a35 width=1.0 style=round hidpi=on order=above &
 
   # Restart display-profile LaunchAgent
   launchctl bootstrap "$GUI_DOMAIN" "$DISPLAY_PROFILE_PLIST" 2>/dev/null || true
