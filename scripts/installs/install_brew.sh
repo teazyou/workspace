@@ -41,18 +41,32 @@ brewInstall "OPENCODE"   "opencode"    # opencode AI tool
 brewInstall "MAS"        "mas"         # Mac App Store CLI (used by install_xcode_mas.sh)
 brewInstall "GH"         "gh"          # GitHub CLI (used by clone_repos.sh for private repo auth)
 
-# PostgreSQL: Homebrew only ships versioned formulae. Pick the highest
-# postgresql@N currently available so this works in 2026, 2027, ...
-log_wait "Detecting latest postgresql@N formula..."
-PG_LATEST=$(brew formulae 2>/dev/null \
+# PostgreSQL: Homebrew only ships versioned formulae. We pick the highest
+# postgresql@N so this works in 2026, 2027, ... — but in three steps so a
+# re-run never spuriously fails:
+#   1. If a postgresql@N is already installed, just reuse it.
+#   2. Otherwise ask `brew search` for the highest available @N.
+#      (`brew formulae` is unreliable here — its output format varies
+#      between brew versions and sometimes returns nothing in piped use.)
+#   3. Last-ditch fallback to a hardcoded recent version.
+log_wait "Resolving postgresql@N formula..."
+PG_LATEST=$(brew list --formula -1 2>/dev/null \
     | grep -E '^postgresql@[0-9]+$' \
     | sort -t '@' -k 2 -n \
     | tail -1)
+
+if [[ -z "$PG_LATEST" ]]; then
+    PG_LATEST=$(brew search --formula '/^postgresql@[0-9]+$/' 2>/dev/null \
+        | grep -E '^postgresql@[0-9]+$' \
+        | sort -t '@' -k 2 -n \
+        | tail -1)
+fi
+
 if [[ -n "$PG_LATEST" ]]; then
-    log_ok "Latest detected: $PG_LATEST"
+    log_ok "Using $PG_LATEST"
     brewInstall "POSTGRESQL" "$PG_LATEST"
 else
-    log_err "Could not detect latest postgresql formula — falling back to postgresql@17"
+    log_err "Could not detect any postgresql@N — falling back to postgresql@17"
     brewInstall "POSTGRESQL" "postgresql@17"
 fi
 
