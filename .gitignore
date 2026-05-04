@@ -2,3 +2,7 @@
 .DS_Store
 ._*
 *.bak
+
+# Install-script idempotency markers (live in $HOME, but ignore here as a
+# safety net in case the repo ever gets cloned into ~ or paths change).
+.workspace_mysql_secured
