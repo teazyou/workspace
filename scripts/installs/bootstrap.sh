@@ -35,6 +35,23 @@
 
 set -e
 
+# --- Self re-exec when piped (curl | bash) ----------------------------------
+# When invoked as `curl ... | bash`, this script's stdin is the pipe carrying
+# the remaining script source. Any child process that reads from stdin (some
+# parts of brew install do) consumes our script, after which bash hits EOF
+# and exits silently mid-install. Detect this case, download a fresh copy to
+# a temp file, and re-exec from there with stdin attached to /dev/tty.
+BOOTSTRAP_URL="https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh"
+if [[ -z "$WORKSPACE_BOOTSTRAP_REEXEC" ]] && [[ ! -t 0 ]]; then
+    TMP_SCRIPT=$(mktemp /tmp/workspace-bootstrap.XXXXXX.sh)
+    if curl -fsSL "$BOOTSTRAP_URL" -o "$TMP_SCRIPT"; then
+        export WORKSPACE_BOOTSTRAP_REEXEC=1
+        exec bash "$TMP_SCRIPT" < /dev/tty
+    fi
+    # Couldn't re-exec — carry on with fingers crossed; print a warning.
+    printf '\033[0;33m[ W8 ] Could not self-re-exec from %s — continuing with piped stdin (sub-process may steal script)\033[0;38m\n' "$BOOTSTRAP_URL" >&2
+fi
+
 # Colours are inlined here because the workspace repo isn't on disk yet,
 # so we can't source zsh/configs/colors.zsh. After installation.sh takes
 # over, the proper helpers from scripts/installs/helper_prompt.sh take care of output.
