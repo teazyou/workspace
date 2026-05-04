@@ -33,9 +33,9 @@ fi
 # mysql_secure_installation is interactive (root password, remove anon
 # users, etc.). The README intentionally has you type the password — no
 # credentials in this public repo.
-log_wait "About to run mysql_secure_installation (interactive)."
-log_wait "You'll be asked to set a root password and answer a few security questions."
-prompt_continue "Ready to run mysql_secure_installation now."
+log_wait "Next: mysql_secure_installation (interactive — sets root password, removes anon users, etc.)"
+log_wait "Press ENTER below to launch it here in this terminal."
+prompt_continue "Press ENTER to run mysql_secure_installation now (do NOT open a new terminal)."
 mysql_secure_installation || log_err "mysql_secure_installation exited non-zero (carry on if it was just 'no changes needed')"
 
 # --- PostgreSQL ---------------------------------------------------------

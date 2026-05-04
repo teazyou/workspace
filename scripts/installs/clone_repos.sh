@@ -44,7 +44,7 @@ if gh auth status &>/dev/null; then
 else
     log_wait "gh CLI needs to authenticate to GitHub before we can clone private repos."
     log_wait "The interactive flow will open your browser for the device-code login."
-    prompt_continue "About to run 'gh auth login' — pick HTTPS / login with web browser."
+    prompt_continue "Press ENTER to run 'gh auth login' here — pick HTTPS / login with web browser."
     gh auth login
     log_ok "gh CLI authenticated"
 fi
