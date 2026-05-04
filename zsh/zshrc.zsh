@@ -28,5 +28,6 @@ source $ZSH_ALIAS/osx.zsh
 source $ZSH_ALIAS/navigation.zsh
 source $ZSH_ALIAS/git.zsh
 source $ZSH_ALIAS/installations.zsh
+source $ZSH_ALIAS/checkpoint.zsh
 
 echo Workspace Loaded!
