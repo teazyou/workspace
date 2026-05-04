@@ -6,7 +6,7 @@
 #   and creates the empty ~/dev folder.
 #
 # Repos:
-#   - ~/secondbrain   (private)  → cloned via gh CLI after auth
+#   - ~/secondbrain   (private)  → cloned from teazyou/obsidian_secondbrain via gh CLI after auth
 #
 # Folders:
 #   - ~/dev   → created empty; the `dev` zsh function (zsh/alias/navigation.zsh)
@@ -54,8 +54,8 @@ log_step "secondbrain"
 if [[ -d "$HOME/secondbrain/.git" ]]; then
     log_ok "~/secondbrain already cloned"
 else
-    log_wait "Cloning teazyou/secondbrain → ~/secondbrain ..."
-    gh repo clone teazyou/secondbrain "$HOME/secondbrain"
+    log_wait "Cloning teazyou/obsidian_secondbrain → ~/secondbrain ..."
+    gh repo clone teazyou/obsidian_secondbrain "$HOME/secondbrain"
     log_ok "~/secondbrain cloned"
 fi
 
