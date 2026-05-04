@@ -26,7 +26,6 @@ fi
 
 # caskInstall "NGROK" "ngrok"
 # brewInstall "TIG" "tig"
-# brewInstall "RUBY" "ruby"
 # brewInstall "REDIS" "redis"
 # caskInstall "MONGODB" "mongodb"
 # caskInstall "ALFRED" "alfred"
@@ -67,6 +66,9 @@ brew cleanup &> /dev/null
 brew services cleanup &> /dev/null
 
 echo $COK"Install Node with NVM"$CWH
+export NVM_DIR="$HOME/.nvm"
+mkdir -p "$NVM_DIR"
+[ -s "$(brew --prefix)/opt/nvm/nvm.sh" ] && \. "$(brew --prefix)/opt/nvm/nvm.sh"
 nvm install --lts
 
 echo $COK"Brew list of service at startup (brew services list)"$CWH

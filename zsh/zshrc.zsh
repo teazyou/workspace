@@ -1,5 +1,5 @@
-# RUN THE FOLLOWING TO SETUP WORKSPACE:
-# echo "source ~/workspace/zshrc.zsh" >> ~/.zshrc && source ~/.zshrc
+# SETUP: ~/.zshrc is a symlink to this file.
+# ln -sf ~/workspace/zsh/zshrc.zsh ~/.zshrc && source ~/.zshrc
 
 echo Workspace Loading!
 

@@ -24,11 +24,11 @@ Scripts folder (git, system install, ..)
 
 Terminal alias
 
-## ./zsh-configs
+## ./zsh/configs
 
 ZSH configs
 
-## ./zshrc.zsh
+## ./zsh/zshrc.zsh
 
 ~/.zshrc file is a link to this file
 

@@ -172,7 +172,11 @@ build_top_gap_config() {
 
 # Get current fingerprint (for change detection)
 get_fingerprint() {
-    system_profiler SPDisplaysDataType 2>/dev/null | grep -E "Resolution:" | sort | md5 | cut -c1-8
+    local resolutions
+    resolutions=$(system_profiler SPDisplaysDataType 2>/dev/null | grep -E "Resolution:" | sort)
+    # Bail if no displays detected (system_profiler returns empty in some non-GUI contexts)
+    [[ -z "$resolutions" ]] && return 1
+    echo "$resolutions" | /sbin/md5 | cut -c1-8
 }
 
 # Update aerospace.toml with new gap values
@@ -201,7 +205,9 @@ update_aerospace_config() {
     { print }
     ' "$AEROSPACE_CONFIG" > "$tmp_file"
 
-    mv "$tmp_file" "$AEROSPACE_CONFIG"
+    # cp (not mv) to write through symlinks instead of replacing them
+    cp "$tmp_file" "$AEROSPACE_CONFIG"
+    rm -f "$tmp_file"
 }
 
 # Main
@@ -210,7 +216,7 @@ main() {
 
     # Check for changes
     local fingerprint
-    fingerprint=$(get_fingerprint)
+    fingerprint=$(get_fingerprint) || { log "No displays detected, skipping"; exit 0; }
 
     if [[ -f "$STATE_FILE" && "$force" != "--force" ]]; then
         local last_fp
