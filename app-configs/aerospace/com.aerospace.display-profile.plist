@@ -7,7 +7,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/teazyou/workspace/app.configs/aerospace/apply-display-profile.sh</string>
+        <string>/Users/teazyou/workspace/app-configs/aerospace/apply-display-profile.sh</string>
     </array>
 
     <key>StartInterval</key>

@@ -6,7 +6,7 @@ echo Workspace Loading!
 reload () { source ~/.zshrc }
 
 # EXPORT PATH TO FALICIATE SCRIPTING AND SUCH
-source ~/workspace/zsh.configs/path.zsh
+source ~/workspace/zsh/configs/path.zsh
 
 # COLORS CONFIGS (SOME EXPORT FOR TERMINAL DECORATION IN SCRIPTS)
 source $ZSH_CONFIGS/colors.zsh

@@ -220,15 +220,15 @@ on-mode-changed = []
     # App launchers (cmd + number) - opens Dock app by position (0-indexed)
     # Rearrange your Dock to change which app each shortcut opens
     cmd-backtick = 'exec-and-forget open -a Finder'
-    cmd-1 = 'exec-and-forget ~/workspace/app.configs/aerospace/open-dock-app.sh 0'
-    cmd-2 = 'exec-and-forget ~/workspace/app.configs/aerospace/open-dock-app.sh 1'
-    cmd-3 = 'exec-and-forget ~/workspace/app.configs/aerospace/open-dock-app.sh 2'
-    cmd-4 = 'exec-and-forget ~/workspace/app.configs/aerospace/open-dock-app.sh 3'
-    cmd-5 = 'exec-and-forget ~/workspace/app.configs/aerospace/open-dock-app.sh 4'
-    cmd-6 = 'exec-and-forget ~/workspace/app.configs/aerospace/open-dock-app.sh 5'
-    cmd-7 = 'exec-and-forget ~/workspace/app.configs/aerospace/open-dock-app.sh 6'
-    cmd-8 = 'exec-and-forget ~/workspace/app.configs/aerospace/open-dock-app.sh 7'
-    cmd-9 = 'exec-and-forget ~/workspace/app.configs/aerospace/open-dock-app.sh 8'
+    cmd-1 = 'exec-and-forget ~/workspace/app-configs/aerospace/open-dock-app.sh 0'
+    cmd-2 = 'exec-and-forget ~/workspace/app-configs/aerospace/open-dock-app.sh 1'
+    cmd-3 = 'exec-and-forget ~/workspace/app-configs/aerospace/open-dock-app.sh 2'
+    cmd-4 = 'exec-and-forget ~/workspace/app-configs/aerospace/open-dock-app.sh 3'
+    cmd-5 = 'exec-and-forget ~/workspace/app-configs/aerospace/open-dock-app.sh 4'
+    cmd-6 = 'exec-and-forget ~/workspace/app-configs/aerospace/open-dock-app.sh 5'
+    cmd-7 = 'exec-and-forget ~/workspace/app-configs/aerospace/open-dock-app.sh 6'
+    cmd-8 = 'exec-and-forget ~/workspace/app-configs/aerospace/open-dock-app.sh 7'
+    cmd-9 = 'exec-and-forget ~/workspace/app-configs/aerospace/open-dock-app.sh 8'
 
 # 'service' binding mode declaration.
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -241,7 +241,7 @@ on-mode-changed = []
     # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
     #s = ['layout sticky tiling', 'mode main']
 
-    p = ['exec-and-forget ~/workspace/app.configs/aerospace/performance-mode.sh', 'mode main'] # Performance mode toggle
+    p = ['exec-and-forget ~/workspace/app-configs/aerospace/performance-mode.sh', 'mode main'] # Performance mode toggle
     alt-shift-h = ['join-with left', 'mode main']
     alt-shift-j = ['join-with down', 'mode main']
     alt-shift-k = ['join-with up', 'mode main']
