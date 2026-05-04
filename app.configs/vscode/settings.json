@@ -76,16 +76,10 @@
         "99. WUTHERING": "console",
         "99. GENSHIN": "console",
         "31. DEV": "github",
-        "grimoire-obsidian": "obsidian",
         "claude": "claude",
         ".claude": "claude",
-        "11. CLAUDE-CODE": "claude",
-        "claude-agents": "claude",
-        "claude-commands": "claude",
-        "claude-links": "claude",
-        "claude-templates": "claude",
         "20. KNOWLEDGE": "bibliography",
-        "Excalidraw": "config",
+        "Excalidraw": "config"
     },
     "markdownlint.config": {
         "MD013": false,

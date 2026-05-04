@@ -29,6 +29,10 @@ fi
 # brewInstall "RUBY" "ruby"
 # brewInstall "REDIS" "redis"
 # caskInstall "MONGODB" "mongodb"
+# caskInstall "ALFRED" "alfred"
+# caskInstall "POSTMAN" "postman"
+# caskInstall "BETTER-TOUCH-TOOL" "bettertouchtool"
+# caskInstall "DOCKER" "docker"
 
 brewInstall "PYTHON" "python"
 
@@ -42,24 +46,18 @@ caskInstall "ITERM" "iterm2"
 
 caskInstall "VSCODE" "visual-studio-code"
 caskInstall "BRAVE" "brave-browser"
-caskInstall "ALFRED" "alfred"
 
 caskInstall "SPOTIFY" "spotify"
-caskInstall "POSTMAN" "postman"
 caskInstall "DBEAVER" "dbeaver-community"
 
 caskInstall "KEEPING-YOU-AWAKE" "keepingyouawake"
-caskInstall "BETTER-TOUCH-TOOL" "bettertouchtool"
 caskInstall "TRANSMISSION" "transmission"
 caskInstall "VLC" "vlc"
 caskInstall "NORDVPN" "nordvpn"
 caskInstall "BITWARDEN" "bitwarden"
 caskInstall "ONYX" "onyx"
-caskInstall "DOCKER" "docker"
 
 # caskInstall "GOOGLE-DRIVE" "google-drive"
-
-echo $CRE"SNAP can't be auto installed"$CWH
 
 echo $COK"Brew update all packages..."$CWH
 brew upgrade &> /dev/null

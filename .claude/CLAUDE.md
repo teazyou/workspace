@@ -1,41 +1,37 @@
 # CLAUDE.md
 
-This repository is my macbook environment configuration.
+This repository `~/workspace` is my macbook environment configuration.
 
-It contains my zsh settings, some alias for terminal, installation commands etc..
+The system/environment use link to file in this folders. Any similar config files should be saved here and linked where they belong. The purpose is to centralise all my system setups in one repository for easy backup/export/edit tasks.
 
-It is located in ~/workspace in my macbook.
+## ./app.configs
 
-## Folder ./app.configs
+Various app configs ( vscode, aerospace, borders, etc..).
 
-It contains some configuration files for various applications. Those application use a link to this folder to access the files.
+### ./app.configs/guide-window-manager.md
 
-## Folder ./claude-code
+Guide of my aerospace + borders + sketchybar setup.
 
-It contain the global claude-code configuraton which is injected into ~/.claude via links.
+## ./functions
 
-It also contains script to initiate projects with code, agents, commands, etc..
+Helper folder with SH functions for other workspace scripts.
 
-## Folder ./functions
+## ./scripts
 
-It is a helper folder, containing sh functions for the various script used by this workspace.
+Scripts folder (git, system install, ..)
 
-## Folder ./scripts
+## ./zsh.alias
 
-It is a sh scripts folder for alias used in various situation during my workflow.
+Terminal alias
 
-## Folder ./zsh.alias
+## ./zsh.configs
 
-All my terminal alias.
+ZSH configs
 
-## Folder ./zsh.configs
+## ./zshrc.zsh
 
-My zsh configs.
-
-## File ./zshrc.zsh
-
-My ~/.zshrc file source this file, it is the entry point for all my zshrc configuration.
+~/.zshrc file is a link to this file
 
 ## Constraint
 
-- NEVER attempt to lint the code or plan for it because I use a command to auto lint.
+- NEVER lint in this folder or plan for it. Lint is done manually.
