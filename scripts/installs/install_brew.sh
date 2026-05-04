@@ -70,7 +70,7 @@ caskInstall "VLC"               "vlc"
 caskInstall "NORDVPN"           "nordvpn"
 caskInstall "BITWARDEN"         "bitwarden"
 caskInstall "ONYX"              "onyx"
-caskInstall "AEROSPACE"         "aerospace"            # tiling window manager
+caskInstall "AEROSPACE"         "nikitabobko/tap/aerospace"  # tiling window manager (lives in its own tap)
 caskInstall "FONT-NERD"         "font-hack-nerd-font"  # required by sketchybar icons
 caskInstall "CLEANMYMAC"        "cleanmymac"
 caskInstall "DISCORD"           "discord"
@@ -78,15 +78,19 @@ caskInstall "OBSIDIAN"          "obsidian"             # used by ~/secondbrain w
 caskInstall "GOOGLE-DRIVE"      "google-drive"
 
 # --- CLEANUP ---------------------------------------------------------------
+# These three commands are nice-to-have, not critical. A single broken
+# cask (e.g. one that needs a sudo prompt during upgrade) used to abort
+# the whole installer because `set -e` propagates the exit code. We
+# tolerate failures here so the rest of the pipeline keeps going.
 log_step "Brew upgrade + cleanup"
 
 log_wait "Running 'brew upgrade'..."
-brew upgrade
+brew upgrade || log_err "brew upgrade returned non-zero (continuing)"
 log_ok "Brew upgrade done"
 
 log_wait "Running 'brew cleanup'..."
-brew cleanup
-brew services cleanup
+brew cleanup           || log_err "brew cleanup returned non-zero (continuing)"
+brew services cleanup  || log_err "brew services cleanup returned non-zero (continuing)"
 log_ok "Brew cleanup done"
 
 log_ok "Brew install complete"

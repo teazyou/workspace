@@ -9,7 +9,8 @@
 # Steps:
 #   1. Xcode Command Line Tools (provides git, gcc, make, ...)
 #   2. Rosetta 2 (Apple Silicon only)
-#   3. Homebrew
+#   3. Homebrew  (+ ensure it's on PATH for the rest of this script and
+#                 for the installation.sh handoff)
 #   4. Latest git from brew (CLT git is fine but brew tracks newer)
 #   5. Clone teazyou/workspace via HTTPS (public repo, no auth needed)
 #   6. Hand off to ~/workspace/scripts/installs/installation.sh
@@ -18,6 +19,19 @@
 #   curl -fsSL https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh | bash
 #
 # Idempotent: re-running on a partially-set-up system skips finished steps.
+#
+# Note on previous flakiness:
+#   This script used to have to be run two or three times. Two root causes:
+#     (a) Homebrew's shellenv was only eval'd inside the "just installed
+#         brew" branch. If brew was already installed but its shellenv
+#         hadn't been added to the current shell yet (which is the case on
+#         the very first run after install_brew.sh dies mid-way), brew
+#         wasn't on PATH for the next steps.
+#     (b) The handoff `exec bash installation.sh` relied on $PATH being
+#         exported, but on a fresh Mac the user's shell hasn't been
+#         restarted yet so /opt/homebrew/bin wasn't visible to children.
+#   Both are now fixed by ALWAYS sourcing brew shellenv once brew exists,
+#   regardless of whether we just installed it.
 
 set -e
 
@@ -37,6 +51,21 @@ err()  { printf "%s[ KO ]%s %s\n"        "$CRE" "$CWH" "$1"; }
 
 REPO_URL="https://github.com/teazyou/workspace.git"
 WORKSPACE="$HOME/workspace"
+
+# Ensure brew is on PATH for the current bash process.
+# Apple Silicon installs brew in /opt/homebrew, Intel in /usr/local. We
+# call this both right after a fresh brew install AND defensively on
+# re-runs where brew already exists but hasn't been eval'd yet.
+ensure_brew_on_path() {
+    if command -v brew &>/dev/null; then
+        return 0
+    fi
+    if [[ -x /opt/homebrew/bin/brew ]]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    elif [[ -x /usr/local/bin/brew ]]; then
+        eval "$(/usr/local/bin/brew shellenv)"
+    fi
+}
 
 # 1. Xcode Command Line Tools --------------------------------------------
 # CLT install is a GUI dialog. We trigger it then poll until it finishes.
@@ -68,17 +97,17 @@ fi
 
 # 3. Homebrew -------------------------------------------------------------
 log "Checking Homebrew..."
+ensure_brew_on_path
 if command -v brew &>/dev/null; then
     ok "Homebrew already installed"
 else
     warn "Installing Homebrew..."
     NONINTERACTIVE=1 /bin/bash -c \
         "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    # Add brew to current shell PATH (Apple Silicon → /opt/homebrew, Intel → /usr/local).
-    if [[ -x /opt/homebrew/bin/brew ]]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-    elif [[ -x /usr/local/bin/brew ]]; then
-        eval "$(/usr/local/bin/brew shellenv)"
+    ensure_brew_on_path
+    if ! command -v brew &>/dev/null; then
+        err "Homebrew install finished but 'brew' is still not on PATH"
+        exit 1
     fi
     ok "Homebrew installed"
 fi
@@ -109,4 +138,7 @@ log "Bootstrap done — handing off to installation.sh"
 # `exec` replaces this bash process with the installer.
 # stdin is redirected from /dev/tty so prompts work even when bootstrap.sh
 # was started via `curl ... | bash` (where stdin is the consumed pipe).
+# We re-source brew shellenv one more time so it's exported into the
+# environment that installation.sh inherits.
+ensure_brew_on_path
 exec bash "$WORKSPACE/scripts/installs/installation.sh" < /dev/tty
