@@ -87,20 +87,24 @@ print(releases[0]["updateTo"]["url"])
 fi
 
 # --- 2. Claude Code CLI -------------------------------------------------
+# We check the binary path directly rather than `command -v claude`, because
+# this script runs in a bash subshell that does NOT source ~/.zshrc — so
+# ~/.local/bin (the install target) isn't on PATH for `command -v` even
+# though the binary is present. That made every re-run reinstall.
 log_step "Claude Code CLI"
 
-if command -v claude &>/dev/null; then
-    log_ok "Claude Code already installed at $(command -v claude)"
+CLAUDE_BIN="$HOME/.local/bin/claude"
+
+if [[ -x "$CLAUDE_BIN" ]]; then
+    log_ok "Claude Code already installed at $CLAUDE_BIN"
 else
     log_wait "Installing Claude Code (curl | bash from claude.ai/install.sh) ..."
     curl -fsSL https://claude.ai/install.sh | bash
 
-    # The installer drops the binary in ~/.local/bin (already exported in
-    # zsh/configs/path.zsh as $PATH_CLAUDE). Verify it landed.
-    if [[ -x "$HOME/.local/bin/claude" ]]; then
-        log_ok "Claude Code installed → $HOME/.local/bin/claude"
+    if [[ -x "$CLAUDE_BIN" ]]; then
+        log_ok "Claude Code installed → $CLAUDE_BIN"
     else
-        log_err "Claude Code install completed but binary not found at ~/.local/bin/claude"
+        log_err "Claude Code install completed but binary not found at $CLAUDE_BIN"
         exit 1
     fi
 fi
