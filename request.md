@@ -18,12 +18,6 @@ We need to optimize and extend the process so it do more than just installing br
 
 ## Best scenario
 
-### First
-
-Remove aerospace-swipe from my workspace, unstall it and all related config, it does not works so its useless. Then run the sh command `checkpoint` to back
-
-### Then
-
 What I would like as best scenario.
 
 I use one line command to run remotely the script from my repository, something like
