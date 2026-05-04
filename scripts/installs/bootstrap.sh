@@ -101,9 +101,40 @@ ensure_brew_on_path
 if command -v brew &>/dev/null; then
     ok "Homebrew already installed"
 else
+    # The Homebrew installer needs sudo ONCE to chown /opt/homebrew (or
+    # /usr/local on Intel). After install, `brew` itself runs without
+    # sudo — that's the "don't use sudo" guidance you've heard. So:
+    #   - The user has to be an Administrator (in the macOS admin group).
+    #   - Sudo credentials must be cached before NONINTERACTIVE=1 kicks
+    #     in, because in non-interactive mode brew won't prompt and just
+    #     errors out with "Need sudo access on macOS" (which is what you
+    #     hit). We pre-cache with `sudo -v` and keep the timestamp warm
+    #     in the background so the install doesn't trip on a long
+    #     download timing out the 5-min sudo window.
+
+    # Hard-fail early if the user isn't an admin — the install can't
+    # succeed at all in that case and there's no point pretending.
+    if ! dseditgroup -o checkmember -m "$(whoami)" admin &>/dev/null; then
+        err "User '$(whoami)' is not an Administrator on this Mac."
+        err "Add this account to the admin group (System Settings → Users & Groups → Administrator) and re-run."
+        exit 1
+    fi
+
+    warn "Homebrew install needs your password ONCE (to chown /opt/homebrew). brew itself runs without sudo afterwards."
+    sudo -v
+    # Background refresher: re-prime the sudo timestamp every 60s while
+    # this script's PID is still alive. Dies automatically when we exit.
+    ( while kill -0 "$$" 2>/dev/null; do sudo -n true; sleep 60; done ) &
+    SUDO_KEEPALIVE_PID=$!
+
     warn "Installing Homebrew..."
     NONINTERACTIVE=1 /bin/bash -c \
         "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    # Stop the keepalive — brew is on disk now and the rest of the
+    # script doesn't need sudo.
+    kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+
     ensure_brew_on_path
     if ! command -v brew &>/dev/null; then
         err "Homebrew install finished but 'brew' is still not on PATH"
