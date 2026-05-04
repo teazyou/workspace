@@ -30,6 +30,11 @@ run_local_post_push_hook() {
 }
 
 # --- Main Script ---
+sh $SCRIPTS/dstore.sh
+[[ $? != 0 ]] && exit 1
+
+sh $SCRIPTS/git/gstatus.sh
+
 echo $CW8"Executing: git push "$@""$CWH
 command git push "$@"
 PUSH_SUCCESS=$?
