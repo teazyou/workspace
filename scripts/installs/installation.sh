@@ -30,56 +30,66 @@ source "$INSTALLS/helper_prompt.sh"
 log_info "Workspace install starting"
 log_wait "User: $(whoami)  |  Host: $(hostname)  |  Arch: $(uname -m)"
 
-# Each step is wrapped in log_step() for readable section headings.
+# Each step is wrapped in next_step() for readable section headings.
 # Sub-scripts are invoked via `bash` so that `set -e` failures bubble up
 # but don't poison the orchestrator's environment.
+#
+# next_step auto-numbers steps as "N/TOTAL — title". TOTAL is computed by
+# grepping this very file for `next_step` calls, so adding/removing a step
+# just means editing its own line — no other numbers need updating.
+TOTAL_STEPS=$(grep -c '^next_step ' "${BASH_SOURCE[0]}")
+STEP=0
+next_step() {
+    STEP=$((STEP + 1))
+    log_step "$STEP/$TOTAL_STEPS — $1"
+}
 
-log_step "1/16 — Homebrew taps + formulae + casks"
+next_step "Homebrew taps + formulae + casks"
 bash "$INSTALLS/install_brew.sh"
 
-log_step "2/16 — Oh-My-Zsh"
+next_step "Oh-My-Zsh"
 bash "$INSTALLS/install_oh_my_zsh.sh"
 
-log_step "3/16 — Symlinks (zshrc, aerospace, borders, sketchybar, vscode)"
+next_step "Symlinks (zshrc, aerospace, borders, sketchybar, vscode)"
 bash "$INSTALLS/setup_symlinks.sh"
 
-log_step "4/16 — iTerm2 preferences (custom-folder mode)"
+next_step "iTerm2 preferences (custom-folder mode)"
 bash "$INSTALLS/install_iterm2.sh"
 
-log_step "5/16 — Claude Desktop + Claude Code (native install)"
+next_step "Claude Desktop + Claude Code (native install)"
 bash "$INSTALLS/install_claude.sh"
 
-log_step "6/16 — VSCode extensions"
+next_step "VSCode extensions"
 bash "$INSTALLS/install_vscode_ext.sh"
 
-log_step "7/16 — Touch ID for sudo"
+next_step "Touch ID for sudo"
 bash "$INSTALLS/install_touch_id_sudo.sh"
 
-log_step "8/16 — macOS defaults"
+next_step "macOS defaults"
 bash "$INSTALLS/setup_macos.sh"
 
-log_step "9/16 — Wallpaper (solid black)"
+next_step "Wallpaper (solid black)"
 bash "$INSTALLS/setup_wallpaper.sh"
 
-log_step "10/16 — Window manager services (sketchybar, borders, aerospace LaunchAgent)"
+next_step "Window manager services (sketchybar, borders, aerospace LaunchAgent)"
 bash "$INSTALLS/install_window_manager.sh"
 
-log_step "11/16 — Node LTS via NVM"
+next_step "Node LTS via NVM"
 bash "$INSTALLS/install_node.sh"
 
-log_step "12/16 — MySQL + PostgreSQL initial setup"
+next_step "MySQL + PostgreSQL initial setup"
 bash "$INSTALLS/install_database.sh"
 
-log_step "13/16 — Xcode via mas"
+next_step "Xcode via mas"
 bash "$INSTALLS/install_xcode_mas.sh"
 
-log_step "14/16 — Clone secondbrain + create ~/dev"
+next_step "Clone secondbrain + create ~/dev"
 bash "$INSTALLS/clone_repos.sh"
 
-log_step "15/16 — Obsidian iCloud setup (move ~/secondbrain to iCloud, hide .git)"
+next_step "Obsidian iCloud setup (move ~/secondbrain to iCloud, hide .git)"
 bash "$INSTALLS/obsidian_setup.sh"
 
-log_step "16/16 — Hourly checkpoint cronjob + Full Disk Access for cron"
+next_step "Hourly checkpoint cronjob + Full Disk Access for cron"
 bash "$INSTALLS/install_checkpoint_cronjob.sh"
 
 log_info "All done"
