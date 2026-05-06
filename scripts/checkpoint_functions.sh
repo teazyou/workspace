@@ -7,7 +7,7 @@ CHECKPOINT_FOLDERS=(
 
 checkpoint_folder() {
   local folder="$1"
-  echo "$CW8[ checkpoint ] $folder$CWH"
+  printf "%b[ checkpoint ] %s%b\n" "$CW8" "$folder" "$CWH"
   cd "$folder" || return 1
   git add -A \
     && sh "$SCRIPTS/git/gcommit.sh" "checkpoint" \
