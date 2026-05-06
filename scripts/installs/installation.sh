@@ -34,49 +34,52 @@ log_wait "User: $(whoami)  |  Host: $(hostname)  |  Arch: $(uname -m)"
 # Sub-scripts are invoked via `bash` so that `set -e` failures bubble up
 # but don't poison the orchestrator's environment.
 
-log_step "1/15 — Homebrew taps + formulae + casks"
+log_step "1/16 — Homebrew taps + formulae + casks"
 bash "$INSTALLS/install_brew.sh"
 
-log_step "2/15 — Oh-My-Zsh"
+log_step "2/16 — Oh-My-Zsh"
 bash "$INSTALLS/install_oh_my_zsh.sh"
 
-log_step "3/15 — Symlinks (zshrc, aerospace, borders, sketchybar, vscode)"
+log_step "3/16 — Symlinks (zshrc, aerospace, borders, sketchybar, vscode)"
 bash "$INSTALLS/setup_symlinks.sh"
 
-log_step "4/15 — iTerm2 preferences (custom-folder mode)"
+log_step "4/16 — iTerm2 preferences (custom-folder mode)"
 bash "$INSTALLS/install_iterm2.sh"
 
-log_step "5/15 — Claude Desktop + Claude Code (native install)"
+log_step "5/16 — Claude Desktop + Claude Code (native install)"
 bash "$INSTALLS/install_claude.sh"
 
-log_step "6/15 — VSCode extensions"
+log_step "6/16 — VSCode extensions"
 bash "$INSTALLS/install_vscode_ext.sh"
 
-log_step "7/15 — Touch ID for sudo"
+log_step "7/16 — Touch ID for sudo"
 bash "$INSTALLS/install_touch_id_sudo.sh"
 
-log_step "8/15 — macOS defaults"
+log_step "8/16 — macOS defaults"
 bash "$INSTALLS/setup_macos.sh"
 
-log_step "9/15 — Wallpaper (solid black)"
+log_step "9/16 — Wallpaper (solid black)"
 bash "$INSTALLS/setup_wallpaper.sh"
 
-log_step "10/15 — Window manager services (sketchybar, borders, aerospace LaunchAgent)"
+log_step "10/16 — Window manager services (sketchybar, borders, aerospace LaunchAgent)"
 bash "$INSTALLS/install_window_manager.sh"
 
-log_step "11/15 — Node LTS via NVM"
+log_step "11/16 — Node LTS via NVM"
 bash "$INSTALLS/install_node.sh"
 
-log_step "12/15 — MySQL + PostgreSQL initial setup"
+log_step "12/16 — MySQL + PostgreSQL initial setup"
 bash "$INSTALLS/install_database.sh"
 
-log_step "13/15 — Xcode via mas"
+log_step "13/16 — Xcode via mas"
 bash "$INSTALLS/install_xcode_mas.sh"
 
-log_step "14/15 — Clone secondbrain + create ~/dev"
+log_step "14/16 — Clone secondbrain + create ~/dev"
 bash "$INSTALLS/clone_repos.sh"
 
-log_step "15/15 — Hourly checkpoint cronjob + Full Disk Access for cron"
+log_step "15/16 — Obsidian iCloud setup (move ~/secondbrain to iCloud, hide .git)"
+bash "$INSTALLS/obsidian_setup.sh"
+
+log_step "16/16 — Hourly checkpoint cronjob + Full Disk Access for cron"
 bash "$INSTALLS/install_checkpoint_cronjob.sh"
 
 log_info "All done"
