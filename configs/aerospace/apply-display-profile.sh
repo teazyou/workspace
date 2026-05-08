@@ -150,11 +150,21 @@ build_top_gap_config() {
         fi
     done < <(get_monitors_config)
 
+    # When SketchyBar is hidden on the secondary monitor, override its top
+    # gap so windows reclaim the freed bar space. Pattern-matched first so
+    # it wins over the per-name entries below.
+    local bar_state_file="/tmp/secondary-bar.state"
+    local secondary_override=""
+    if [[ -f "$bar_state_file" ]] && [[ "$(cat "$bar_state_file" 2>/dev/null)" == "off" ]]; then
+        secondary_override="{ monitor.secondary = 10 }"
+        log "Secondary bar hidden — prepending secondary gap override (10)"
+    fi
+
     # Build final config string
     if (( ${#gap_entries[@]} == 0 )); then
         echo "$default_gap"
     elif (( ${#gap_entries[@]} == 1 )); then
-        # Single monitor - just use the value
+        # Single monitor - just use the value (no secondary override possible)
         local single_gap="${gap_entries[0]}"
         single_gap="${single_gap#*= }"
         single_gap="${single_gap% \}}"
@@ -162,6 +172,9 @@ build_top_gap_config() {
     else
         # Multiple monitors - use array format
         local result="["
+        if [[ -n "$secondary_override" ]]; then
+            result+="$secondary_override, "
+        fi
         for entry in "${gap_entries[@]}"; do
             result+="$entry, "
         done

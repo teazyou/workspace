@@ -95,7 +95,7 @@ on-mode-changed = []
     outer.left =       10
     outer.bottom =     10
     # Top gap for SketchyBar on all monitors
-    outer.top =        [{ monitor."hdmi.*" = 42 }, { monitor."built-in.*" = 15 }, 42]
+    outer.top =        [{ monitor."built-in.*" = 15 }, { monitor."sidecar.*" = 42 }, 42]
     outer.right =      10
 
 # 'main' binding mode declaration
@@ -200,7 +200,7 @@ on-mode-changed = []
 # 'service' binding mode declaration.
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
 [mode.service.binding]
-    esc = ['reload-config', 'mode main']
+    esc = ['reload-config', 'exec-and-forget osascript -e "display notification \"Config reloaded\" with title \"AeroSpace\""', 'mode main']
     r = ['flatten-workspace-tree', 'mode main'] # reset layout
     f = ['layout floating tiling', 'mode main'] # Toggle between floating and tiling layout
     backspace = ['close-all-windows-but-current', 'mode main']
@@ -209,6 +209,7 @@ on-mode-changed = []
     #s = ['layout sticky tiling', 'mode main']
 
     p = ['exec-and-forget ~/workspace/configs/aerospace/performance-mode.sh', 'mode main'] # Performance mode toggle
+    b = ['exec-and-forget ~/workspace/configs/aerospace/secondary-bar-toggle.sh', 'mode main'] # Toggle SketchyBar on secondary monitor
     alt-shift-h = ['join-with left', 'mode main']
     alt-shift-j = ['join-with down', 'mode main']
     alt-shift-k = ['join-with up', 'mode main']
