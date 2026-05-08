@@ -91,10 +91,9 @@
     "claudeCode.useTerminal": true,
     "window.titleBarStyle": "native",
     "window.customTitleBarVisibility": "never",
-    "workbench.statusBar.visible": false,
-    "workbench.activityBar.location": "hidden",
     "github.copilot.enable": {
         "plaintext": true,
         "markdown": true
-    }
+    },
+    "workbench.statusBar.visible": false
 }
