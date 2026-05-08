@@ -255,11 +255,6 @@ main() {
         aerospace reload-config
         log "Reloaded aerospace config"
     fi
-
-    # Notify
-    if command -v osascript &> /dev/null; then
-        osascript -e "display notification \"Display profile updated\" with title \"AeroSpace\"" 2>/dev/null || true
-    fi
 }
 
 main "$@"
