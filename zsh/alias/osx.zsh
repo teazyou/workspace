@@ -1,1 +1,1 @@
-dstore () { sh $SCRIPTS/dstore.sh }
+dstore () { sh $SCRIPTS/dstore.sh "$@" }
