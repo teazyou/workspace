@@ -89,8 +89,8 @@ bash "$INSTALLS/clone_repos.sh"
 next_step "Obsidian iCloud setup (move ~/secondbrain to iCloud, hide .git)"
 bash "$INSTALLS/obsidian_setup.sh"
 
-next_step "Hourly checkpoint cronjob + Full Disk Access for cron"
-bash "$INSTALLS/install_checkpoint_cronjob.sh"
+next_step "Hourly checkpoint LaunchAgent"
+bash "$INSTALLS/install_checkpoint_launchd.sh"
 
 log_info "All done"
 log_ok "Workspace install complete. Open a new iTerm2 window to load the new shell."
