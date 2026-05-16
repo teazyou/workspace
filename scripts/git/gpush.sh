@@ -30,7 +30,7 @@ run_local_post_push_hook() {
 }
 
 # --- Main Script ---
-sh $SCRIPTS/dstore.sh
+sh $SCRIPTS/dstore.sh silent
 [[ $? != 0 ]] && exit 1
 
 sh $SCRIPTS/git/gstatus.sh
