@@ -17,20 +17,18 @@ source "$SCRIPTS/checkpoint_functions.sh"
 mkdir -p "$STATE_DIR"
 
 for folder in "${CHECKPOINT_FOLDERS[@]}"; do
-  if [ ! -d "$folder/.git" ]; then
-    echo "skip $folder (not a git repo)"
-    continue
-  fi
-  if [ -z "$(git -C "$folder" status --porcelain)" ]; then
-    echo "skip $folder (clean)"
-    continue
-  fi
-  # Recency guard: checkpoint a repo only when its working tree is
-  # byte-for-byte identical to the previous run -- i.e. nothing changed
-  # in the last interval -- so work still in progress is never pushed.
-  # Uses a git content fingerprint (see checkpoint_functions.sh) rather
-  # than `find -mmin`, which fails inside the iCloud-backed ~/secondbrain
-  # when this runs from a background LaunchAgent.
+  # Single eligibility gate: checkpoint a repo only when its working-tree
+  # content fingerprint is byte-for-byte identical to the previous run --
+  # i.e. nothing was modified in the last interval -- so work still in
+  # progress is never committed/pushed.
+  #
+  # There is deliberately no "skip if clean" check: a clean repo is still
+  # checkpointed so that a commit left unpushed by an earlier network
+  # failure gets retried -- checkpoint_folder always runs git push.
+  #
+  # The fingerprint is a git content hash (see checkpoint_functions.sh)
+  # rather than `find -mmin`, which fails inside the iCloud-backed
+  # ~/secondbrain when this runs from a background LaunchAgent.
   sig=$(working_tree_signature "$folder")
   sigfile="$STATE_DIR/${folder//\//_}.sig"
   prev=$(cat "$sigfile" 2>/dev/null)
@@ -40,7 +38,7 @@ for folder in "${CHECKPOINT_FOLDERS[@]}"; do
     continue
   fi
   if [ "$sig" != "$prev" ]; then
-    echo "skip $folder (changed since last run)"
+    echo "skip $folder (modified in the last hour)"
     continue
   fi
   echo "checkpointing $folder"

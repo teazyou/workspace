@@ -31,9 +31,18 @@ working_tree_signature() {
 checkpoint_folder() {
   local folder="$1"
   printf "%b[ checkpoint ] %s%b\n" "$CW8" "$folder" "$CWH"
+  if [ ! -d "$folder/.git" ]; then
+    echo "skip $folder (not a git repo)"
+    return 1
+  fi
   cd "$folder" || return 1
-  git add -A \
-    && sh "$SCRIPTS/git/gcommit.sh" "checkpoint" \
-    && sh "$SCRIPTS/git/gpush.sh"
+  # The three steps run unconditionally -- they are NOT chained with
+  # `&&`. gcommit.sh exits non-zero when there is nothing to commit (a
+  # clean tree), and an `&&` chain would then skip gpush.sh. Running
+  # gpush.sh regardless means a commit left unpushed by an earlier
+  # network failure is retried on the next run.
+  git add -A
+  sh "$SCRIPTS/git/gcommit.sh" "checkpoint"
+  sh "$SCRIPTS/git/gpush.sh"
   cd - > /dev/null
 }
