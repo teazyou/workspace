@@ -1,5 +1,29 @@
 #!/bin/bash
 
+# Runs a cleanup tailored to the repository being pushed, matched on its
+# "<owner>/<name>" id derived from the origin URL. This is a generic
+# extension point: add a repo by appending an `if` block that matches
+# its repo_id and runs whatever that repo needs. Each repo gets its own
+# self-contained block, so any one can be commented out independently.
+run_repo_specific_cleanup() {
+  echo $CW8"--- Checking for repository-specific tasks ---"$CWH
+  url=$(git config --get remote.origin.url) || return 1
+  repo_id=$(echo "$url" | sed -e 's/.*github.com[:\/]//' -e 's/\.git$//')
+
+  echo "Detected repository: $repo_id"
+
+  # --- teazyou/obsidian_secondbrain ------------------------------------
+  # Disabled on purpose: the hourly checkpoint job pushes this repo every
+  # idle hour, so an aggressive gc here would run on the vault hourly --
+  # git's built-in auto-gc is enough. Kept as a working template for
+  # re-enabling it, or for adding a cleanup for another repository.
+  # if [[ "$repo_id" == "teazyou/obsidian_secondbrain" ]]; then
+  #   echo "Target repository detected. Running aggressive cleanup..."
+  #   git gc --prune=now --aggressive
+  #   echo $COK"Cleanup complete."$CWH
+  # fi
+}
+
 run_local_post_push_hook() {
   echo $CW8"--- Checking for local .git/hooks/post-push ---"$CWH
   local hook_path=".git/hooks/post-push"
@@ -25,6 +49,7 @@ PUSH_SUCCESS=$?
 
 if [[ $PUSH_SUCCESS -eq 0 ]]; then
   echo $COK"Push successful."$CWH
+  run_repo_specific_cleanup
   run_local_post_push_hook
 else
   echo $CKO"Push failed."$CWH
