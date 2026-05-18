@@ -36,13 +36,23 @@ checkpoint_folder() {
     return 1
   fi
   cd "$folder" || return 1
-  # The three steps run unconditionally -- they are NOT chained with
-  # `&&`. gcommit.sh exits non-zero when there is nothing to commit (a
-  # clean tree), and an `&&` chain would then skip gpush.sh. Running
-  # gpush.sh regardless means a commit left unpushed by an earlier
-  # network failure is retried on the next run.
+  # Stage and commit. gcommit.sh exits non-zero when there is nothing to
+  # commit, so the steps are not `&&`-chained -- that exit code must not
+  # gate the push decision below.
   git add -A
   sh "$SCRIPTS/git/gcommit.sh" "checkpoint"
-  sh "$SCRIPTS/git/gpush.sh"
+  # Push only when the local branch is ahead of its upstream. This covers
+  # both a fresh checkpoint commit and one left behind by an earlier
+  # failed push: a failed push does not advance the upstream ref, so its
+  # commits still count here. `git rev-list` is a local, network-free
+  # query, so an idle repo no longer does a pointless `git push` round
+  # trip every run. The test fails open -- if the count cannot be
+  # determined (no upstream, detached HEAD) the substitution is empty,
+  # "" != "0" holds, and gpush.sh still runs.
+  if [ "$(git rev-list --count @{u}..HEAD 2>/dev/null)" != "0" ]; then
+    sh "$SCRIPTS/git/gpush.sh"
+  else
+    echo "nothing to push for $folder (already up to date)"
+  fi
   cd - > /dev/null
 }
