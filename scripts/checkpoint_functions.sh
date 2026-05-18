@@ -52,7 +52,7 @@ checkpoint_folder() {
   if [ "$(git rev-list --count @{u}..HEAD 2>/dev/null)" != "0" ]; then
     sh "$SCRIPTS/git/gpush.sh"
   else
-    echo "nothing to push for $folder (already up to date)"
+    printf "%bNo push, already up to date%b\n" "$CKO" "$CWH"
   fi
   cd - > /dev/null
 }
