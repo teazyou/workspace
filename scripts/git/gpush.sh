@@ -48,19 +48,11 @@ sh $SCRIPTS/dstore.sh silent
 sh $SCRIPTS/git/gstatus.sh
 
 echo $CW8"Executing: git push "$@""$CWH
-push_output=$(command git push "$@" 2>&1)
+command git push "$@"
 PUSH_SUCCESS=$?
-echo $CW8"$push_output"$CWH
 
 if [[ $PUSH_SUCCESS -eq 0 ]]; then
-  # `git push` exits 0 both when it pushed commits and when the remote
-  # was already current ("Everything up-to-date"). Tell the two apart so
-  # the message never claims a push that did not actually happen.
-  if echo "$push_output" | grep -q "Everything up-to-date"; then
-    echo $CW8"Nothing to push -- remote already up to date."$CWH
-  else
-    echo $COK"Push successful."$CWH
-  fi
+  echo $COK"Push successful."$CWH
   run_repo_specific_cleanup
   run_local_post_push_hook
 else
