@@ -20,11 +20,14 @@
 - ./configs/aerospace/aerospace.toml
 - ./configs/aerospace/apply-display-profile.sh
 - ./configs/aerospace/com.aerospace.display-profile.plist
+- ./configs/aerospace/com.aerospace.empty-watcher.plist
 - ./configs/aerospace/doc.aerospace.md
+- ./configs/aerospace/empty-workspace-watcher.sh
 - ./configs/aerospace/features.aerospace.md
 - ./configs/aerospace/open-dock-app.sh
 - ./configs/aerospace/performance-mode.sh
 - ./configs/aerospace/secondary-bar-toggle.sh
+- ./configs/aerospace/track-workspace-mru.sh
 - ./configs/borders/bordersrc
 - ./configs/sketchybar/sketchybarrc
 - ./configs/sketchybar/colors.sh
@@ -88,6 +91,28 @@
 - Keeps workspace spaces (left) and time/date (right) always visible
 - State tracked via /tmp/performance-mode.state
 - Edit for: which items to hide/show, notification messages
+
+`./configs/aerospace/com.aerospace.empty-watcher.plist`
+- LaunchAgent that runs empty-workspace-watcher.sh as a long-running daemon
+- RunAtLoad + KeepAlive (no StartInterval — script has its own 500ms poll loop)
+- ThrottleInterval=5 prevents tight restart loops if the script bombs
+- Install via symlink to ~/Library/LaunchAgents/, then launchctl load
+- Edit for: log paths, throttle interval
+
+`./configs/aerospace/empty-workspace-watcher.sh`
+- Long-running daemon, polls focused workspace every 500ms
+- When focused workspace has zero windows, bounces to the most-recently-focused non-empty workspace
+- MRU read from /tmp/aerospace-ws-mru.state (written by track-workspace-mru.sh)
+- Fallback order: MRU newest-first → first non-empty workspace from `aerospace list-workspaces --monitor all --empty no` → stay put if everything is empty
+- Uses `aerospace workspace --fail-if-noop` to avoid firing exec-on-workspace-change for no-op bounces
+- Stateless per-tick check (no prev-focus comparison)
+- Edit for: poll interval, fallback logic
+
+`./configs/aerospace/track-workspace-mru.sh`
+- Called from aerospace.toml exec-on-workspace-change with $AEROSPACE_FOCUSED_WORKSPACE
+- Appends focused workspace to /tmp/aerospace-ws-mru.state, dedups, caps at 20 entries (newest last)
+- Uses mkdir-based lockdir at /tmp/aerospace-ws-mru.lock to serialise concurrent writers; bails after ~250ms to never block aerospace
+- Edit for: MRU cap size, lock timeout
 
 `./configs/aerospace/secondary-bar-toggle.sh`
 - Toggles SketchyBar visibility on the secondary monitor (alt+shift+; then b via aerospace.toml service mode)
