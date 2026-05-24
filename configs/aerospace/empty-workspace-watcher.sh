@@ -13,10 +13,26 @@
 # that's intentional (fresh state each session).
 
 mru_file="/tmp/aerospace-ws-mru.state"
+grace_seconds=20
 
 while true; do
     focused_ws=$(aerospace list-workspaces --focused 2>/dev/null)
     if [[ -n "$focused_ws" ]]; then
+        # Per-workspace grace period: open-dock-app.sh touches
+        # /tmp/aerospace-empty-watcher-grace-<ws> when it pre-switches to a
+        # target workspace and launches a new app. Skip ticks while the
+        # marker for the currently focused workspace is fresh so we don't
+        # bounce off the target before the app's first window appears.
+        # Daemon still bounces normally for any OTHER empty workspace.
+        grace_file="/tmp/aerospace-empty-watcher-grace-${focused_ws}"
+        if [[ -f "$grace_file" ]]; then
+            age=$(( $(date +%s) - $(stat -f %m "$grace_file" 2>/dev/null || echo 0) ))
+            if [[ $age -lt $grace_seconds ]]; then
+                sleep 0.5
+                continue
+            fi
+        fi
+
         count=$(aerospace list-windows --workspace "$focused_ws" --count 2>/dev/null)
         if [[ "$count" == "0" ]]; then
             # Single query: all non-empty workspaces, one per line.

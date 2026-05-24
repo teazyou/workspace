@@ -37,10 +37,43 @@ while IFS='|' read -r wid wsn; do
     workspaces_by_window+=("$wsn")
 done < <(aerospace list-windows --monitor all --app-bundle-id "$bundle_id" --format '%{window-id}|%{workspace}' 2>/dev/null)
 
-# App not running → workspace-target then launch
+# App not running → workspace-target then launch.
+#
+# Two-layer protection against empty-workspace-watcher.sh bouncing us off
+# the target while the app is still launching:
+#
+# 1. Per-workspace grace marker /tmp/aerospace-empty-watcher-grace-<ws>:
+#    daemon skips ticks while this file's mtime is fresh (<20s).
+#
+# 2. Silent placement enforcer (backgrounded): polls for the app's first
+#    window. When it appears, if it's not on the target workspace (because
+#    the user navigated away mid-launch), silently move it. Then clear
+#    the grace marker. Hard cap ~18s.
 if [[ ${#windows[@]} -eq 0 ]]; then
+    grace_file="/tmp/aerospace-empty-watcher-grace-${workspace}"
+    touch "$grace_file"
     aerospace workspace "$workspace"
     open "$app_path"
+
+    (
+        i=0
+        while [[ $i -lt 90 ]]; do
+            sleep 0.2
+            entry=$(aerospace list-windows --monitor all --app-bundle-id "$bundle_id" --format '%{window-id}|%{workspace}' 2>/dev/null | head -n 1)
+            if [[ -n "$entry" ]]; then
+                wid="${entry%%|*}"
+                wws="${entry##*|}"
+                if [[ "$wws" != "$workspace" ]]; then
+                    aerospace move-node-to-workspace --window-id "$wid" "$workspace" 2>/dev/null
+                fi
+                break
+            fi
+            i=$((i + 1))
+        done
+        rm -f "$grace_file"
+        exit 0
+    ) </dev/null >/dev/null 2>&1 &
+
     exit 0
 fi
 

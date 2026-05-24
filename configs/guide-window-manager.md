@@ -76,13 +76,15 @@
 - Opens / focuses macOS Dock apps by position index (0-indexed)
 - Called by aerospace.toml cmd+1-9 keybindings
 - Reads persistent-apps from Dock plist, decodes URL to get .app path, extracts CFBundleIdentifier
-- If app has no windows (per `aerospace list-windows --app-bundle-id`): switches to workspace (position+1) then `open`s the app, so the new window lands on the matching workspace
+- If app has no windows (per `aerospace list-windows --app-bundle-id`): touches a per-workspace grace marker `/tmp/aerospace-empty-watcher-grace-<ws>`, switches to workspace (position+1), then `open`s the app, so the new window lands on the matching workspace
+- The grace marker tells empty-workspace-watcher.sh to skip bouncing that specific workspace while its mtime is fresh (<20s), giving the app time to spawn its first window
+- After launching, spawns a backgrounded silent placement enforcer: polls `aerospace list-windows --app-bundle-id` every 200ms (cap ~18s); when the first window appears, if it landed on a non-target workspace (user navigated away mid-launch), silently relocates it with `aerospace move-node-to-workspace --window-id` (no focus follow, no workspace switch). Removes the grace marker on completion
 - If app has windows and is already focused: cycles to next window in AeroSpace's window list (wraps)
 - If app has windows but another app is focused: returns to last window focused via this script (per-app state at `/tmp/dock-cycle-<bundle_id>.state`); falls back to first window if state is missing/stale
 - State self-heals: closed windows / new window-ids after app restart drop out of the list and trigger the fallback
 - Known limitation: manual focus changes (Mission Control, dock click, new window while app is in background) don't update the state file; next CMD+N from outside the app may target the previous CMD+N window rather than the most-recently-touched
 - Fallback: if bundle id can't be read, plain `open` (old behavior)
-- Edit for: state file location, cycling order, fallback behavior
+- Edit for: state file location, cycling order, fallback behavior, placement-enforcer poll cap
 
 `./configs/aerospace/performance-mode.sh`
 - Toggles performance mode on/off (alt+shift+; then p via aerospace.toml service mode)
@@ -106,7 +108,9 @@
 - Fallback order: MRU newest-first → first non-empty workspace from `aerospace list-workspaces --monitor all --empty no` → stay put if everything is empty
 - Uses `aerospace workspace --fail-if-noop` to avoid firing exec-on-workspace-change for no-op bounces
 - Stateless per-tick check (no prev-focus comparison)
-- Edit for: poll interval, fallback logic
+- Per-workspace grace: if `/tmp/aerospace-empty-watcher-grace-<focused_ws>` exists with fresh mtime (<20s), the daemon skips that tick. Touched by open-dock-app.sh when pre-switching to a target workspace for a new-app launch, so we don't bounce off the target before the app's first window appears. Daemon still bounces normally for any OTHER empty workspace
+- The 20s grace cap is intentionally slightly longer than open-dock-app.sh's ~18s placement-enforcer cap so slow Electron cold-starts don't get bounced mid-launch
+- Edit for: poll interval, fallback logic, grace_seconds cap
 
 `./configs/aerospace/track-workspace-mru.sh`
 - Called from aerospace.toml exec-on-workspace-change with $AEROSPACE_FOCUSED_WORKSPACE
