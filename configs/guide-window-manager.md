@@ -40,7 +40,7 @@
 - Defines keybindings (alt+hjkl=focus, alt+shift+hjkl=move, alt+1-9=workspace)
 - Configures gaps, monitors assignment, startup commands
 - Launches sketchybar+borders on startup
-- App launchers via cmd+1-9 use open-dock-app.sh to open Dock apps by position
+- App launchers via cmd+1-9 use open-dock-app.sh: if the app isn't running, open it on workspace N (matching the Dock position); if running, focus it (cycles through its windows on repeated presses, returns to last-focused window when coming from another app)
 - alt+shift+; then p triggers aerospace/performance-mode.sh (toggles UI overhead reduction)
 - alt+shift+; then b triggers aerospace/secondary-bar-toggle.sh (hides/shows SketchyBar on secondary monitor)
 - CrossOver auto-floated via on-window-detected rule (prevents tiling conflicts with games)
@@ -70,10 +70,16 @@
 - Read-only reference, don't edit
 
 `./configs/aerospace/open-dock-app.sh`
-- Opens macOS Dock apps by position index (0-indexed)
+- Opens / focuses macOS Dock apps by position index (0-indexed)
 - Called by aerospace.toml cmd+1-9 keybindings
-- Reads persistent-apps from Dock plist, decodes URL, opens app
-- Edit for: changing how app path is resolved
+- Reads persistent-apps from Dock plist, decodes URL to get .app path, extracts CFBundleIdentifier
+- If app has no windows (per `aerospace list-windows --app-bundle-id`): switches to workspace (position+1) then `open`s the app, so the new window lands on the matching workspace
+- If app has windows and is already focused: cycles to next window in AeroSpace's window list (wraps)
+- If app has windows but another app is focused: returns to last window focused via this script (per-app state at `/tmp/dock-cycle-<bundle_id>.state`); falls back to first window if state is missing/stale
+- State self-heals: closed windows / new window-ids after app restart drop out of the list and trigger the fallback
+- Known limitation: manual focus changes (Mission Control, dock click, new window while app is in background) don't update the state file; next CMD+N from outside the app may target the previous CMD+N window rather than the most-recently-touched
+- Fallback: if bundle id can't be read, plain `open` (old behavior)
+- Edit for: state file location, cycling order, fallback behavior
 
 `./configs/aerospace/performance-mode.sh`
 - Toggles performance mode on/off (alt+shift+; then p via aerospace.toml service mode)
