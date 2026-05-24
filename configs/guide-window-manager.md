@@ -102,20 +102,24 @@
 - Edit for: log paths, throttle interval
 
 `./configs/aerospace/empty-workspace-watcher.sh`
-- Long-running daemon, polls focused workspace every 500ms
-- When focused workspace has zero windows, bounces to the most-recently-focused non-empty workspace
-- MRU read from /tmp/aerospace-ws-mru.state (written by track-workspace-mru.sh)
-- Fallback order: MRU newest-first → first non-empty workspace from `aerospace list-workspaces --monitor all --empty no` → stay put if everything is empty
-- Uses `aerospace workspace --fail-if-noop` to avoid firing exec-on-workspace-change for no-op bounces
-- Stateless per-tick check (no prev-focus comparison)
-- Per-workspace grace: if `/tmp/aerospace-empty-watcher-grace-<focused_ws>` exists with fresh mtime (<20s), the daemon skips that tick. Touched by open-dock-app.sh when pre-switching to a target workspace for a new-app launch, so we don't bounce off the target before the app's first window appears. Daemon still bounces normally for any OTHER empty workspace
+- Long-running daemon, polls every 500ms — per-monitor (multi-monitor aware)
+- For each monitor: if its currently visible workspace has zero windows, bounces it to a non-empty workspace assigned to THAT monitor (so closing the last window on mon1's ws5 doesn't leave mon1 empty while focus drifts to mon2)
+- Per-monitor MRU read from `/tmp/aerospace-ws-mru-mon-<mon-id>.state` (written by track-workspace-mru.sh)
+- Fallback order per monitor: MRU newest-first (filtered to that monitor + currently non-empty) → first non-empty workspace AeroSpace lists for that monitor → stay put if everything on that monitor is empty
+- Focused-monitor bounce uses `aerospace workspace --fail-if-noop <target>` (focus stays put because target is on the same monitor)
+- Non-focused-monitor bounce uses `aerospace workspace <target>` then `aerospace focus-monitor <orig-mon-id>` to return focus to the originally focused monitor — the workspace switch steals focus to the target's monitor as a side effect, so we restore it. The ~100ms borders/sketchybar flicker is accepted
+- `focus-monitor` is called by numeric monitor-id (not name) — monitor names can contain glob metacharacters like `(` `)` (e.g. "Sidecar Display (AirPlay)") which break the name-pattern matching AeroSpace uses
+- Per-workspace grace: if `/tmp/aerospace-empty-watcher-grace-<visible_ws>` exists with fresh mtime (<20s), that one monitor's bounce is skipped (other monitors still bounce). Touched by open-dock-app.sh during app launches
 - The 20s grace cap is intentionally slightly longer than open-dock-app.sh's ~18s placement-enforcer cap so slow Electron cold-starts don't get bounced mid-launch
+- Bash 3.2 compatible: no `declare -A`, no `mapfile` — uses parallel arrays and grep-based set membership
 - Edit for: poll interval, fallback logic, grace_seconds cap
 
 `./configs/aerospace/track-workspace-mru.sh`
 - Called from aerospace.toml exec-on-workspace-change with $AEROSPACE_FOCUSED_WORKSPACE
-- Appends focused workspace to /tmp/aerospace-ws-mru.state, dedups, caps at 20 entries (newest last)
-- Uses mkdir-based lockdir at /tmp/aerospace-ws-mru.lock to serialise concurrent writers; bails after ~250ms to never block aerospace
+- Derives the workspace's monitor-id via `aerospace list-workspaces --all --format '%{monitor-id} %{workspace}'` + awk lookup (workspaces are statically assigned to monitors via aerospace.toml `[workspace-to-monitor-force-assignment]`)
+- Appends focused workspace to per-monitor file `/tmp/aerospace-ws-mru-mon-<mon-id>.state`, dedups, caps at 10 entries (newest last)
+- Uses per-monitor mkdir-based lockdir `/tmp/aerospace-ws-mru-mon-<mon-id>.lock` to serialise concurrent writers; bails after ~250ms to never block aerospace
+- Silently exits if monitor lookup fails (workspace unknown, monitor disconnected mid-call) — avoids writing to a state file with empty monitor-id
 - Edit for: MRU cap size, lock timeout
 
 `./configs/aerospace/secondary-bar-toggle.sh`
