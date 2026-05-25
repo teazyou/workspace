@@ -105,7 +105,7 @@
 - Long-running daemon, polls every 500ms — per-monitor (multi-monitor aware)
 - For each monitor: if its currently visible workspace has zero windows, bounces it to a non-empty workspace assigned to THAT monitor (so closing the last window on mon1's ws5 doesn't leave mon1 empty while focus drifts to mon2)
 - Per-monitor MRU read from `/tmp/aerospace-ws-mru-mon-<mon-id>.state` (written by track-workspace-mru.sh)
-- Fallback order per monitor: MRU newest-first (filtered to that monitor + currently non-empty) → first non-empty workspace AeroSpace lists for that monitor → stay put if everything on that monitor is empty
+- Fallback order per monitor: MRU newest-first (filtered to that monitor + currently non-empty) → first non-empty workspace AeroSpace lists for that monitor → if every workspace on the monitor is empty, the first workspace AeroSpace lists for that monitor (per aerospace.toml assignment order: ws1 for main, ws6 for secondary) → stay put only when that target equals the already-visible ws
 - Focused-monitor bounce uses `aerospace workspace --fail-if-noop <target>` (focus stays put because target is on the same monitor)
 - Non-focused-monitor bounce uses `aerospace workspace <target>` then `aerospace focus-monitor <orig-mon-id>` to return focus to the originally focused monitor — the workspace switch steals focus to the target's monitor as a side effect, so we restore it. The ~100ms borders/sketchybar flicker is accepted
 - `focus-monitor` is called by numeric monitor-id (not name) — monitor names can contain glob metacharacters like `(` `)` (e.g. "Sidecar Display (AirPlay)") which break the name-pattern matching AeroSpace uses
