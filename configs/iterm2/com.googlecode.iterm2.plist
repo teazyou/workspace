@@ -56,7 +56,9 @@
 	<true/>
 	<key>HideScrollbar</key>
 	<false/>
-	<key>HideTabNumber</key>
+	<key>HideTab</key>
+		<false/>
+		<key>HideTabNumber</key>
 	<false/>
 	<key>HotkeyMigratedFromSingleToMulti</key>
 	<true/>
@@ -1408,6 +1410,8 @@
 			<array/>
 			<key>Terminal Type</key>
 			<string>xterm-256color</string>
+			<key>Title Components</key>
+			<integer>4</integer>
 			<key>Transparency</key>
 			<real>0.0</real>
 			<key>Unlimited Scrollback</key>
