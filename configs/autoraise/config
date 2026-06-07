@@ -1,0 +1,35 @@
+# AutoRaise config — focus-follows-mouse for the AeroSpace setup.
+# Source of truth: ~/workspace/configs/autoraise/config
+# Symlinked to ~/.config/AutoRaise/config (the path AutoRaise reads).
+# Format: key=value, one per line, strings double-quoted.
+# After editing: `brew services` not used — restart via the LaunchAgent
+# (see com.autoraise.daemon.plist) or just `pkill AutoRaise` (KeepAlive respawns it).
+
+# How often the mouse position is polled (ms). 50 = default, light on CPU.
+pollMillis=50
+
+# Raise/focus delay in units of pollMillis. delay=2 -> the cursor must come to
+# rest on a window for ~100ms before it gets focused. This is the menu-bar /
+# SketchyBar guard: a quick flick up to the top bar doesn't rest on the windows
+# it crosses, so none of them steal focus en route.
+delay=2
+
+# Hold this key to temporarily suppress AutoRaise. "option" = alt, which is the
+# modifier behind EVERY AeroSpace binding (alt+hjkl focus, alt+shift+hjkl move,
+# alt+1-9 workspace). So the whole time you're doing keyboard window management
+# focus-follows-mouse is gated off and can't hijack the window under the cursor.
+disableKey="option"
+
+# Require the mouse to actually stop moving before raising. Reinforces `delay`
+# so mid-swipe fly-throughs never trigger.
+requireMouseStop=true
+
+# Ignore mouse jitter smaller than this before considering a focus change.
+mouseDelta=0.1
+
+# Don't re-focus immediately after a Space/workspace change.
+ignoreSpaceChanged=true
+
+# Cursor warping is handled by AeroSpace's mouse-follows-focus callback
+# (on-focus-changed = move-mouse window-lazy-center in aerospace.toml), so
+# AutoRaise's own warp is left disabled to avoid two tools fighting over the cursor.

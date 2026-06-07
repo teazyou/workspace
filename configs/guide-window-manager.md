@@ -14,6 +14,8 @@
 | `./configs/aerospace/aerospace.toml` | `~/.aerospace.toml` |
 | `./configs/borders/` | `~/.config/borders` |
 | `./configs/sketchybar/` | `~/.config/sketchybar` |
+| `./configs/autoraise/config` | `~/.config/AutoRaise/config` |
+| `./configs/autoraise/com.autoraise.daemon.plist` | `~/Library/LaunchAgents/com.autoraise.daemon.plist` |
 
 ## File List
 
@@ -28,6 +30,8 @@
 - ./configs/aerospace/performance-mode.sh
 - ./configs/aerospace/secondary-bar-toggle.sh
 - ./configs/aerospace/track-workspace-mru.sh
+- ./configs/autoraise/config
+- ./configs/autoraise/com.autoraise.daemon.plist
 - ./configs/borders/bordersrc
 - ./configs/sketchybar/sketchybarrc
 - ./configs/sketchybar/colors.sh
@@ -47,6 +51,8 @@
 - alt+shift+; then p triggers aerospace/performance-mode.sh (toggles UI overhead reduction)
 - alt+shift+; then b triggers aerospace/secondary-bar-toggle.sh (hides/shows SketchyBar on secondary monitor)
 - CrossOver auto-floated via on-window-detected rule (prevents tiling conflicts with games)
+- `on-focus-changed = ['move-mouse window-lazy-center']`: mouse-follows-focus — warps the cursor to the focused window on every focus change (keyboard alt+hjkl, app switch). Pairs with AutoRaise's focus-follows-mouse (see `./configs/autoraise/`) to keep cursor + keyboard focus in sync. `lazy` = no warp if the cursor is already on the target (avoids jitter)
+- `alt-shift-hjkl` move bindings append `move-mouse window-lazy-center` so the cursor trails a moved window (a `move` keeps focus, so on-focus-changed alone wouldn't fire)
 - Edit for: keybindings, workspace layout, monitor assignment, gaps
 
 `./configs/aerospace/apply-display-profile.sh`
@@ -132,6 +138,23 @@
 - State tracked via /tmp/secondary-bar.state
 - apply-display-profile.sh also reads this state file, so monitor-change events keep the override applied while the bar is hidden
 - Edit for: gap value (default 10 = matches outer.left/right/bottom), changing target monitor
+
+`./configs/autoraise/config`
+- AutoRaise config — focus-follows-mouse (hover a window to focus it), the piece AeroSpace doesn't do natively (it only does the inverse, mouse-follows-focus)
+- Installed via `brew tap dimentium/autoraise && brew install autoraise` (binary at `/opt/homebrew/bin/AutoRaise`)
+- Symlinked to `~/.config/AutoRaise/config` (the path AutoRaise reads); format is `key=value`, one per line
+- `disableKey="option"`: holding alt fully suppresses AutoRaise. Since every AeroSpace binding is alt-based (alt+hjkl focus, alt+shift+hjkl move, alt+1-9 workspace), focus-follows-mouse is gated off during all keyboard window management — the cursor can't hijack the window you're manipulating
+- `delay=2` + `requireMouseStop=true`: the cursor must rest ~100ms on a window before focusing, so a quick flick up to the menu bar / SketchyBar doesn't steal focus from the windows it crosses
+- Warping is left to AeroSpace's `on-focus-changed` callback (AutoRaise's own warp disabled) so the two tools don't fight over the cursor
+- Requires Accessibility permission (System Settings → Privacy & Security → Accessibility → add `/opt/homebrew/bin/AutoRaise`) or it runs but does nothing
+- Edit for: pollMillis, delay, disableKey, ignoreApps, mouseDelta
+
+`./configs/autoraise/com.autoraise.daemon.plist`
+- LaunchAgent that runs the AutoRaise binary as a background daemon (RunAtLoad + KeepAlive, ThrottleInterval=5), mirroring the `com.aerospace.*` pattern instead of `brew services`
+- Symlinked to `~/Library/LaunchAgents/`, then `launchctl load`
+- Logs to `/tmp/autoraise.stdout.log` / `/tmp/autoraise.stderr.log`
+- AutoRaise auto-reads `~/.config/AutoRaise/config`, so the plist just runs the binary with no args. After a config edit: `pkill AutoRaise` (KeepAlive respawns it) or unload/load the agent
+- Edit for: binary path, log paths, throttle interval
 
 `./configs/borders/bordersrc`
 - JankyBorders config (window border styling)
