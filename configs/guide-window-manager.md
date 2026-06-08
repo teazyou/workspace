@@ -30,6 +30,7 @@
 - ./configs/aerospace/performance-mode.sh
 - ./configs/aerospace/secondary-bar-toggle.sh
 - ./configs/aerospace/track-workspace-mru.sh
+- ./scripts/aerospace-restart.sh
 - ./configs/autoraise/config
 - ./configs/autoraise/com.autoraise.daemon.plist
 - ./configs/borders/bordersrc
@@ -138,6 +139,12 @@
 - State tracked via /tmp/secondary-bar.state
 - apply-display-profile.sh also reads this state file, so monitor-change events keep the override applied while the bar is hidden
 - Edit for: gap value (default 10 = matches outer.left/right/bottom), changing target monitor
+
+`./scripts/aerospace-restart.sh`
+- Full restart of the whole window-manager stack — wired to the `aerostart` shell alias (`zsh/alias/osx.zsh`)
+- Stop phase: `launchctl bootout` the three LaunchAgents (display-profile, empty-watcher, autoraise — they're KeepAlive so a plain kill respawns them) then `killall` AeroSpace, sketchybar, borders, AutoRaise
+- Start phase: `open -a AeroSpace` (its after-startup-command relaunches sketchybar + borders), waits for AeroSpace to be up, then `launchctl bootstrap` the three LaunchAgents again
+- Edit for: which agents/processes are cycled, start/stop ordering
 
 `./configs/autoraise/config`
 - AutoRaise config — focus-follows-mouse (hover a window to focus it), the piece AeroSpace doesn't do natively (it only does the inverse, mouse-follows-focus)
