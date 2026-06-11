@@ -49,13 +49,18 @@ default-root-container-orientation = 'auto'
 # Fallback value (if you omit the key): on-focused-monitor-changed = []
 on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
 
-# Mouse follows focus on every focus change (keyboard alt+hjkl, app switch, etc).
-# Pairs with AutoRaise's focus-follows-mouse (see configs/autoraise/) so the cursor
-# and keyboard focus stay in sync — after a keyboard focus change the cursor is
-# already on the focused window, so AutoRaise won't yank focus back somewhere else.
-# 'window-lazy-center' only warps the cursor if it isn't already over the focused
-# window, so there's no jitter when the two tools already agree.
-on-focus-changed = ['move-mouse window-lazy-center']
+# Mouse-follows-focus is intentionally NOT global. on-focus-changed fires for
+# EVERY focus change — including the mouse-driven ones AutoRaise triggers when the
+# cursor crosses a window border — so a global 'move-mouse' here recentered the
+# cursor whenever you merely moused over another window (annoying). Instead the
+# warp is attached explicitly to the keyboard / app-switch bindings below
+# (alt+hjkl focus, alt+1-9 & alt-tab workspace, alt-shift+1-9 move-follow) and to
+# open-dock-app.sh (cmd+1-9). That way only deliberate shortcut-driven focus
+# changes recenter the cursor; manual mouse movement never does.
+# Still pairs with AutoRaise's focus-follows-mouse (see configs/autoraise/): after
+# a keyboard focus change the cursor is warped onto the new window, so AutoRaise
+# won't immediately yank focus back to wherever the cursor used to be.
+on-focus-changed = []
 
 # You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
 # Useful if you don't use this macOS feature, but accidentally hit cmd-h or cmd-alt-h key
@@ -145,10 +150,14 @@ on-mode-changed = []
     alt-comma = 'layout accordion horizontal vertical'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#focus
-    alt-h = 'focus left'
-    alt-j = 'focus down'
-    alt-k = 'focus up'
-    alt-l = 'focus right'
+    # Append move-mouse so the cursor follows keyboard focus to the new window
+    # (mouse-follows-focus is no longer a global on-focus-changed callback — see
+    # above). The warp also keeps AutoRaise from yanking focus back to the window
+    # the cursor was sitting over.
+    alt-h = ['focus left', 'move-mouse window-lazy-center']
+    alt-j = ['focus down', 'move-mouse window-lazy-center']
+    alt-k = ['focus up', 'move-mouse window-lazy-center']
+    alt-l = ['focus right', 'move-mouse window-lazy-center']
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move
     # Append move-mouse so the cursor trails the moved window: a 'move' keeps focus
@@ -165,33 +174,35 @@ on-mode-changed = []
     alt-equal = 'resize smart +50'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace
-    alt-1 = 'workspace 1'
-    alt-2 = 'workspace 2'
-    alt-3 = 'workspace 3'
-    alt-4 = 'workspace 4'
-    alt-5 = 'workspace 5'
-    alt-6 = 'workspace 6'
-    alt-7 = 'workspace 7'
-    alt-8 = 'workspace 8'
-    alt-9 = 'workspace 9'
+    # move-mouse appended so the cursor lands on the focused window of the
+    # switched-to workspace (mouse-follows-focus is no longer global).
+    alt-1 = ['workspace 1', 'move-mouse window-lazy-center']
+    alt-2 = ['workspace 2', 'move-mouse window-lazy-center']
+    alt-3 = ['workspace 3', 'move-mouse window-lazy-center']
+    alt-4 = ['workspace 4', 'move-mouse window-lazy-center']
+    alt-5 = ['workspace 5', 'move-mouse window-lazy-center']
+    alt-6 = ['workspace 6', 'move-mouse window-lazy-center']
+    alt-7 = ['workspace 7', 'move-mouse window-lazy-center']
+    alt-8 = ['workspace 8', 'move-mouse window-lazy-center']
+    alt-9 = ['workspace 9', 'move-mouse window-lazy-center']
     # alt-a = 'workspace A' # In your config, you can drop workspace bindings that you don't need
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
     # Each move also triggers sketchybar update to refresh workspace app lists
     # --focus-follows-window: switch to the destination workspace after the move
-    alt-shift-1 = ['move-node-to-workspace --focus-follows-window 1', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-2 = ['move-node-to-workspace --focus-follows-window 2', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-3 = ['move-node-to-workspace --focus-follows-window 3', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-4 = ['move-node-to-workspace --focus-follows-window 4', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-5 = ['move-node-to-workspace --focus-follows-window 5', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-6 = ['move-node-to-workspace --focus-follows-window 6', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-7 = ['move-node-to-workspace --focus-follows-window 7', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-8 = ['move-node-to-workspace --focus-follows-window 8', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-9 = ['move-node-to-workspace --focus-follows-window 9', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-1 = ['move-node-to-workspace --focus-follows-window 1', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-2 = ['move-node-to-workspace --focus-follows-window 2', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-3 = ['move-node-to-workspace --focus-follows-window 3', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-4 = ['move-node-to-workspace --focus-follows-window 4', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-5 = ['move-node-to-workspace --focus-follows-window 5', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-6 = ['move-node-to-workspace --focus-follows-window 6', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-7 = ['move-node-to-workspace --focus-follows-window 7', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-8 = ['move-node-to-workspace --focus-follows-window 8', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-9 = ['move-node-to-workspace --focus-follows-window 9', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
     # alt-shift-a = 'move-node-to-workspace A'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
-    alt-tab = 'workspace-back-and-forth'
+    alt-tab = ['workspace-back-and-forth', 'move-mouse window-lazy-center']
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-workspace-to-monitor
     alt-shift-tab = 'move-workspace-to-monitor --wrap-around next'
 

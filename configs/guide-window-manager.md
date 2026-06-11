@@ -52,8 +52,8 @@
 - alt+shift+; then p triggers aerospace/performance-mode.sh (toggles UI overhead reduction)
 - alt+shift+; then b triggers aerospace/secondary-bar-toggle.sh (hides/shows SketchyBar on secondary monitor)
 - CrossOver auto-floated via on-window-detected rule (prevents tiling conflicts with games)
-- `on-focus-changed = ['move-mouse window-lazy-center']`: mouse-follows-focus — warps the cursor to the focused window on every focus change (keyboard alt+hjkl, app switch). Pairs with AutoRaise's focus-follows-mouse (see `./configs/autoraise/`) to keep cursor + keyboard focus in sync. `lazy` = no warp if the cursor is already on the target (avoids jitter)
-- `alt-shift-hjkl` move bindings append `move-mouse window-lazy-center` so the cursor trails a moved window (a `move` keeps focus, so on-focus-changed alone wouldn't fire)
+- `on-focus-changed = []`: mouse-follows-focus is deliberately NOT global. The callback fires on EVERY focus change — including the mouse-driven ones AutoRaise triggers when the cursor crosses a window border — so a global `move-mouse` here recentered the cursor on plain mouse-over (annoying). Instead the warp is attached explicitly to the shortcut bindings, so only deliberate keyboard/app-switch focus changes recenter the cursor; manual mouse movement never does
+- The `move-mouse window-lazy-center` warp is appended to: `alt-hjkl` (focus), `alt-1-9` + `alt-tab` (workspace), `alt-shift-1-9` (move-node-to-workspace --focus-follows-window), `alt-shift-hjkl` (move — a `move` keeps focus so it never relied on on-focus-changed anyway), and inside `open-dock-app.sh` for `cmd-1-9` app switches. Still pairs with AutoRaise's focus-follows-mouse (see `./configs/autoraise/`): after a keyboard focus change the cursor sits on the new window so AutoRaise won't yank focus back. `lazy` = no warp if the cursor is already on the target (avoids jitter)
 - Edit for: keybindings, workspace layout, monitor assignment, gaps
 
 `./configs/aerospace/apply-display-profile.sh`
@@ -88,6 +88,7 @@
 - After launching, spawns a backgrounded silent placement enforcer: polls `aerospace list-windows --app-bundle-id` every 200ms (cap ~18s); when the first window appears, if it landed on a non-target workspace (user navigated away mid-launch), silently relocates it with `aerospace move-node-to-workspace --window-id` (no focus follow, no workspace switch). Removes the grace marker on completion
 - If app has windows and is already focused: cycles to next window in AeroSpace's window list (wraps)
 - If app has windows but another app is focused: returns to last window focused via this script (per-app state at `/tmp/dock-cycle-<bundle_id>.state`); falls back to first window if state is missing/stale
+- After focusing (both the running-app focus path and the cold-launch path once the window lands on the target workspace), warps the cursor onto the focused window via `aerospace move-mouse window-lazy-center` — mouse-follows-focus is no longer a global on-focus-changed callback (that also recentered on manual mouse-over), so shortcut-driven app switches recenter the cursor here instead
 - State self-heals: closed windows / new window-ids after app restart drop out of the list and trigger the fallback
 - Known limitation: manual focus changes (Mission Control, dock click, new window while app is in background) don't update the state file; next CMD+N from outside the app may target the previous CMD+N window rather than the most-recently-touched
 - Fallback: if bundle id can't be read, plain `open` (old behavior)

@@ -65,6 +65,13 @@ if [[ ${#windows[@]} -eq 0 ]]; then
                 wws="${entry##*|}"
                 if [[ "$wws" != "$workspace" ]]; then
                     aerospace move-node-to-workspace --window-id "$wid" "$workspace" 2>/dev/null
+                else
+                    # Window opened on the target workspace (the one we switched to
+                    # above and are still viewing) and macOS just focused it → warp
+                    # the cursor onto it, matching the focus-path warp below. We skip
+                    # this when the window had to be relocated, because that means the
+                    # user navigated away mid-launch and we don't follow focus there.
+                    aerospace move-mouse window-lazy-center 2>/dev/null
                 fi
                 break
             fi
@@ -119,4 +126,9 @@ done
 
 [[ -n "$next_ws" ]] && aerospace workspace "$next_ws"
 aerospace focus --window-id "$next"
+# Warp the cursor onto the focused window. Mouse-follows-focus is no longer a
+# global on-focus-changed callback in aerospace.toml (that also fired on manual
+# mouse-over, recentering the cursor whenever you crossed a border). So this
+# shortcut-driven app switch recenters the cursor explicitly here instead.
+aerospace move-mouse window-lazy-center
 echo "$next" > "$state_file"
