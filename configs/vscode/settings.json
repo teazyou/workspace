@@ -1,5 +1,5 @@
 {
-    "editor.fontSize": 18,
+    "editor.fontSize": 20,
     "workbench.startupEditor": "none",
     "extensions.ignoreRecommendations": true,
     "[javascript]": {
@@ -90,11 +90,11 @@
     "claudeCode.preferredLocation": "sidebar",
     "claudeCode.useTerminal": true,
     "window.titleBarStyle": "native",
-    "window.customTitleBarVisibility": "never",
     "github.copilot.enable": {
         "plaintext": true,
         "markdown": true
     },
     "workbench.statusBar.visible": false,
-    "chat.viewSessions.orientation": "stacked"
+    "chat.viewSessions.orientation": "stacked",
+    "workbench.activityBar.location": "top"
 }
