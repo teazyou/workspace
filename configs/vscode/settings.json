@@ -96,5 +96,6 @@
     "chat.viewSessions.orientation": "stacked",
     "workbench.activityBar.location": "top",
     "claudeCode.enableNewConversationShortcut": true,
-    "claudeCode.preferredLocation": "panel"
+    "claudeCode.preferredLocation": "panel",
+    "claudeCode.useTerminal": true
 }
