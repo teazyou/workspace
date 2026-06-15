@@ -15,7 +15,7 @@
 #          that is currently non-empty.
 #       3. Hard fallback: every ws on this monitor is empty → bounce to the
 #          first ws AeroSpace lists for this monitor (aerospace.toml
-#          assignment order; today ws1 for main, ws6 for secondary).
+#          assignment order; today: ws1 for main, ws7 for secondary, ws0 for the Sidecar/third monitor).
 #       4. If target equals the (empty) visible ws → stay put.
 #
 # Bouncing a non-focused monitor: `aerospace workspace <target>` switches
@@ -115,7 +115,7 @@ while true; do
         # 3) Hard fallback: monitor is fully empty -> bounce to the first ws
         #    AeroSpace lists for this monitor. Order follows aerospace.toml's
         #    [workspace-to-monitor-force-assignment] / persistent-workspaces
-        #    declaration order (today: ws1 for main, ws6 for secondary).
+        #    declaration order (today: ws1 for main, ws7 for secondary, ws0 for the Sidecar/third monitor).
         #    L113 guard below naturally no-ops when we are already on that ws.
         if [[ -z "$target" ]]; then
             target=$(printf '%s\n' "$mon_ws_list" | awk 'NF{print; exit}')

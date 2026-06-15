@@ -71,19 +71,26 @@ automatically-unhide-macos-hidden-apps = true
 # even when they are invisible.
 # This config version is only available since 'config-version = 2'
 # Fallback value (if you omit the key): persistent-workspaces = []
-persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7"]
+persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
 
 # Assign workspaces to specific monitors
-# Workspaces 1, 2, 3, 4, 5 -> Main monitor
-# Workspaces 6, 7 -> Secondary monitor
+# Workspaces 1-6 -> Main monitor (HDMI, menu-bar display)
+# Workspaces 7-9 -> Secondary monitor (Built-in Retina)
+# Workspace  0   -> Third monitor (Sidecar / AirPlay), only when connected
+# Note: 7-9 and 0 use name regexes (not 'secondary'), which is only defined
+# for 2-monitor setups — with 3 monitors connected 'secondary' leaked ws9
+# onto the main display. Name regexes pin each to its real monitor.
 [workspace-to-monitor-force-assignment]
     1 = 'main'
     2 = 'main'
     3 = 'main'
     4 = 'main'
     5 = 'main'
-    6 = 'secondary'
-    7 = 'secondary'
+    6 = 'main'
+    7 = 'built-in.*'
+    8 = 'built-in.*'
+    9 = 'built-in.*'
+    0 = 'sidecar.*'
 
 # A callback that runs every time binding mode changes
 # See: https://nikitabobko.github.io/AeroSpace/guide#binding-modes
@@ -185,6 +192,7 @@ on-mode-changed = []
     alt-7 = ['workspace 7', 'move-mouse window-lazy-center']
     alt-8 = ['workspace 8', 'move-mouse window-lazy-center']
     alt-9 = ['workspace 9', 'move-mouse window-lazy-center']
+    alt-0 = ['workspace 0', 'move-mouse window-lazy-center']
     # alt-a = 'workspace A' # In your config, you can drop workspace bindings that you don't need
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
@@ -199,6 +207,7 @@ on-mode-changed = []
     alt-shift-7 = ['move-node-to-workspace --focus-follows-window 7', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
     alt-shift-8 = ['move-node-to-workspace --focus-follows-window 8', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
     alt-shift-9 = ['move-node-to-workspace --focus-follows-window 9', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    alt-shift-0 = ['move-node-to-workspace --focus-follows-window 0', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
     # alt-shift-a = 'move-node-to-workspace A'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth
