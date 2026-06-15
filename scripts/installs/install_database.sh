@@ -4,7 +4,9 @@
 # Purpose:
 #   Brings MySQL and PostgreSQL up to a usable state on a fresh install.
 #
-#   - Starts both as brew services so they auto-start at login.
+#   - Runs both as brew services for the setup steps below, but does NOT
+#     register them to auto-start at login (uses 'brew services run', not
+#     'start') — they stay installed and available to start manually.
 #   - Runs `mysql_secure_installation` interactively (you set the root
 #     password yourself — no credentials live in this public repo).
 #   - Creates a default postgres database matching your Unix username so
@@ -23,8 +25,10 @@ log_step "MySQL"
 if brew services list | awk '{print $1, $2}' | grep -E '^mysql started' &>/dev/null; then
     log_ok "MySQL already running"
 else
-    log_wait "Starting MySQL service ..."
-    brew services start mysql
+    log_wait "Running MySQL service for setup (not registered for login auto-start) ..."
+    # 'run' (not 'start') brings the daemon up now for mysql_secure_installation
+    # below WITHOUT registering a login LaunchAgent — so it never auto-starts.
+    brew services run mysql
     # Give the daemon a moment to come up before mysql_secure_installation.
     sleep 3
     log_ok "MySQL started"
@@ -66,8 +70,10 @@ fi
 if brew services list | awk '{print $1, $2}' | grep -E "^${PG_SERVICE} started" &>/dev/null; then
     log_ok "$PG_SERVICE already running"
 else
-    log_wait "Starting $PG_SERVICE ..."
-    brew services start "$PG_SERVICE"
+    log_wait "Running $PG_SERVICE for setup (not registered for login auto-start) ..."
+    # 'run' (not 'start'): daemon comes up now for createdb below without
+    # registering a login LaunchAgent — no auto-start at login.
+    brew services run "$PG_SERVICE"
     sleep 3
     log_ok "$PG_SERVICE started"
 fi
