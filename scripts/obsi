@@ -147,6 +147,13 @@ else
   # Real per-vault config directory.
   mkdir -p "$config_dir"
 
+  # Self-contained gitignore so this vault config dir is never committed to
+  # whatever repo the folder lives in, without modifying that repo. A single
+  # "*" ignores the entire .obsidian/ subtree (including this file). The central
+  # config has no top-level .gitignore, so the symlink loop below can never
+  # create a .obsidian/.gitignore symlink that would clash with this real file.
+  printf '%s\n' '*' > "$config_dir/.gitignore"
+
   # Symlink every non-blacklisted TOP-LEVEL central entry (files AND dirs,
   # including hidden ones) into it, using ABSOLUTE targets so the links
   # resolve regardless of cwd. -mindepth/-maxdepth 1 = top level only.
