@@ -27,8 +27,7 @@ for folder in "${CHECKPOINT_FOLDERS[@]}"; do
   # failure gets retried -- checkpoint_folder always runs git push.
   #
   # The fingerprint is a git content hash (see checkpoint_functions.sh)
-  # rather than `find -mmin`, which fails inside the iCloud-backed
-  # ~/secondbrain when this runs from a background LaunchAgent.
+  # rather than `find -mmin`, so .gitignored paths don't affect it.
   sig=$(working_tree_signature "$folder")
   sigfile="$STATE_DIR/${folder//\//_}.sig"
   prev=$(cat "$sigfile" 2>/dev/null)

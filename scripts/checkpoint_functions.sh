@@ -13,12 +13,10 @@ CHECKPOINT_FOLDERS=(
 # so the repo is safe to commit; a different one means work is still in
 # progress and the repo is skipped.
 #
-# Why git and not `find -mmin`: ~/secondbrain is a symlink into iCloud
-# Drive, a TCC-protected location. A background LaunchAgent cannot walk
-# it with `find` ("Operation not permitted"), but git keeps working.
-# Staging into a throwaway index leaves the repo's real index untouched,
-# and `git add -A` honours .gitignore, so ignored paths (logs/, the
-# state dir, ...) never affect the fingerprint.
+# Why a git content hash and not `find -mmin`: staging into a throwaway
+# index leaves the repo's real index untouched, and `git add -A` honours
+# .gitignore, so ignored paths (logs/, the state dir, ...) never affect
+# the fingerprint.
 working_tree_signature() {
   local folder="$1" tmp_index sig
   tmp_index="$(mktemp -u "${TMPDIR:-/tmp}/checkpoint-index.XXXXXX")"

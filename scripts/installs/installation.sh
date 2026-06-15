@@ -86,9 +86,6 @@ bash "$INSTALLS/install_xcode_mas.sh"
 next_step "Clone secondbrain + create ~/dev"
 bash "$INSTALLS/clone_repos.sh"
 
-next_step "Obsidian iCloud setup (move ~/secondbrain to iCloud, hide .git)"
-bash "$INSTALLS/obsidian_setup.sh"
-
 next_step "Hourly checkpoint LaunchAgent"
 bash "$INSTALLS/install_checkpoint_launchd.sh"
 

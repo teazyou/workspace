@@ -13,12 +13,12 @@ run_repo_specific_cleanup() {
 
   echo $CW8"Detected repository: $repo_id"$CWH
 
-  # --- teazyou/obsidian_secondbrain ------------------------------------
+  # --- teazyou/secondbrain ------------------------------------
   # Disabled on purpose: the hourly checkpoint job pushes this repo every
   # idle hour, so an aggressive gc here would run on the vault hourly --
   # git's built-in auto-gc is enough. Kept as a working template for
   # re-enabling it, or for adding a cleanup for another repository.
-  # if [[ "$repo_id" == "teazyou/obsidian_secondbrain" ]]; then
+  # if [[ "$repo_id" == "teazyou/secondbrain" ]]; then
   #   echo $CW8"Target repository detected. Running aggressive cleanup..."$CWH
   #   git gc --prune=now --aggressive
   #   echo $COK"Cleanup complete."$CWH
