@@ -5,30 +5,30 @@
 # After editing: `brew services` not used — restart via the LaunchAgent
 # (see com.autoraise.daemon.plist) or just `pkill AutoRaise` (KeepAlive respawns it).
 
-# How often the mouse position is polled (ms). 50 = default, light on CPU.
-pollMillis=50
+# How often the mouse position is polled (ms). 200 = deliberate/slow, very light on CPU.
+pollMillis=200
 
-# Raise/focus delay in units of pollMillis. delay=1 = snappiest: focus the
-# window under the cursor after a single ~50ms poll, with NO required mouse-stop,
-# so hover-to-focus feels instant (this is the action done constantly).
-# delay=0 would disable focusing entirely, so 1 is the floor. delay>1 would
-# re-introduce a rest-before-focus wait, which felt too slow.
+# Raise/focus delay in units of pollMillis. delay=1 = the floor (no extra delay):
+# once the mouse comes to rest (requireMouseStop below) the window under it is
+# focused after a single ~200ms poll. delay=0 would disable focusing entirely, so
+# 1 is the minimum; delay>1 would stack additional rest-before-focus waits on top.
 delay=1
 
 # Hold this key to temporarily suppress AutoRaise. "option" = alt, which is the
 # modifier behind EVERY AeroSpace binding (alt+hjkl focus, alt+shift+hjkl move,
 # alt+1-9 workspace). So the whole time you're doing keyboard window management
 # focus-follows-mouse is gated off and can't hijack the window under the cursor.
-# This is ALSO the menu-bar guard now that the delay is gone: hold alt while
-# flicking up to the Apple menu / SketchyBar and nothing on the way steals focus.
+# Also a manual guard for quick gestures: hold alt while flicking up to the Apple
+# menu / SketchyBar and nothing on the way steals focus.
 disableKey="option"
 
-# Don't wait for the mouse to halt before focusing — keeps hover-to-focus instant.
-# The single-poll delay above still debounces sub-50ms pass-throughs.
-requireMouseStop=false
+# Require the mouse to come to rest before focusing — a quick flick across a window
+# (e.g. up to the menu bar / SketchyBar) won't steal focus, only a deliberate stop does.
+requireMouseStop=true
 
-# Ignore mouse jitter smaller than this before considering a focus change.
-mouseDelta=0.1
+# Ignore mouse jitter smaller than this before considering a focus change. Raised
+# from 0.1 so small unintentional nudges while the cursor rests don't re-trigger focus.
+mouseDelta=1.0
 
 # Don't re-focus immediately after a Space/workspace change.
 ignoreSpaceChanged=true
