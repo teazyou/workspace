@@ -1,5 +1,5 @@
 {
-    "editor.fontSize": 14,
+    "editor.fontSize": 20,
     "workbench.startupEditor": "none",
     "extensions.ignoreRecommendations": true,
     "[javascript]": {
@@ -97,5 +97,6 @@
     "workbench.activityBar.location": "top",
     "claudeCode.enableNewConversationShortcut": true,
     "claudeCode.preferredLocation": "panel",
-    "claudeCode.useTerminal": true
+    "claudeCode.useTerminal": true,
+    "window.customTitleBarVisibility": "never"
 }
