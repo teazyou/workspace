@@ -5,14 +5,18 @@
 # After editing: `brew services` not used — restart via the LaunchAgent
 # (see com.autoraise.daemon.plist) or just `pkill AutoRaise` (KeepAlive respawns it).
 
-# How often the mouse position is polled (ms). 200 = deliberate/slow, very light on CPU.
-pollMillis=200
+# How often the mouse position is polled (ms) — the responsiveness knob, and the
+# floor on how fast a mouse-stop can be detected. 50 = default/snappy, light on CPU
+# (minimum 20). NOTE: a high value (e.g. 200) does NOT make focus more "deliberate",
+# it just adds latency before the stop is noticed — the deliberate / no-fly-over-steal
+# behavior comes entirely from requireMouseStop below.
+pollMillis=50
 
-# Raise/focus delay in units of pollMillis. delay=1 = the floor (no extra delay):
-# once the mouse comes to rest (requireMouseStop below) the window under it is
-# focused after a single ~200ms poll. delay=0 would disable focusing entirely, so
-# 1 is the minimum; delay>1 would stack additional rest-before-focus waits on top.
-delay=1
+# Raise/focus delay in units of pollMillis. delay=3 ≈ 100ms hover-dwell: after the
+# mouse comes to rest (enforced by requireMouseStop below) the window under it is
+# raised/focused ~100ms later (at pollMillis=50: delay=2 ≈ 50ms, delay=3 ≈ 100ms).
+# delay=0 disables raising entirely; delay=1 = no dwell (focus as soon as stopped).
+delay=3
 
 # Hold this key to temporarily suppress AutoRaise. "option" = alt, which is the
 # modifier behind EVERY AeroSpace binding (alt+hjkl focus, alt+shift+hjkl move,
