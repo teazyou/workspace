@@ -5,17 +5,15 @@
 # After editing: `brew services` not used — restart via the LaunchAgent
 # (see com.autoraise.daemon.plist) or just `pkill AutoRaise` (KeepAlive respawns it).
 
-# How often the mouse position is polled (ms) — the responsiveness knob, and the
-# floor on how fast a mouse-stop can be detected. 50 = default/snappy, light on CPU
-# (minimum 20). NOTE: a high value (e.g. 200) does NOT make focus more "deliberate",
-# it just adds latency before the stop is noticed — the deliberate / no-fly-over-steal
-# behavior comes entirely from requireMouseStop below.
-pollMillis=50
+# How often the mouse position is polled (ms). With requireMouseStop=false (below)
+# this interval IS the fly-over debounce: focus lands on whatever is under the cursor
+# at each tick, so a quick pass-through between ticks is skipped. 200 = coarse/relaxed;
+# lower = snappier but more likely to grab windows you only flick past. Minimum 20.
+pollMillis=200
 
-# Raise/focus delay in units of pollMillis. delay=1 = no dwell: as soon as the mouse
-# comes to rest (enforced by requireMouseStop below) the window under it is raised/
-# focused on the next ~50ms poll — the snappiest setting that still requires a stop.
-# delay=0 disables raising entirely; delay>1 adds a dwell (delay=2 ≈ 50ms, 3 ≈ 100ms).
+# Raise/focus delay in units of pollMillis. delay=1 = no dwell: the window under the
+# cursor is raised/focused on the next poll (~200ms at the rate above). delay=0
+# disables raising entirely; delay>1 adds a hover-dwell (each unit above 1 = one poll).
 delay=1
 
 # Hold this key to temporarily suppress AutoRaise. "option" = alt, which is the
@@ -26,9 +24,10 @@ delay=1
 # menu / SketchyBar and nothing on the way steals focus.
 disableKey="option"
 
-# Require the mouse to come to rest before focusing — a quick flick across a window
-# (e.g. up to the menu bar / SketchyBar) won't steal focus, only a deliberate stop does.
-requireMouseStop=true
+# false: don't wait for the mouse to stop — focus whatever is under the cursor at each
+# poll tick. Fly-over protection then comes from the coarse pollMillis above, not from
+# a stop requirement. Set explicitly because AutoRaise defaults requireMouseStop to true.
+requireMouseStop=false
 
 # Ignore mouse jitter smaller than this before considering a focus change. Raised
 # from 0.1 so small unintentional nudges while the cursor rests don't re-trigger focus.
