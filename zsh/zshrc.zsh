@@ -20,6 +20,9 @@ source $ZSH_CONFIGS/git.zsh
 # NVM CONFIGS
 source $ZSH_CONFIGS/nvm.zsh
 
+# ITERM2 CONFIGS (RANDOM TAB COLOR PER NEW TAB/WINDOW)
+source $ZSH_CONFIGS/iterm2.zsh
+
 # ZSH CONFIG FROM INSTALLATION FOLDER
 source $ZSH/oh-my-zsh.sh
 
