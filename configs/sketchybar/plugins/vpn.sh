@@ -5,13 +5,14 @@ source "$HOME/.config/sketchybar/colors.sh"
 
 VPN_STATUS=""
 
-# Check NordVPN connection status
-NORDVPN_STATUS=$(defaults read com.nordvpn.macos isAppWasConnectedToVPN 2>/dev/null)
-if [ "$NORDVPN_STATUS" = "1" ]; then
+# NordVPN (NordLynx/WireGuard) brings up a utun with an IPv4 in 10.5.0.0/16
+# when connected. The always-present IPv6-only utun interfaces are ignored.
+# Fallback for OpenVPN mode: broaden to /inet (10|172|100)\./ if needed.
+if ifconfig 2>/dev/null | awk '/^utun/{i=$1} /inet 10\.5\./{found=1} END{exit !found}'; then
   VPN_STATUS="connected"
 fi
 
-# Fallback: Check system VPN connections
+# Fallback: registered NetworkExtension VPN services (covers IKEv2/L2TP if ever configured)
 if [ -z "$VPN_STATUS" ]; then
   VPN_STATUS=$(scutil --nc list 2>/dev/null | grep "(Connected)")
 fi

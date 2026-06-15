@@ -10,8 +10,8 @@ GUI_DOMAIN="gui/$(id -u)"
 
 # SketchyBar items to hide/restore
 ITEMS_WITH_LABEL=(volume ram cpu battery network_down network_up)
-ITEMS_ICON_ONLY=(headset vpn wifi ethernet)
-BRACKETS=(audio traffic resources connectivity)
+ITEMS_ICON_ONLY=(headset)
+BRACKETS=(audio traffic resources)
 SPACERS=(spacer0 spacer1 spacer2 spacer3)
 
 gaming_mode_on() {
