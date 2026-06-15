@@ -84,7 +84,9 @@ APP_LIST=$(aerospace list-windows --workspace "$WORKSPACE_ID" --format '%{app-na
 
 if [ -n "$APP_LIST" ]; then
     while IFS= read -r app; do
-        if [ -n "$app" ]; then
+        # Skip Stickies: it's an always-on-top floating note, not a managed
+        # window, so it shouldn't clutter the workspace app-name list.
+        if [ -n "$app" ] && [ "$app" != "Stickies" ]; then
             SHORT_NAME=$(shorten_app_name "$app")
             if [ -z "$APPS" ]; then
                 APPS="$SHORT_NAME"
