@@ -253,3 +253,9 @@ on-mode-changed = []
 [[on-window-detected]]
 if.app-id = 'com.codeweavers.CrossOver'
 run = 'layout floating'
+
+# Float Stickies notes so AeroSpace leaves them untiled (Stickies handles its own
+# always-on-top / "Float on Top" z-order itself)
+[[on-window-detected]]
+if.app-id = 'com.apple.Stickies'
+run = 'layout floating'
