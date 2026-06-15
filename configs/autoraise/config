@@ -12,11 +12,11 @@
 # behavior comes entirely from requireMouseStop below.
 pollMillis=50
 
-# Raise/focus delay in units of pollMillis. delay=3 ≈ 100ms hover-dwell: after the
-# mouse comes to rest (enforced by requireMouseStop below) the window under it is
-# raised/focused ~100ms later (at pollMillis=50: delay=2 ≈ 50ms, delay=3 ≈ 100ms).
-# delay=0 disables raising entirely; delay=1 = no dwell (focus as soon as stopped).
-delay=3
+# Raise/focus delay in units of pollMillis. delay=1 = no dwell: as soon as the mouse
+# comes to rest (enforced by requireMouseStop below) the window under it is raised/
+# focused on the next ~50ms poll — the snappiest setting that still requires a stop.
+# delay=0 disables raising entirely; delay>1 adds a dwell (delay=2 ≈ 50ms, 3 ≈ 100ms).
+delay=1
 
 # Hold this key to temporarily suppress AutoRaise. "option" = alt, which is the
 # modifier behind EVERY AeroSpace binding (alt+hjkl focus, alt+shift+hjkl move,
