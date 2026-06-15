@@ -11,6 +11,22 @@ source "$HOME/.config/sketchybar/colors.sh"
 
 WORKSPACE_ID="$1"
 
+# First workspace of each monitor group (main=1, built-in=7, sidecar=0).
+# Must match the bracket grouping in items/spaces.sh and the
+# [workspace-to-monitor-force-assignment] block in aerospace.toml.
+GROUP_FIRST_WORKSPACES=" 1 7 0 "
+IS_GROUP_FIRST=false
+case "$GROUP_FIRST_WORKSPACES" in
+  *" $WORKSPACE_ID "*) IS_GROUP_FIRST=true ;;
+esac
+
+# Last workspace of each monitor group (main=6, built-in=9, sidecar=0).
+GROUP_LAST_WORKSPACES=" 6 9 0 "
+IS_GROUP_LAST=false
+case "$GROUP_LAST_WORKSPACES" in
+  *" $WORKSPACE_ID "*) IS_GROUP_LAST=true ;;
+esac
+
 # Function to shorten common app names
 shorten_app_name() {
     local app="$1"
@@ -112,17 +128,43 @@ else
     LABEL_COLOR="0xffb35060"  # Dark red (brighter)
 fi
 
-# Add extra padding after number when apps are present
-if [ -n "$APPS" ]; then
-    ICON_PADDING=8
-else
-    ICON_PADDING=0
+# Render in one of three states: occupied (number + apps), number-only
+# (group-first or focused/visible empty), or a minimal dot (empty filler).
+# Because the dot state swaps the icon glyph AND font, every non-dot branch
+# must reset icon/icon.font back to the number so an item never gets stuck on
+# the dot when an app appears.
+FONT="JetBrainsMono Nerd Font"
+NUM_FONT="$FONT:Bold:13.0"        # matches the static number font in spaces.sh
+DOT_GLYPH="·"
+DOT_FONT="$FONT:Bold:18.0"        # bigger + bold so the empty-marker dot is clearly visible
+DOT_COLOR="0xff6e4250"            # dim placeholder matching the inactive theme
+
+# Extra right padding for breathing room: after the leading number of a group
+# (gap between e.g. 1 and 2) and after the last item of a group (gap before the
+# bracket edge / separator).
+EDGE_PAD_R=1
+DOT_PAD_R=0
+if [ "$IS_GROUP_FIRST" = true ] || [ "$IS_GROUP_LAST" = true ]; then
+  EDGE_PAD_R=6
+fi
+if [ "$IS_GROUP_LAST" = true ]; then
+  DOT_PAD_R=6
 fi
 
-# Update the workspace item
-sketchybar --set space.$WORKSPACE_ID \
-    background.color=$BG_COLOR \
-    icon.color=$ICON_COLOR \
-    icon.padding_right=$ICON_PADDING \
-    label="$APPS" \
-    label.color=$LABEL_COLOR
+ARGS=( --set space.$WORKSPACE_ID background.color=$BG_COLOR )
+
+if [ -n "$APPS" ]; then
+  # OCCUPIED: number + app names
+  ARGS+=( icon="$WORKSPACE_ID" icon.font="$NUM_FONT" icon.color=$ICON_COLOR icon.padding_left=5 icon.padding_right=3 \
+          label="$APPS" label.color=$LABEL_COLOR label.drawing=on padding_left=1 padding_right=$EDGE_PAD_R )
+elif [ "$IS_GROUP_FIRST" = true ] || [ "$IS_VISIBLE" = true ]; then
+  # NUMBER ONLY: group-first always, or focused/visible empty so position is visible
+  ARGS+=( icon="$WORKSPACE_ID" icon.font="$NUM_FONT" icon.color=$ICON_COLOR icon.padding_left=5 icon.padding_right=0 \
+          label="" label.drawing=off padding_left=1 padding_right=$EDGE_PAD_R )
+else
+  # DOT: empty, not group-first, not visible -> minimal width
+  ARGS+=( icon="$DOT_GLYPH" icon.font="$DOT_FONT" icon.color=$DOT_COLOR icon.padding_left=2 icon.padding_right=2 \
+          label="" label.drawing=off padding_left=0 padding_right=$DOT_PAD_R )
+fi
+
+sketchybar "${ARGS[@]}"

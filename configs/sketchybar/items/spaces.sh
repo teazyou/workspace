@@ -21,14 +21,14 @@ do
     icon.color=$PINK
     icon.highlight_color=$WHITE
     icon.align=left
-    icon.padding_left=10
+    icon.padding_left=5
     icon.padding_right=0
-    padding_left=2
-    padding_right=2
+    padding_left=1
+    padding_right=1
     label.font="$FONT:Bold:13.0"
     label.color=0xaaffffff
-    label.padding_left=6
-    label.padding_right=12
+    label.padding_left=2
+    label.padding_right=6
     label.drawing=on
     label=""
     background.color=$TRANSPARENT
@@ -46,13 +46,13 @@ do
   # Add spacer after space.6 (between main and secondary workspaces)
   if [ "$sid" = "6" ]; then
     sketchybar --add item spaces_spacer_main left \
-               --set spaces_spacer_main width=5 background.drawing=off icon.drawing=off label.drawing=off
+               --set spaces_spacer_main width=3 background.drawing=off icon.drawing=off label.drawing=off
   fi
 
   # Add spacer after space.9 (between secondary and third workspaces)
   if [ "$sid" = "9" ]; then
     sketchybar --add item spaces_spacer_secondary left \
-               --set spaces_spacer_secondary width=5 background.drawing=off icon.drawing=off label.drawing=off
+               --set spaces_spacer_secondary width=3 background.drawing=off icon.drawing=off label.drawing=off
   fi
 done
 
