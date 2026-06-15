@@ -1,0 +1,14 @@
+{
+  "enabledCssSnippets": [
+    "all",
+    "theme",
+    "minimal",
+    "salem",
+    "typomagical",
+    "wombat",
+    "103.obsidianite"
+  ],
+  "baseFontSize": 18,
+  "showViewHeader": true,
+  "showRibbon": true
+}

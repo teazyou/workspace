@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "name": "Markdown"
+    },
+    {
+      "name": "Markdown (Hugo)"
+    },
+    {
+      "name": "Html"
+    },
+    {
+      "name": "TextBundle"
+    },
+    {
+      "name": "Typst"
+    },
+    {
+      "name": "PDF",
+      "customArguments": "--pdf-engine=xelatex -V mainfont=\"Arial\"",
+      "openExportedFileLocation": true,
+      "arguments": "-f ${fromFormat} --resource-path=\"${currentDir}\" --resource-path=\"${attachmentFolderPath}\" --lua-filter=\"${luaDir}/pdf.lua\" ${ options.textemplate ? `--resource-path=\"${pluginDir}/textemplate\" --template=\"${options.textemplate}\"` : `--resource-path=\"${pluginDir}/textemplate\" --template=\"dissertation2.tex\"` } -o \"${outputPath}\" -t pdf"
+    },
+    {
+      "name": "Word (.docx)"
+    },
+    {
+      "name": "OpenOffice"
+    },
+    {
+      "name": "RTF"
+    },
+    {
+      "name": "Epub"
+    },
+    {
+      "name": "Latex"
+    },
+    {
+      "name": "Media Wiki"
+    },
+    {
+      "name": "reStructuredText"
+    },
+    {
+      "name": "Textile"
+    },
+    {
+      "name": "OPML"
+    },
+    {
+      "name": "Bibliography"
+    },
+    {
+      "name": "PowerPoint (.pptx)"
+    }
+  ],
+  "pandocPath": {
+    "darwin": "/opt/homebrew/bin/pandoc"
+  },
+  "defaultExportDirectoryMode": "Custom",
+  "openExportedFile": false,
+  "env": {
+    "darwin": {
+      "PATH": "/Library/TeX/texbin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+      "HOME": "/Users/teazyou",
+      "LANG": "en_US.UTF-8"
+    }
+  },
+  "showExportProgressBar": true,
+  "customDefaultExportDirectory": {
+    "darwin": "/Users/teazyou/Downloads"
+  },
+  "openExportedFileLocation": false,
+  "showOverwriteConfirmation": false,
+  "lastExportDirectory": {
+    "darwin": "/Users/teazyou/Downloads"
+  },
+  "lastExportType": "PDF",
+  "lastEditName": "PDF"
+}
