@@ -5,21 +5,28 @@
 # Usage:  obsidian [folder]      (folder defaults to the current directory ".")
 #
 # Obsidian cannot natively share one config across vaults: every vault folder
-# needs its own ".obsidian/" directory. This command makes that ".obsidian"
-# a SYMLINK to a single central config dir, so all your vaults share the same
-# plugins / snippets / hotkeys / appearance, and then opens the folder in
-# Obsidian — the editor equivalent of `code .`.
+# needs its own ".obsidian/" directory. Rather than symlinking the WHOLE
+# ".obsidian" directory at a single central config (which forces every vault to
+# share volatile per-vault state like workspace.json / graph.json), this command
+# uses a PER-FILE model:
 #
-# Central config dir (the symlink target):
+#   <folder>/.obsidian is a REAL directory. Inside it, each shareable entry from
+#   the central config is a SYMLINK pointing at the central copy, while a small
+#   BLACKLIST of per-vault / volatile entries is left out so Obsidian creates
+#   those locally (as real files) in each vault. The result: plugins, snippets,
+#   hotkeys, appearance, etc. stay shared and centrally version-controlled, but
+#   each vault keeps its own workspace layout, graph state and recovery cache.
+#
+# Central config dir (the symlink targets live here):
 #     /Users/teazyou/workspace/configs/dot-obsidian
 #
 # Behavior:
 #   1. Resolve <folder> to an absolute path; error if missing / not a dir.
 #   2. If <folder>/.obsidian already exists (real dir OR symlink): leave it
 #      completely untouched and just open the vault.
-#   3. Otherwise: create the symlink <folder>/.obsidian -> central config,
-#      wipe the shared per-vault runtime-state files (so the new window opens
-#      clean), then open the vault.
+#   3. Otherwise: create a real <folder>/.obsidian directory, symlink every
+#      non-blacklisted top-level central entry into it (absolute targets), then
+#      open the vault. Nothing in the central config is created or deleted.
 #
 # OPEN MECHANISM (chosen + caveat):
 #   We register the vault in Obsidian's registry
@@ -45,6 +52,28 @@ set -euo pipefail
 readonly CENTRAL="/Users/teazyou/workspace/configs/dot-obsidian"
 readonly REGISTRY="$HOME/Library/Application Support/obsidian/obsidian.json"
 
+# ---- BLACKLIST -----------------------------------------------------------
+# Top-level central entries that must NOT be symlinked into a vault's
+# .obsidian. These are either repo plumbing, this launcher itself, or volatile
+# PER-VAULT runtime state that each vault should own locally (Obsidian creates
+# them as real files per folder). Edit this list to change what is shared.
+#
+# Matching is by EXACT basename, so "file-recovery" (the snapshot DIRECTORY) is
+# excluded while "file-recovery.json" (the recovery policy file) is NOT — it
+# stays shared/symlinked.
+readonly BLACKLIST=(
+  .git                  # repo metadata (not actually in CENTRAL, here for safety)
+  .gitignore            # repo plumbing
+  .DS_Store             # macOS Finder cruft
+  bin                   # this launcher script's home
+  workspace.json        # per-vault open-panes layout (volatile)
+  workspace-mobile.json # per-vault mobile layout (volatile)
+  graph.json            # per-vault graph view state (volatile)
+  file-recovery         # per-vault recovery snapshot DIRECTORY (volatile, can be large)
+  cache                 # per-vault on-disk cache (volatile)
+  .trash                # per-vault deleted-notes trash
+)
+
 usage() {
   cat <<'EOF'
 obsidian — plant the shared Obsidian config into a folder and open it.
@@ -56,15 +85,30 @@ EXAMPLES:
     obsidian .             open the current directory as an Obsidian vault
     obsidian ~/notes       open ~/notes as a vault
 
-The first time a folder is opened, a ".obsidian" symlink pointing at the
-shared central config is planted inside it. Folders that already have a
-".obsidian" (real or symlink) are opened as-is and left untouched.
+The first time a folder is opened, a REAL ".obsidian" directory is created
+inside it and each shareable entry from the central config is SYMLINKED into
+it (plugins, snippets, hotkeys, appearance, *.json settings, …). A small
+blacklist of volatile per-vault files (workspace.json, graph.json,
+file-recovery snapshots, caches, …) is left out so Obsidian creates those
+locally per vault. Folders that already have a ".obsidian" (real or symlink)
+are opened as-is and left completely untouched.
+
+Nothing in the central config is ever created or deleted by this command.
 
 Central config: /Users/teazyou/workspace/configs/dot-obsidian
 EOF
 }
 
 err() { printf 'obsidian: %s\n' "$1" >&2; }
+
+# Is $1 an exact-basename match against any BLACKLIST entry?
+is_blacklisted() {
+  local name="$1" b
+  for b in "${BLACKLIST[@]}"; do
+    [[ "$name" == "$b" ]] && return 0
+  done
+  return 1
+}
 
 case "${1-}" in
   -h|--help) usage; exit 0 ;;
@@ -85,10 +129,10 @@ fi
 # Absolute, symlink-resolved path. cd+pwd handles spaces and relative paths.
 folder="$(cd "$raw_folder" && pwd -P)"
 
-config_link="$folder/.obsidian"
+config_dir="$folder/.obsidian"
 
-# ---- 2/3. Plant symlink + clean state (only if no .obsidian yet) ----------
-if [[ -e "$config_link" || -L "$config_link" ]]; then
+# ---- 2/3. Plant per-file symlinks (only if no .obsidian yet) --------------
+if [[ -e "$config_dir" || -L "$config_dir" ]]; then
   # Already has a .obsidian (real dir, or an existing symlink). Leave it alone.
   printf 'obsidian: %s already has a .obsidian — opening as-is\n' "$folder"
 else
@@ -96,18 +140,25 @@ else
     err "central config dir not found: $CENTRAL"
     exit 1
   fi
-  ln -s "$CENTRAL" "$config_link"
-  printf 'obsidian: linked %s/.obsidian -> %s\n' "$folder" "$CENTRAL"
 
-  # Wipe shared per-vault runtime state so the new window opens clean. These
-  # live directly in the central dir and are reachable through the new symlink;
-  # they are git-ignored and regenerated by Obsidian.
-  rm -rf -- \
-    "$CENTRAL/workspace.json" \
-    "$CENTRAL/workspace-mobile.json" \
-    "$CENTRAL/graph.json" \
-    "$CENTRAL/file-recovery.json" \
-    "$CENTRAL/file-recovery"
+  # Real per-vault config directory.
+  mkdir -p "$config_dir"
+
+  # Symlink every non-blacklisted TOP-LEVEL central entry (files AND dirs,
+  # including hidden ones) into it, using ABSOLUTE targets so the links
+  # resolve regardless of cwd. -mindepth/-maxdepth 1 = top level only.
+  linked=0
+  while IFS= read -r -d '' entry; do
+    name="$(basename "$entry")"
+    if is_blacklisted "$name"; then
+      continue
+    fi
+    ln -s "$CENTRAL/$name" "$config_dir/$name"
+    linked=$((linked + 1))
+  done < <(find "$CENTRAL" -mindepth 1 -maxdepth 1 -print0)
+
+  printf 'obsidian: created real %s with %d shared symlink(s) into %s\n' \
+    "$config_dir" "$linked" "$CENTRAL"
 fi
 
 # ---- 4. Open the vault ----------------------------------------------------
