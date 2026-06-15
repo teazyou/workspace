@@ -79,22 +79,29 @@ get_monitors_config() {
     local current_name=""
     local current_res=""
     local is_retina=false
+    local is_main=false
 
     while IFS= read -r line; do
         # Detect monitor name (e.g., "Color LCD:", "Display:")
         if [[ "$line" =~ ^[[:space:]]+([A-Za-z].+):$ ]]; then
             # Save previous monitor if exists
             if [[ -n "$current_name" && -n "$current_res" ]]; then
-                monitors+=("$current_name|$current_res|$is_retina")
+                monitors+=("$current_name|$current_res|$is_retina|$is_main")
             fi
             current_name="${BASH_REMATCH[1]}"
             current_res=""
             is_retina=false
+            is_main=false
         fi
 
         # Detect Retina display (built-in or external Retina)
         if [[ "$line" =~ "Retina" ]]; then
             is_retina=true
+        fi
+
+        # Detect the main display (carries the menu bar)
+        if [[ "$line" =~ Main\ Display:\ Yes ]]; then
+            is_main=true
         fi
 
         # Detect resolution (take first resolution line per monitor)
@@ -105,7 +112,7 @@ get_monitors_config() {
 
     # Don't forget last monitor
     if [[ -n "$current_name" && -n "$current_res" ]]; then
-        monitors+=("$current_name|$current_res|$is_retina")
+        monitors+=("$current_name|$current_res|$is_retina|$is_main")
     fi
 
     # Output monitor info
@@ -116,8 +123,9 @@ get_monitors_config() {
 build_top_gap_config() {
     local -a gap_entries=()
     local default_gap=30
+    local main_gap=""
 
-    while IFS='|' read -r name res is_retina; do
+    while IFS='|' read -r name res is_retina is_main; do
         [[ -z "$name" ]] && continue
 
         # Extract width and height
@@ -125,6 +133,11 @@ build_top_gap_config() {
         local height="${res#*x}"
         local gap
         gap=$(calculate_top_gap "$width" "$height" "$is_retina")
+
+        # Remember the gap of the main display (the one with the menu bar)
+        if [[ "$is_main" == "true" ]]; then
+            main_gap="$gap"
+        fi
 
         # Build monitor pattern for TOML
         # Use lowercase name for matching
@@ -150,31 +163,33 @@ build_top_gap_config() {
         fi
     done < <(get_monitors_config)
 
-    # When SketchyBar is hidden on the secondary monitor, override its top
-    # gap so windows reclaim the freed bar space. Pattern-matched first so
-    # it wins over the per-name entries below.
+    # When SketchyBar is hidden on the secondary monitors, keep the bar gap
+    # only on the main monitor (where the bar still shows) and reclaim the
+    # freed top space on every other monitor — regardless of monitor count.
+    # The old `monitor.secondary` keyword only works for 2-monitor setups,
+    # so use `monitor.main` + a small default instead.
     local bar_state_file="/tmp/secondary-bar.state"
-    local secondary_override=""
+    local bar_off=false
     if [[ -f "$bar_state_file" ]] && [[ "$(cat "$bar_state_file" 2>/dev/null)" == "off" ]]; then
-        secondary_override="{ monitor.secondary = 10 }"
-        log "Secondary bar hidden — prepending secondary gap override (10)"
+        bar_off=true
     fi
 
     # Build final config string
     if (( ${#gap_entries[@]} == 0 )); then
         echo "$default_gap"
     elif (( ${#gap_entries[@]} == 1 )); then
-        # Single monitor - just use the value (no secondary override possible)
+        # Single monitor - always main; bar-off doesn't apply.
         local single_gap="${gap_entries[0]}"
         single_gap="${single_gap#*= }"
         single_gap="${single_gap% \}}"
         echo "$single_gap"
+    elif [[ "$bar_off" == "true" && -n "$main_gap" ]]; then
+        # Bar hidden on secondaries: keep main's gap, reclaim to 10 elsewhere.
+        log "Secondary bar hidden — keeping main gap ($main_gap), reclaiming others to 10"
+        echo "[{ monitor.main = $main_gap }, 10]"
     else
-        # Multiple monitors - use array format
+        # Multiple monitors - use array format (per-resolution entries).
         local result="["
-        if [[ -n "$secondary_override" ]]; then
-            result+="$secondary_override, "
-        fi
         for entry in "${gap_entries[@]}"; do
             result+="$entry, "
         done

@@ -60,7 +60,8 @@
 - Auto-adjusts AeroSpace outer.top gap based on connected monitor resolutions
 - Uses lookup table for common resolutions (4K, 1440p, 1080p, MacBook Retina)
 - Detects display changes via fingerprint, updates aerospace.toml, reloads config
-- Reads /tmp/secondary-bar.state — when "off", prepends `{ monitor.secondary = 10 }` so the bar-hidden state survives monitor changes
+- Single source of truth for outer.top — detects the main display via `Main Display: Yes` in system_profiler and tracks its gap (main_gap)
+- Reads /tmp/secondary-bar.state — when "off" (2+ monitors, main detected), emits `[{ monitor.main = <main_gap> }, 10]` so the bar gap stays only on the main monitor (where the bar still shows) and all other monitors reclaim to 10, regardless of monitor count; otherwise keeps the per-resolution multi-entry array. The old `monitor.secondary` override is gone (it only worked for 2-monitor setups)
 - Edit for: gap values per resolution, adding new resolution mappings
 
 `./configs/aerospace/com.aerospace.display-profile.plist`
@@ -131,15 +132,15 @@
 - Edit for: MRU cap size, lock timeout
 
 `./configs/aerospace/secondary-bar-toggle.sh`
-- Toggles SketchyBar visibility on the secondary monitor (alt+shift+; then b via aerospace.toml service mode)
-- ON: `sketchybar --bar display=all` + removes `{ monitor.secondary = 10 }` override from outer.top
-- OFF: `sketchybar --bar display=main` + prepends `{ monitor.secondary = 10 }` override to outer.top so windows reclaim the freed bar space
-- Edits aerospace.toml via awk + tempfile + cp (writes through the symlink at ~/.aerospace.toml)
-- Then runs `aerospace reload-config` to apply the new gaps
-- Orthogonal to performance mode: only flips the bar's display target and the secondary outer.top, leaves per-item drawing state alone
+- Toggles SketchyBar visibility on the secondary monitors (alt+shift+; then b via aerospace.toml service mode)
+- ON: `sketchybar --bar display=all` + `rm -f` the state file
+- OFF: `sketchybar --bar display=main` + writes `off` to the state file
+- Does NOT edit outer.top itself anymore — after writing the state (state written BEFORE the generator runs), it delegates gap regeneration to `apply-display-profile.sh --force`, the single source of truth. When off, the generator emits `[{ monitor.main = <main_gap> }, 10]` so non-main monitors reclaim the freed bar space; works for any monitor count
+- No own `aerospace reload-config` — the generator runs reload itself (avoids a double reload)
+- Orthogonal to performance mode: only flips the bar's display target and the bar state, leaves per-item drawing state alone
 - State tracked via /tmp/secondary-bar.state
-- apply-display-profile.sh also reads this state file, so monitor-change events keep the override applied while the bar is hidden
-- Edit for: gap value (default 10 = matches outer.left/right/bottom), changing target monitor
+- apply-display-profile.sh also reads this state file, so monitor-change events keep the bar-hidden gaps applied while the bar is hidden
+- Edit for: changing target monitor (display=main); gap behavior lives in apply-display-profile.sh
 
 `./scripts/aerospace-restart.sh`
 - Full restart of the whole window-manager stack — wired to the `aerostart` shell alias (`zsh/alias/osx.zsh`)
