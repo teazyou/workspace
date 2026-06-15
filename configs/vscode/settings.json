@@ -1,5 +1,5 @@
 {
-    "editor.fontSize": 20,
+    "editor.fontSize": 17,
     "workbench.startupEditor": "none",
     "extensions.ignoreRecommendations": true,
     "[javascript]": {
