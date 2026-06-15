@@ -54,18 +54,21 @@ readonly REGISTRY="$HOME/Library/Application Support/obsidian/obsidian.json"
 
 # ---- BLACKLIST -----------------------------------------------------------
 # Top-level central entries that must NOT be symlinked into a vault's
-# .obsidian. These are either repo plumbing, this launcher itself, or volatile
-# PER-VAULT runtime state that each vault should own locally (Obsidian creates
-# them as real files per folder). Edit this list to change what is shared.
+# .obsidian. These are volatile PER-VAULT runtime state that each vault should
+# own locally (Obsidian creates them as real files per folder), plus a couple of
+# harmless safety entries. Edit this list to change what is shared.
 #
 # Matching is by EXACT basename, so "file-recovery" (the snapshot DIRECTORY) is
 # excluded while "file-recovery.json" (the recovery policy file) is NOT — it
 # stays shared/symlinked.
+#
+# NOTE: the launcher script and a per-config .gitignore no longer live in
+# CENTRAL — the script moved to scripts/obsi and its ignore rules were merged
+# into the repo's main .gitignore — so the old "bin" and ".gitignore" entries
+# are dropped: they can never appear as central entries to symlink.
 readonly BLACKLIST=(
   .git                  # repo metadata (not actually in CENTRAL, here for safety)
-  .gitignore            # repo plumbing
   .DS_Store             # macOS Finder cruft
-  bin                   # this launcher script's home
   workspace.json        # per-vault open-panes layout (volatile)
   workspace-mobile.json # per-vault mobile layout (volatile)
   graph.json            # per-vault graph view state (volatile)

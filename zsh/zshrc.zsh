@@ -29,6 +29,7 @@ source $ZSH/oh-my-zsh.sh
 # ALIAS
 source $ZSH_ALIAS/osx.zsh
 source $ZSH_ALIAS/navigation.zsh
+source $ZSH_ALIAS/obsidian.zsh
 source $ZSH_ALIAS/git.zsh
 source $ZSH_ALIAS/installations.zsh
 source $ZSH_ALIAS/checkpoint.zsh

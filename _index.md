@@ -7,7 +7,7 @@
 ```
 configs/    app configs (aerospace, sketchybar, borders, autoraise, vscode, iterm2)
 zsh/        ~/.zshrc + sourced configs and aliases
-scripts/    install/system scripts (installs/, git/, checkpoint)
+scripts/    install/system scripts (installs/, git/, checkpoint, obsi)
 functions/  shared SH helpers sourced by scripts
 logs/       runtime logs + checkpoint state (gitignored)
 ```
@@ -28,13 +28,14 @@ App configuration; the window-manager stack (aerospace + sketchybar + borders + 
 - `configs/autoraise/com.autoraise.daemon.plist` — AutoRaise LaunchAgent — `← ~/Library/LaunchAgents/`.
 - `configs/vscode/settings.json` — VS Code user settings — `← ~/Library/Application Support/Code/User/settings.json`.
 - `configs/iterm2/com.googlecode.iterm2.plist` — iTerm2 prefs (manual export/import; not symlinked).
+- `configs/dot-obsidian/` — central Obsidian config (plugins, snippets, hotkeys, appearance, *.json settings). Not symlinked as a whole; the `obsi` launcher (`scripts/obsi`) plants per-file symlinks from each vault's `.obsidian/` to entries here. Per-vault runtime state (workspace.json, graph.json, file-recovery/, cache/, .trash/) is gitignored — see `.gitignore`.
 
 ## zsh
 Shell setup; `zshrc.zsh` is the entry point that sources everything else.
 - `zsh/zshrc.zsh` — `~/.zshrc` source-of-truth; sources every config + alias below — `← ~/.zshrc`. *Edit when: changing what loads at shell startup.*
 - `zsh/configs/path.zsh` — exports `WORKSPACE`/`SCRIPTS`/`ZSH_*` path vars used everywhere. *Edit when: adding a new sourced dir or PATH entry.*
 - `zsh/configs/*.zsh` — startup configs: `colors.zsh`, `oh-my-zsh.zsh` (theme/plugins), `git.zsh`, `nvm.zsh`, `iterm2.zsh`.
-- `zsh/alias/*.zsh` — alias groups by topic: `osx.zsh`, `navigation.zsh`, `git.zsh`, `installations.zsh`, `checkpoint.zsh`. *Edit when: adding a terminal alias.*
+- `zsh/alias/*.zsh` — alias groups by topic: `osx.zsh`, `navigation.zsh`, `obsidian.zsh` (the `obsi` vault launcher → `scripts/obsi`), `git.zsh`, `installations.zsh`, `checkpoint.zsh`. *Edit when: adding a terminal alias.*
 
 ## scripts
 Install, git, system, and checkpoint scripts.
@@ -49,6 +50,7 @@ Install, git, system, and checkpoint scripts.
 - `scripts/checkpoint_all.sh`, `checkpoint_functions.sh` — manual checkpoint runner + shared logic; `CHECKPOINT_FOLDERS` lists watched repos (`~/workspace`, `~/secondbrain`). *Edit when: changing which repos auto-checkpoint.*
 - `scripts/aerospace-restart.sh` — full restart of the WM stack (aerospace, sketchybar, borders, LaunchAgents).
 - `scripts/dstore.sh` — recursively delete `.DS_Store` files; used by the git scripts (`silent` mode).
+- `scripts/obsi` — Obsidian vault launcher: opens a folder as a vault, planting per-file symlinks from its `.obsidian/` to the central `configs/dot-obsidian` config. Fronted by `zsh/alias/obsidian.zsh` (`obsi [folder]`). *Edit when: changing which central entries are shared (BLACKLIST) or the open mechanism.*
 
 ## functions
 Shared SH helpers sourced by other scripts.
@@ -57,5 +59,5 @@ Shared SH helpers sourced by other scripts.
 ## Optional / low-touch
 - `logs/` — runtime output, gitignored except `.gitkeep`: `checkpoint_cron.log`, `checkpoint_launchd.{out,err}.log`, `checkpoint_state/*.sig` (per-repo content fingerprints).
 - `.claude/CLAUDE.md` — project instructions for Claude (intended purpose, constraints).
-- `.gitignore` — ignores `.DS_Store`, `*.bak`, `logs/*`, install idempotency markers.
+- `.gitignore` — ignores `.DS_Store`, `*.bak`, `logs/*`, install idempotency markers, and the scoped `configs/dot-obsidian/` per-vault runtime state (workspace.json, graph.json, file-recovery/, cache/, .trash/). *(Per-config `.gitignore` files are not used; rules are consolidated here.)*
 - `request.md` — scratch/throwaway note (not part of the config system).

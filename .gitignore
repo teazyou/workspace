@@ -8,3 +8,15 @@ logs/*
 # Install-script idempotency markers (live in $HOME, but ignore here as a
 # safety net in case the repo ever gets cloned into ~ or paths change).
 .workspace_mysql_secured
+
+# dot-obsidian (per-vault runtime state — never committed)
+# Volatile per-vault/per-window state Obsidian regenerates in the central
+# config dir; scoped to the subtree so nothing else in the repo is affected.
+# (.DS_Store and *.bak are already ignored globally above.)
+configs/dot-obsidian/workspace.json
+configs/dot-obsidian/workspace-mobile.json
+configs/dot-obsidian/graph.json
+configs/dot-obsidian/file-recovery/
+configs/dot-obsidian/cache/
+configs/dot-obsidian/.trash/
+configs/dot-obsidian/*.bak
