@@ -154,7 +154,8 @@
 - Installed via `brew tap dimentium/autoraise && brew install autoraise` (binary at `/opt/homebrew/bin/AutoRaise`)
 - Symlinked to `~/.config/AutoRaise/config` (the path AutoRaise reads); format is `key=value`, one per line
 - `disableKey="option"`: holding alt fully suppresses AutoRaise. Since every AeroSpace binding is alt-based (alt+hjkl focus, alt+shift+hjkl move, alt+1-9 workspace), focus-follows-mouse is gated off during all keyboard window management — the cursor can't hijack the window you're manipulating
-- `delay=2` + `requireMouseStop=true`: the cursor must rest ~100ms on a window before focusing, so a quick flick up to the menu bar / SketchyBar doesn't steal focus from the windows it crosses
+- `pollMillis=200` + `delay=1` + `requireMouseStop=true`: the cursor must come to a deliberate rest on a window and is then focused after one ~200ms poll, so a quick flick up to the menu bar / SketchyBar doesn't steal focus from the windows it crosses (`delay=0` would disable AutoRaise entirely, so 1 is the floor)
+- `mouseDelta=1.0`: ignore pointer jitter smaller than this, so small unintentional nudges while the cursor rests don't re-trigger a focus change
 - Warping is left to AeroSpace's `on-focus-changed` callback (AutoRaise's own warp disabled) so the two tools don't fight over the cursor
 - Requires Accessibility permission (System Settings → Privacy & Security → Accessibility → add `/opt/homebrew/bin/AutoRaise`) or it runs but does nothing
 - Edit for: pollMillis, delay, disableKey, ignoreApps, mouseDelta
