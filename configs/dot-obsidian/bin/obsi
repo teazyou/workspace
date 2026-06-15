@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 #
-# obsidian — plant the shared Obsidian config into a folder and open it as a vault.
+# obsi — plant the shared Obsidian config into a folder and open it as a vault.
 #
-# Usage:  obsidian [folder]      (folder defaults to the current directory ".")
+# Usage:  obsi [folder]      (folder defaults to the current directory ".")
 #
 # Obsidian cannot natively share one config across vaults: every vault folder
 # needs its own ".obsidian/" directory. Rather than symlinking the WHOLE
@@ -76,14 +76,14 @@ readonly BLACKLIST=(
 
 usage() {
   cat <<'EOF'
-obsidian — plant the shared Obsidian config into a folder and open it.
+obsi — plant the shared Obsidian config into a folder and open it.
 
 USAGE:
-    obsidian [folder]      folder defaults to "." (current directory)
+    obsi [folder]      folder defaults to "." (current directory)
 
 EXAMPLES:
-    obsidian .             open the current directory as an Obsidian vault
-    obsidian ~/notes       open ~/notes as a vault
+    obsi .             open the current directory as an Obsidian vault
+    obsi ~/notes       open ~/notes as a vault
 
 The first time a folder is opened, a REAL ".obsidian" directory is created
 inside it and each shareable entry from the central config is SYMLINKED into
@@ -99,7 +99,7 @@ Central config: /Users/teazyou/workspace/configs/dot-obsidian
 EOF
 }
 
-err() { printf 'obsidian: %s\n' "$1" >&2; }
+err() { printf 'obsi: %s\n' "$1" >&2; }
 
 # Is $1 an exact-basename match against any BLACKLIST entry?
 is_blacklisted() {
@@ -134,7 +134,7 @@ config_dir="$folder/.obsidian"
 # ---- 2/3. Plant per-file symlinks (only if no .obsidian yet) --------------
 if [[ -e "$config_dir" || -L "$config_dir" ]]; then
   # Already has a .obsidian (real dir, or an existing symlink). Leave it alone.
-  printf 'obsidian: %s already has a .obsidian — opening as-is\n' "$folder"
+  printf 'obsi: %s already has a .obsidian — opening as-is\n' "$folder"
 else
   if [[ ! -d "$CENTRAL" ]]; then
     err "central config dir not found: $CENTRAL"
@@ -157,7 +157,7 @@ else
     linked=$((linked + 1))
   done < <(find "$CENTRAL" -mindepth 1 -maxdepth 1 -print0)
 
-  printf 'obsidian: created real %s with %d shared symlink(s) into %s\n' \
+  printf 'obsi: created real %s with %d shared symlink(s) into %s\n' \
     "$config_dir" "$linked" "$CENTRAL"
 fi
 
@@ -232,11 +232,11 @@ open "obsidian://open?path=$encoded"
 # If we just registered a NEW vault while Obsidian is already running, the
 # running instance may have a cached registry and ignore the URI. Warn once.
 if [[ "$already_registered" -eq 0 ]] && pgrep -x Obsidian >/dev/null 2>&1; then
-  printf 'obsidian: opened %s.\n' "$folder"
-  printf 'obsidian: note — this folder was newly registered while Obsidian was\n'
+  printf 'obsi: opened %s.\n' "$folder"
+  printf 'obsi: note — this folder was newly registered while Obsidian was\n'
   printf '          already running. If the window did not appear, quit Obsidian\n'
   printf '          (Cmd-Q) and run this command again; the registry is cached\n'
   printf '          at launch.\n'
 else
-  printf 'obsidian: opened %s\n' "$folder"
+  printf 'obsi: opened %s\n' "$folder"
 fi
