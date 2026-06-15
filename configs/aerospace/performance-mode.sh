@@ -9,9 +9,9 @@ DISPLAY_PROFILE_PLIST="$HOME/Library/LaunchAgents/com.aerospace.display-profile.
 GUI_DOMAIN="gui/$(id -u)"
 
 # SketchyBar items to hide/restore
-ITEMS_WITH_LABEL=(volume ram cpu battery network_down network_up)
+ITEMS_WITH_LABEL=(volume network_down network_up)
 ITEMS_ICON_ONLY=(headset)
-BRACKETS=(audio traffic resources)
+BRACKETS=(audio traffic)
 SPACERS=(spacer0 spacer1 spacer2 spacer3)
 
 gaming_mode_on() {
