@@ -2,7 +2,6 @@
 workspace.json
 workspace-mobile.json
 graph.json
-file-recovery.json
 file-recovery/
 # Caches / OS noise
 cache/
