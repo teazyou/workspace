@@ -47,7 +47,7 @@
 - Main AeroSpace tiling window manager config
 - Defines keybindings (alt+hjkl=focus, alt+shift+hjkl=move, alt+1-9=workspace)
 - Configures gaps, monitors assignment, startup commands
-- Launches sketchybar+borders on startup
+- Launches sketchybar+borders on startup, then applies the default modes (performance mode ON + the bar hidden on secondary monitors) once the bar is up — a third `after-startup-command` waits for the bar items, resets the `/tmp` state files, and runs `secondary-bar-toggle.sh` then `performance-mode.sh` from their clean state, so each (re)start re-establishes the defaults deterministically
 - App launchers via cmd+1-9 use open-dock-app.sh: if the app isn't running, open it on workspace N (matching the Dock position); if running, focus it (cycles through its windows on repeated presses, returns to last-focused window when coming from another app)
 - alt+shift+; then p triggers aerospace/performance-mode.sh (toggles UI overhead reduction)
 - alt+shift+; then b triggers aerospace/secondary-bar-toggle.sh (hides/shows SketchyBar on secondary monitor)
@@ -102,6 +102,7 @@
 - OFF: restores everything, restarts borders, reloads LaunchAgent, re-enables all items
 - Keeps workspace spaces (left) and time/date (right) always visible
 - State tracked via /tmp/performance-mode.state
+- Default at startup: ON — aerospace.toml's after-startup-command clears /tmp/performance-mode.state then runs this script, and no state ⇒ the toggle lands ON
 - Edit for: which items to hide/show, notification messages
 
 `./configs/aerospace/com.aerospace.empty-watcher.plist`
@@ -141,6 +142,7 @@
 - Orthogonal to performance mode: only flips the bar's display target and the bar state, leaves per-item drawing state alone
 - State tracked via /tmp/secondary-bar.state
 - apply-display-profile.sh also reads this state file, so monitor-change events keep the bar-hidden gaps applied while the bar is hidden
+- Default at startup: hidden (OFF) — aerospace.toml's after-startup-command clears /tmp/secondary-bar.state then runs this script, and no state ⇒ the toggle lands OFF/hidden
 - Edit for: changing target monitor (display=main); gap behavior lives in apply-display-profile.sh
 
 `./scripts/aerospace-restart.sh`

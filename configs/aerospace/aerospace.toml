@@ -13,7 +13,13 @@ config-version = 2
 # Launch JankyBorders with Tokyo Night theme
 after-startup-command = [
     'exec-and-forget sketchybar',
-    'exec-and-forget borders active_color=0xffe08030 inactive_color=0xff3a2a35 width=3.0 style=round hidpi=on order=above'
+    'exec-and-forget borders active_color=0xffe08030 inactive_color=0xff3a2a35 width=3.0 style=round hidpi=on order=above',
+    # Default modes at startup: performance mode ON + the bar hidden on secondary
+    # monitors. Wait for the bar items to exist, reset the /tmp state files so a
+    # (re)start re-establishes the defaults deterministically (the toggle scripts
+    # key off these states), then run each toggle from its clean state: no
+    # secondary-bar.state => OFF/hidden, no performance-mode.state => ON.
+    'exec-and-forget for i in {1..20}; do sketchybar --query volume >/dev/null 2>&1 && break; sleep 0.3; done; rm -f /tmp/performance-mode.state /tmp/secondary-bar.state; "$HOME"/workspace/configs/aerospace/secondary-bar-toggle.sh; "$HOME"/workspace/configs/aerospace/performance-mode.sh'
 ]
 
 # Notify Sketchybar about workspace change + track workspace MRU for the
