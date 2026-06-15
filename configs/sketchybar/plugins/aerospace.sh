@@ -160,8 +160,10 @@ if [ -n "$APPS" ]; then
   ARGS+=( icon="$WORKSPACE_ID" icon.font="$NUM_FONT" icon.color=$ICON_COLOR icon.padding_left=5 icon.padding_right=3 \
           label="$APPS" label.color=$LABEL_COLOR label.drawing=on padding_left=1 padding_right=$EDGE_PAD_R )
 elif [ "$IS_GROUP_FIRST" = true ] || [ "$IS_VISIBLE" = true ]; then
-  # NUMBER ONLY: group-first always, or focused/visible empty so position is visible
-  ARGS+=( icon="$WORKSPACE_ID" icon.font="$NUM_FONT" icon.color=$ICON_COLOR icon.padding_left=5 icon.padding_right=0 \
+  # NUMBER ONLY: group-first always, or focused/visible empty so position is visible.
+  # Symmetric icon padding (5/5) so the highlight bubble has room on both sides
+  # and doesn't clip the digit when the empty workspace is selected.
+  ARGS+=( icon="$WORKSPACE_ID" icon.font="$NUM_FONT" icon.color=$ICON_COLOR icon.padding_left=5 icon.padding_right=5 \
           label="" label.drawing=off padding_left=1 padding_right=$EDGE_PAD_R )
 else
   # DOT: empty, not group-first, not visible -> minimal width
