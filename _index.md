@@ -49,7 +49,7 @@ Install, git, system, and checkpoint scripts.
 - `scripts/installs/helper_prompt.sh` — `log_*` color/prompt helpers sourced by install scripts.
 - `scripts/git/g*.sh` — git workflow helpers (`gcommit`, `gcreate`, `gdelete`, `gpush`, `gstatus`); fronted by `zsh/alias/git.zsh`.
 - `scripts/checkpoint_cronjob.sh` — LaunchAgent entry: auto-commits tracked repos on a schedule, logs to `logs/`. Invoked by `~/Library/LaunchAgents/com.teazyou.checkpoint.plist` (real file, not symlinked).
-- `scripts/checkpoint_all.sh`, `checkpoint_functions.sh` — manual checkpoint runner + shared logic; `CHECKPOINT_FOLDERS` lists watched repos (`~/workspace`, `~/secondbrain`). *Edit when: changing which repos auto-checkpoint.*
+- `scripts/checkpoint_all.sh`, `checkpoint_functions.sh` — manual checkpoint runner + shared logic; `CHECKPOINT_FOLDERS` lists watched repos (`~/workspace/configs/dot-claude` (submodule, listed first so it commits before the parent gitlink), `~/workspace`, `~/secondbrain`). *Edit when: changing which repos auto-checkpoint.*
 - `scripts/aerospace-restart.sh` — full restart of the WM stack (aerospace, sketchybar, borders, LaunchAgents).
 - `scripts/dstore.sh` — recursively delete `.DS_Store` files; used by the git scripts (`silent` mode).
 - `scripts/obsi` — Obsidian vault launcher: opens a folder as a vault, planting per-file symlinks from its `.obsidian/` to the central `configs/dot-obsidian` config. Fronted by `zsh/alias/obsidian.zsh` (`obsi [folder]`). *Edit when: changing which central entries are shared (BLACKLIST) or the open mechanism.*

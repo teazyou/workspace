@@ -1,6 +1,9 @@
 #!/bin/bash
 
 CHECKPOINT_FOLDERS=(
+  # dot-claude (private submodule) is checkpointed BEFORE $HOME/workspace so its
+  # commit is pushed before the parent repo records the bumped gitlink.
+  "$HOME/workspace/configs/dot-claude"
   "$HOME/workspace"
   "$HOME/secondbrain"
 )
@@ -29,7 +32,9 @@ working_tree_signature() {
 checkpoint_folder() {
   local folder="$1"
   printf "%b[ checkpoint ] %s%b\n" "$CW8" "$folder" "$CWH"
-  if [ ! -d "$folder/.git" ]; then
+  # A normal repo has a .git directory; a submodule working tree has a .git
+  # *file* (a "gitdir:" pointer). Accept either, or git would skip submodules.
+  if [ ! -e "$folder/.git" ]; then
     echo "skip $folder (not a git repo)"
     return 1
   fi
