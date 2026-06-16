@@ -48,24 +48,22 @@ default-root-container-layout = 'tiles'
 #               tall monitor (anything higher than wide) gets vertical orientation
 default-root-container-orientation = 'auto'
 
-# Mouse follows focus when focused monitor changes
-# Drop it from your config, if you don't like this behavior
-# See https://nikitabobko.github.io/AeroSpace/guide#on-focus-changed-callbacks
-# See https://nikitabobko.github.io/AeroSpace/commands#move-mouse
-# Fallback value (if you omit the key): on-focused-monitor-changed = []
-on-focused-monitor-changed = ['move-mouse monitor-lazy-center']
-
-# Mouse-follows-focus is intentionally NOT global. on-focus-changed fires for
-# EVERY focus change — including the mouse-driven ones AutoRaise triggers when the
-# cursor crosses a window border — so a global 'move-mouse' here recentered the
-# cursor whenever you merely moused over another window (annoying). Instead the
-# warp is attached explicitly to the keyboard / app-switch bindings below
-# (alt+hjkl focus, alt+1-9 & alt-tab workspace, alt-shift+1-9 move-follow) and to
-# open-dock-app.sh (cmd+1-9). That way only deliberate shortcut-driven focus
-# changes recenter the cursor; manual mouse movement never does.
+# Mouse-follows-focus is intentionally NOT global — BOTH callbacks are empty.
+# on-focus-changed fires for EVERY focus change and on-focused-monitor-changed
+# fires whenever the focused monitor changes — including the mouse-driven ones
+# AutoRaise triggers when the cursor crosses a window/monitor border. A global
+# 'move-mouse' on either one recentered the cursor whenever you merely moused over
+# another window (e.g. passing over a picture-in-picture player on another monitor
+# warped the cursor to the focused app's center — annoying). Instead the warp is
+# attached explicitly to the keyboard / app-switch bindings below (alt+hjkl focus,
+# alt+1-9 & alt-tab workspace, alt-shift+1-9 move-follow) and to open-dock-app.sh
+# (cmd+1-9). That way only deliberate shortcut-driven focus changes recenter the
+# cursor; manual mouse movement never does.
 # Still pairs with AutoRaise's focus-follows-mouse (see configs/autoraise/): after
 # a keyboard focus change the cursor is warped onto the new window, so AutoRaise
 # won't immediately yank focus back to wherever the cursor used to be.
+# See https://nikitabobko.github.io/AeroSpace/guide#on-focus-changed-callbacks
+on-focused-monitor-changed = []
 on-focus-changed = []
 
 # You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
