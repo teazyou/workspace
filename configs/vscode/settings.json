@@ -94,7 +94,6 @@
     },
     "workbench.statusBar.visible": false,
     "chat.viewSessions.orientation": "stacked",
-    "claudeCode.enableNewConversationShortcut": true,
     "claudeCode.preferredLocation": "panel",
     "window.customTitleBarVisibility": "never",
     "workbench.activityBar.location": "top",
@@ -134,5 +133,6 @@
     "terminal.integrated.gpuAcceleration": "off",
     "window.systemColorTheme": "dark",
     "window.autoDetectColorScheme": false,
-    "breadcrumbs.enabled": false
+    "breadcrumbs.enabled": false,
+    "claudeCode.enableNewConversationShortcut": true
 }

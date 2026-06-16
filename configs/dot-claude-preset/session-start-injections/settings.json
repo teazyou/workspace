@@ -1,0 +1,27 @@
+{
+    "hooks": {
+        "SessionStart": [
+            {
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/scafolding/controllers/hook-session-start.py\" SessionStart",
+                        "statusMessage": "Loading main-agent system prompt..."
+                    }
+                ]
+            }
+        ],
+        "SubagentStart": [
+            {
+                "matcher": "*",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": "python3 \"${CLAUDE_PROJECT_DIR}/.claude/scafolding/controllers/hook-session-start.py\" SubagentStart",
+                        "statusMessage": "Loading sub-agent system prompt..."
+                    }
+                ]
+            }
+        ]
+    }
+}
