@@ -29,6 +29,7 @@ App configuration; the window-manager stack (aerospace + sketchybar + borders + 
 - `configs/vscode/settings.json` — VS Code user settings — `← ~/Library/Application Support/Code/User/settings.json`.
 - `configs/iterm2/com.googlecode.iterm2.plist` — iTerm2 prefs (manual export/import; not symlinked).
 - `configs/dot-obsidian/` — central Obsidian config (plugins, snippets, hotkeys, appearance, *.json settings). Not symlinked as a whole; the `obsi` launcher (`scripts/obsi`) plants per-file symlinks from each vault's `.obsidian/` to entries here. Per-vault runtime state (workspace.json, graph.json, file-recovery/, cache/, .trash/) is gitignored — see `.gitignore`.
+- `configs/dot-claude/` — **private git submodule** (`https://github.com/teazyou/dot-claude.git`) that **is** `~/.claude` (Claude Code): on each machine `~/.claude` is a whole-folder **symlink** → `configs/dot-claude`, so everything Claude Code writes lands in this submodule. Allowlist-style `.gitignore` (ignore-all + re-allow `settings.json`, `CLAUDE.md`, `keybindings.json`, and the `agents/ commands/ skills/ output-styles/ workflows/ hooks/` dirs; credential denylist) commits only safe config — all runtime/secret data (`projects/`, `sessions/`, `history.jsonl`, …) physically lives here but is gitignored. Secrets are protected three ways: gitignored, private repo, and a mirrored defensive allowlist for `configs/dot-claude/` in this repo's root `.gitignore` (active only if it ever stops being a submodule). *Edit when: changing which `~/.claude` config is backed up or the allowlist; keep the two allowlists in sync.*
 
 ## zsh
 Shell setup; `zshrc.zsh` is the entry point that sources everything else.
@@ -51,7 +52,6 @@ Install, git, system, and checkpoint scripts.
 - `scripts/aerospace-restart.sh` — full restart of the WM stack (aerospace, sketchybar, borders, LaunchAgents).
 - `scripts/dstore.sh` — recursively delete `.DS_Store` files; used by the git scripts (`silent` mode).
 - `scripts/obsi` — Obsidian vault launcher: opens a folder as a vault, planting per-file symlinks from its `.obsidian/` to the central `configs/dot-obsidian` config. Fronted by `zsh/alias/obsidian.zsh` (`obsi [folder]`). *Edit when: changing which central entries are shared (BLACKLIST) or the open mechanism.*
-
 ## functions
 Shared SH helpers sourced by other scripts.
 - `functions/brew.sh` — idempotent `brew` install/tap wrappers used by `scripts/installs/install_brew.sh`.

@@ -20,3 +20,40 @@ configs/dot-obsidian/file-recovery/
 configs/dot-obsidian/cache/
 configs/dot-obsidian/.trash/
 configs/dot-obsidian/*.bak
+
+# dot-claude (private submodule at configs/dot-claude) — DEFENSIVE 3rd layer.
+# While it is a submodule these rules are INERT: git tracks it as a gitlink and
+# never descends into it. They only take effect if it ever STOPS being a submodule
+# and becomes plain tracked content — then this still ignores all runtime/secret
+# data and re-allows only the same safe config the submodule's own .gitignore does.
+# Keep in sync with configs/dot-claude/.gitignore.
+configs/dot-claude/*
+!configs/dot-claude/.gitignore
+!configs/dot-claude/README.md
+!configs/dot-claude/settings.json
+!configs/dot-claude/CLAUDE.md
+!configs/dot-claude/keybindings.json
+!configs/dot-claude/agents/
+!configs/dot-claude/agents/**
+!configs/dot-claude/commands/
+!configs/dot-claude/commands/**
+!configs/dot-claude/skills/
+!configs/dot-claude/skills/**
+!configs/dot-claude/output-styles/
+!configs/dot-claude/output-styles/**
+!configs/dot-claude/workflows/
+!configs/dot-claude/workflows/**
+!configs/dot-claude/hooks/
+!configs/dot-claude/hooks/**
+# credential denylist (last match wins)
+configs/dot-claude/settings.local.json
+configs/dot-claude/**/.credentials.json
+configs/dot-claude/**/credentials.json
+configs/dot-claude/**/*.pem
+configs/dot-claude/**/*.key
+configs/dot-claude/**/*.p12
+configs/dot-claude/**/*.pfx
+configs/dot-claude/**/.env
+configs/dot-claude/**/.env.*
+configs/dot-claude/.claude.json
+configs/dot-claude/.claude.json.backup*

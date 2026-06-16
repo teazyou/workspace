@@ -1,0 +1,3 @@
+[submodule "configs/dot-claude"]
+	path = configs/dot-claude
+	url = https://github.com/teazyou/dot-claude.git
