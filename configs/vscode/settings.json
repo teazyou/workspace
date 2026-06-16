@@ -1,5 +1,5 @@
 {
-    "editor.fontSize": 17,
+    "editor.fontSize": 14,
     "workbench.startupEditor": "none",
     "extensions.ignoreRecommendations": true,
     "[javascript]": {
@@ -94,9 +94,8 @@
     },
     "workbench.statusBar.visible": false,
     "chat.viewSessions.orientation": "stacked",
-    "workbench.activityBar.location": "top",
     "claudeCode.enableNewConversationShortcut": true,
     "claudeCode.preferredLocation": "panel",
-    "claudeCode.useTerminal": true,
-    "window.customTitleBarVisibility": "never"
+    "window.customTitleBarVisibility": "never",
+    "workbench.activityBar.location": "top"
 }
