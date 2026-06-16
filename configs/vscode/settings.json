@@ -133,5 +133,6 @@
     },
     "terminal.integrated.gpuAcceleration": "off",
     "window.systemColorTheme": "dark",
-    "window.autoDetectColorScheme": false
+    "window.autoDetectColorScheme": false,
+    "breadcrumbs.enabled": false
 }
