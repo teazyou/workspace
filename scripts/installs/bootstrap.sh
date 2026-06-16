@@ -173,6 +173,9 @@ fi
 
 # 5. Clone the workspace repo --------------------------------------------
 # Workspace is a public repo so HTTPS clone needs no credentials.
+# NOTE: clone is intentionally NON-recursive. The private `configs/dot-claude`
+# submodule can't be cloned until gh is authenticated (clone_repos.sh) — it is
+# initialized later by setup_dot_claude.sh.
 log "Cloning $REPO_URL into $WORKSPACE ..."
 if [[ -d "$WORKSPACE/.git" ]]; then
     ok "Workspace already cloned at $WORKSPACE"

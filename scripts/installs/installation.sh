@@ -86,6 +86,9 @@ bash "$INSTALLS/install_xcode_mas.sh"
 next_step "Clone secondbrain + create ~/dev"
 bash "$INSTALLS/clone_repos.sh"
 
+next_step "dot-claude submodule + ~/.claude symlink"
+bash "$INSTALLS/setup_dot_claude.sh"
+
 next_step "Hourly checkpoint LaunchAgent"
 bash "$INSTALLS/install_checkpoint_launchd.sh"
 
