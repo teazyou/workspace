@@ -124,6 +124,7 @@ build_top_gap_config() {
     local -a gap_entries=()
     local default_gap=30
     local main_gap=""
+    local builtin_is_main=false
 
     while IFS='|' read -r name res is_retina is_main; do
         [[ -z "$name" ]] && continue
@@ -133,11 +134,6 @@ build_top_gap_config() {
         local height="${res#*x}"
         local gap
         gap=$(calculate_top_gap "$width" "$height" "$is_retina")
-
-        # Remember the gap of the main display (the one with the menu bar)
-        if [[ "$is_main" == "true" ]]; then
-            main_gap="$gap"
-        fi
 
         # Build monitor pattern for TOML
         # Use lowercase name for matching
@@ -152,6 +148,26 @@ build_top_gap_config() {
             # Use first word of monitor name as pattern
             pattern=$(echo "$name" | awk '{print tolower($1)}' | sed 's/[^a-z0-9]/.*/g')
             pattern="${pattern}.*"
+        fi
+
+        # MacBook built-in only: halve its top gap (round up) when the bar IS
+        # shown on it (Case B). Gated on the built-in pattern so an external
+        # retina monitor is never affected. Done before main_gap is set so a
+        # built-in main display feeds the halved value into the bar-off branch.
+        if [[ "$pattern" == "built-in.*" ]]; then
+            gap=$(( (gap + 1) / 2 ))
+        fi
+
+        # Remember the gap of the main display (the one with the menu bar)
+        if [[ "$is_main" == "true" ]]; then
+            main_gap="$gap"
+        fi
+
+        # Track whether the MacBook built-in is itself the main display. The
+        # bar-off branch uses this to give the built-in less top space when it's
+        # main (bar shown on it) than when it's a bar-less secondary.
+        if [[ "$pattern" == "built-in.*" && "$is_main" == "true" ]]; then
+            builtin_is_main=true
         fi
 
         gap_entries+=("{ monitor.\"$pattern\" = $gap }")
@@ -184,9 +200,22 @@ build_top_gap_config() {
         single_gap="${single_gap% \}}"
         echo "$single_gap"
     elif [[ "$bar_off" == "true" && -n "$main_gap" ]]; then
-        # Bar hidden on secondaries: keep main's gap, reclaim to 10 elsewhere.
-        log "Secondary bar hidden — keeping main gap ($main_gap), reclaiming others to 10"
-        echo "[{ monitor.main = $main_gap }, 10]"
+        # Bar hidden on secondaries (those screens show no bar), so reclaim top:
+        #   built-in MAIN (bar shown on it)    -> 2
+        #   built-in SECONDARY (no bar there)  -> 4  (2px base + 2px extra)
+        #   main external (bar still drawn)    -> full $main_gap
+        #   other external secondaries         -> $bottom_gap (match the bottom gap)
+        # First match wins: built-in (FIRST) takes $builtin_top regardless of its
+        # slot; a non-built-in main then matches monitor.main; remaining external
+        # secondaries fall through to the bottom-matching default.
+        local builtin_top=4
+        [[ "$builtin_is_main" == "true" ]] && builtin_top=2
+        # Mirror outer.bottom so a bar-less external secondary's top == its bottom.
+        local bottom_gap
+        bottom_gap=$(grep -E '^[[:space:]]*outer\.bottom' "$AEROSPACE_CONFIG" 2>/dev/null | grep -oE '[0-9]+' | head -1 || true)
+        [[ -z "$bottom_gap" ]] && bottom_gap=5
+        log "Secondary bar hidden — built-in $builtin_top (main 2 / secondary 4), main external keeps $main_gap, external secondaries -> bottom gap $bottom_gap"
+        echo "[{ monitor.\"built-in.*\" = $builtin_top }, { monitor.main = $main_gap }, $bottom_gap]"
     else
         # Multiple monitors - use array format (per-resolution entries).
         local result="["
