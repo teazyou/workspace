@@ -239,7 +239,14 @@ on-mode-changed = []
     esc = ['reload-config', 'mode main']
     r = ['flatten-workspace-tree', 'mode main'] # reset layout
     f = ['layout floating tiling', 'mode main'] # Toggle between floating and tiling layout
-    backspace = ['close-all-windows-but-current', 'mode main']
+    # close-all-windows-but-current intentionally disabled (was bound to backspace)
+    # backspace = ['close-all-windows-but-current', 'mode main']
+
+    # 2x2 grid from a 4-window space: flatten the tree, lay the windows out in a
+    # single horizontal row, then pair them into two vertical columns and balance.
+    # Relies on enable-normalization-opposite-orientation-for-nested-containers = true
+    # so each join-with nests into a vertical column. Trigger: alt-shift-; then /
+    slash = ['flatten-workspace-tree', 'layout tiles horizontal', 'focus right', 'focus right', 'focus right', 'join-with left', 'focus left', 'join-with left', 'balance-sizes', 'mode main']
 
     # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
     #s = ['layout sticky tiling', 'mode main']
