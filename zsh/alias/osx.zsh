@@ -1,2 +1,2 @@
 dstore () { sh $SCRIPTS/dstore.sh "$@" }
-alias aerostart="bash $SCRIPTS/aerospace-restart.sh"
+alias aerospace-restart="bash $SCRIPTS/aerospace-restart.sh"
