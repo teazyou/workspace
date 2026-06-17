@@ -1,6 +1,7 @@
 #!/bin/bash
 # Performance mode toggle — reduces macOS UI overhead (SketchyBar,
-# JankyBorders, display-profile LaunchAgent) for resource-intensive tasks.
+# display-profile LaunchAgent) for resource-intensive tasks.
+# JankyBorders is intentionally left running (same as normal mode).
 
 set -euo pipefail
 
@@ -15,9 +16,6 @@ BRACKETS=(audio traffic)
 SPACERS=(spacer0 spacer1 spacer2 spacer3)
 
 gaming_mode_on() {
-  # Stop JankyBorders
-  killall borders 2>/dev/null || true
-
   # Stop display-profile LaunchAgent
   launchctl bootout "$GUI_DOMAIN" "$DISPLAY_PROFILE_PLIST" 2>/dev/null || true
 
@@ -39,9 +37,6 @@ gaming_mode_on() {
 }
 
 gaming_mode_off() {
-  # Restart JankyBorders
-  borders active_color=0xffe08030 inactive_color=0xff3a2a35 width=3.0 style=round hidpi=on order=above &
-
   # Restart display-profile LaunchAgent
   launchctl bootstrap "$GUI_DOMAIN" "$DISPLAY_PROFILE_PLIST" 2>/dev/null || true
 

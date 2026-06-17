@@ -66,15 +66,10 @@ This setup creates a keyboard-driven window management workflow for macOS, simil
 **Shortcuts (Default):**
 - `alt + /` - Toggle between horizontal and vertical tiles
 
-#### Accordion Layout
+#### Accordion Layout — DISABLED
 **Description:** One window is displayed in front with others partially visible on sides.
 
-**Depends on:**
-- AeroSpace accordion feature
-- Configuration setting: `accordion-padding`
-
-**Shortcuts (Default):**
-- `alt + ,` - Switch to accordion layout
+**Status:** Intentionally disabled — the `accordion-padding` setting and the `alt + ,` binding have been removed from the config. `default-root-container-layout` stays on `tiles`.
 
 ---
 
@@ -497,7 +492,6 @@ outer.top = 48  # Adjust based on SketchyBar height
 | `alt + 1-9` | Switch to workspace 1-9 |
 | `alt + shift + 1-9` | Move window to workspace 1-9 |
 | `alt + /` | Toggle tiles horizontal/vertical |
-| `alt + ,` | Switch to accordion layout |
 | `alt + -` | Decrease window size |
 | `alt + =` | Increase window size |
 | `alt + f` | Toggle fullscreen |
