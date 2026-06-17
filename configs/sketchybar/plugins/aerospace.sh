@@ -78,23 +78,49 @@ for ws in $VISIBLE_WORKSPACES; do
     fi
 done
 
-# Get apps in this workspace
+# Get apps in this workspace. When the same app has multiple windows in the
+# space, collapse them into a single entry and append one '*' per EXTRA instance
+# (no space): four iTerm2 windows render as "iTerm2***". Distinct apps keep their
+# first-seen order. Uses parallel indexed arrays (no associative arrays) to stay
+# compatible with macOS's bash 3.2.
 APPS=""
 APP_LIST=$(aerospace list-windows --workspace "$WORKSPACE_ID" --format '%{app-name}' 2>/dev/null)
 
 if [ -n "$APP_LIST" ]; then
+    ORDER=()   # distinct app names, first-seen order
+    COUNTS=()  # parallel: window count per app in ORDER
     while IFS= read -r app; do
         # Skip Stickies: it's an always-on-top floating note, not a managed
         # window, so it shouldn't clutter the workspace app-name list.
-        if [ -n "$app" ] && [ "$app" != "Stickies" ]; then
-            SHORT_NAME=$(shorten_app_name "$app")
-            if [ -z "$APPS" ]; then
-                APPS="$SHORT_NAME"
-            else
-                APPS="$APPS $SHORT_NAME"
+        [ -z "$app" ] && continue
+        [ "$app" = "Stickies" ] && continue
+        found=-1
+        for idx in "${!ORDER[@]}"; do
+            if [ "${ORDER[idx]}" = "$app" ]; then
+                found=$idx
+                break
             fi
+        done
+        if [ "$found" -ge 0 ]; then
+            COUNTS[found]=$(( COUNTS[found] + 1 ))
+        else
+            ORDER+=("$app")
+            COUNTS+=(1)
         fi
     done <<< "$APP_LIST"
+
+    for idx in "${!ORDER[@]}"; do
+        SHORT_NAME=$(shorten_app_name "${ORDER[idx]}")
+        extra=$(( COUNTS[idx] - 1 ))
+        stars=""
+        [ "$extra" -gt 0 ] && stars=$(printf '%*s' "$extra" '' | tr ' ' '*')
+        entry="$SHORT_NAME$stars"
+        if [ -z "$APPS" ]; then
+            APPS="$entry"
+        else
+            APPS="$APPS $entry"
+        fi
+    done
 fi
 
 # Determine highlight color based on monitor - dark red theme
