@@ -135,5 +135,6 @@
     "window.autoDetectColorScheme": false,
     "breadcrumbs.enabled": false,
     "claudeCode.enableNewConversationShortcut": true,
-    "workbench.editor.closeEmptyGroups": false
+    "workbench.editor.closeEmptyGroups": false,
+    "redhat.telemetry.enabled": false
 }
