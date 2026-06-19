@@ -151,11 +151,16 @@ sketchybar --add bracket resources ram cpu battery \
 sketchybar --add bracket connectivity vpn wifi ethernet \
            --set connectivity "${bracket_style[@]}"
 
-# Paint the spaces strip once: fire the coordinator's event so plugins/aerospace.sh
-# runs a single batched repaint of every space.N item at startup. Avoids the
-# `sketchybar --update` thundering herd (which synchronously runs EVERY polling
-# plugin on every bar restart / perf-mode toggle / display flip). update_freq
-# items self-populate from their literal label= seeds on their own first tick.
-sketchybar --trigger aerospace_workspace_change
+# Paint the spaces strip once at startup. Run the coordinator plugin DIRECTLY
+# instead of `sketchybar --trigger aerospace_workspace_change`: a custom-event
+# trigger fired from here does NOT reliably reach the coordinator item that was
+# just --subscribed a few lines earlier, so the spaces stay stuck in their static
+# number-only seed state (icon=N, empty label) until the first real workspace
+# switch re-fires the event via aerospace's exec-on-workspace-change. A direct
+# call is the exact same lightweight repaint (one shell + 3 aerospace queries +
+# 1 batched --set), NOT the `sketchybar --update` thundering herd that would
+# synchronously run EVERY polling plugin. update_freq items self-populate from
+# their literal label= seeds on their own first tick regardless.
+"$PLUGIN_DIR/aerospace.sh"
 
 echo "sketchybar configuration loaded..."

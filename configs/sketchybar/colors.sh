@@ -37,9 +37,9 @@ export SHADOW_COLOR=$BLACK
 
 # Spaces palette (plugins/aerospace.sh coordinator). Centralized here so the
 # whole spaces strip recolors from one place, like the rest of the bar.
-export SPACE_FOCUS_BG=$BORDER_ACTIVE   # focused-monitor space bubble (= active border red)
-export SPACE_MON2_BG=0xff8a3048        # 2nd visible monitor bubble
-export SPACE_MON3_BG=0xff75283d        # 3rd+ visible monitor bubble
+export SPACE_FOCUS_BG=0xb3b22222       # focused-monitor space bubble — firebrick at 70% alpha (matches the right-side pill/bracket opacity)
+export SPACE_MON2_BG=0xb38a3048        # 2nd visible monitor bubble (70% alpha)
+export SPACE_MON3_BG=0xb375283d        # 3rd+ visible monitor bubble (70% alpha)
 export SPACE_ACTIVE_ICON=0xff1a1a2e    # number glyph on a focused/visible bubble
 export SPACE_FOCUS_LABEL=0xfffff0f3    # app-name label on the focused bubble (reddish white)
 export SPACE_INACTIVE_FG=0xffb35060    # inactive space number + app label (dark red)
