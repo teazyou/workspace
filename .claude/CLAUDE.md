@@ -14,5 +14,9 @@ The window-manager setup (aerospace + borders + sketchybar) is documented in `co
 
 ## Conventions
 
-- **Keep `_index.md` in sync.** When you add, move, remove, or rename a file, or change a symlink target, update `_index.md` (`@../_index.md`) in the same change so the map stays accurate.
+- **Keep `_index.md` in sync.** When you add, move, remove, or rename a file, or change a symlink target, update `_index.md` in the same change so the map stays accurate.
 - **NEVER lint in this folder or plan for it.** Linting is done manually.
+
+## Index
+
+@../_index.md
