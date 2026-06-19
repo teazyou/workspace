@@ -16,6 +16,7 @@ The window-manager setup (aerospace + borders + sketchybar) is documented in `co
 
 - **Keep `_index.md` in sync.** When you add, move, remove, or rename a file, or change a symlink target, update `_index.md` in the same change so the map stays accurate.
 - **NEVER lint in this folder or plan for it.** Linting is done manually.
+- **Read `configs/vscode/guide-transparency.md` before modifying any VS Code theme, colour, or transparency setting** (`workbench.colorTheme`, `workbench.colorCustomizations`, `vscode_vibrancy.*`). The transparency is a layered system where one value affects others (and the Claude Code panel); the guide explains the mechanics and the non-obvious fixes.
 
 ## Index
 
