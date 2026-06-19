@@ -778,9 +778,9 @@
 			<key>Blinking Cursor</key>
 			<false/>
 			<key>Blur</key>
-			<false/>
+			<true/>
 			<key>Blur Radius</key>
-			<real>9.91796875</real>
+			<real>3.0999999999999996</real>
 			<key>Bold Color</key>
 			<dict>
 				<key>Alpha Component</key>
@@ -1413,7 +1413,7 @@
 			<key>Title Components</key>
 			<integer>4</integer>
 			<key>Transparency</key>
-			<real>0.40417220744680848</real>
+			<real>0.29604388297872342</real>
 			<key>Unlimited Scrollback</key>
 			<true/>
 			<key>Use Bold Font</key>
