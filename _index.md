@@ -37,7 +37,7 @@ Shell setup; `zshrc.zsh` is the entry point that sources everything else.
 - `zsh/zshrc.zsh` — `~/.zshrc` source-of-truth; sources every config + alias below — `← ~/.zshrc`. *Edit when: changing what loads at shell startup.*
 - `zsh/configs/path.zsh` — exports `WORKSPACE`/`SCRIPTS`/`ZSH_*` path vars used everywhere. *Edit when: adding a new sourced dir or PATH entry.*
 - `zsh/configs/*.zsh` — startup configs: `colors.zsh`, `oh-my-zsh.zsh` (theme/plugins), `git.zsh`, `nvm.zsh`, `iterm2.zsh`.
-- `zsh/alias/*.zsh` — alias groups by topic: `osx.zsh`, `navigation.zsh`, `obsidian.zsh` (the `obsi` vault launcher → `scripts/obsi`), `git.zsh`, `installations.zsh`, `checkpoint.zsh`. *Edit when: adding a terminal alias.*
+- `zsh/alias/*.zsh` — alias groups by topic: `osx.zsh`, `navigation.zsh`, `obsidian.zsh` (the `obsi` vault launcher → `scripts/obsi`), `git.zsh`, `installations.zsh`, `checkpoint.zsh`, `wallpapers.zsh` (the `wallpapers-treatment` launcher → `scripts/wallpapers_treatment.sh`). *Edit when: adding a terminal alias.*
 
 ## scripts
 Install, git, system, and checkpoint scripts.
@@ -52,6 +52,7 @@ Install, git, system, and checkpoint scripts.
 - `scripts/checkpoint_cronjob.sh` — LaunchAgent entry: auto-commits tracked repos on a schedule, logs to `logs/`. Invoked by `~/Library/LaunchAgents/com.teazyou.checkpoint.plist` (real file, not symlinked).
 - `scripts/checkpoint_all.sh`, `checkpoint_functions.sh` — manual checkpoint runner + shared logic; `CHECKPOINT_FOLDERS` lists watched repos (`~/workspace/configs/dot-claude` (submodule, listed first so it commits before the parent gitlink), `~/workspace`, `~/secondbrain`). *Edit when: changing which repos auto-checkpoint.*
 - `scripts/aerospace-restart.sh` — full restart of the WM stack (aerospace, sketchybar, borders, LaunchAgents).
+- `scripts/wallpapers_treatment.sh` — batch-applies an ImageMagick "profile" (e.g. `blur-4`) to every wallpaper under `~/gdrive/wallpapers/originals/<category>/`, writing processed copies into `~/gdrive/wallpapers/modified/<profile-name>/<profile-name>-<category>/` (originals never modified; idempotent — skips already-processed images). `originals/` is the source of truth: a clean pass first prunes `modified/` to mirror it (removes any profile subfolder/image whose original is gone, even for profiles no longer in the array). Failed conversions are retried up to 3 rounds. Self-installs ImageMagick via Homebrew if missing. Profiles are an array at the top of the file (`"<name>|<magick options>"`); fronted by `zsh/alias/wallpapers.zsh` (`wallpapers-treatment <profile-name>`). Bash 3.2-compatible. *Edit when: adding/changing a profile.*
 - `scripts/dstore.sh` — recursively delete `.DS_Store` files; used by the git scripts (`silent` mode).
 - `scripts/obsi` — Obsidian vault launcher: opens a folder as a vault, planting per-file symlinks from its `.obsidian/` to the central `configs/dot-obsidian` config. Fronted by `zsh/alias/obsidian.zsh` (`obsi [folder]`). *Edit when: changing which central entries are shared (BLACKLIST) or the open mechanism.*
 ## functions
