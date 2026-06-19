@@ -16,6 +16,46 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
 
+# True (exit 0) when the MacBook built-in display currently carries the menu bar
+# (is the main display). Used to decide where the "laptop-companion" workspaces
+# 7-9 live: when the built-in is SECONDARY (an external is main, e.g. the home
+# desk setup) they belong on the built-in; when the built-in is itself MAIN (e.g.
+# the travel setup with a portable external) they must move off it onto the
+# secondary external. A monitor block counts as the built-in if its name is
+# "Color LCD", its Display Type says "Built-in", or its Connection Type is
+# "Internal" — any one is enough.
+builtin_is_main() {
+    system_profiler SPDisplaysDataType 2>/dev/null | awk '
+        /^[[:space:]]+[A-Za-z].*:$/ {
+            if (blk_main && blk_builtin) found=1
+            blk_main=0; blk_builtin=0
+            if ($0 ~ /Color LCD/) blk_builtin=1
+        }
+        /Display Type:.*Built-in/              { blk_builtin=1 }
+        /Connection Type:[[:space:]]*Internal/ { blk_builtin=1 }
+        /Main Display:[[:space:]]*Yes/         { blk_main=1 }
+        END {
+            if (blk_main && blk_builtin) found=1
+            exit (found ? 0 : 1)
+        }
+    '
+}
+
+# Monitor pattern (TOML-quoted) for workspaces 7-9, the laptop-companion screen.
+# 'built-in.*' names the MacBook explicitly so it never grabs an iPad sidecar (a
+# bare 'secondary' would also match the iPad when the built-in is secondary). When
+# the built-in is main, 'built-in.*' would collide with workspaces 1-6 (also on
+# main), so fall back to 'secondary' — the portable external reports an empty name
+# to AeroSpace and can't be matched by a name regex, but it's the only non-main
+# screen in the travel setup so 'secondary' resolves to it unambiguously.
+companion_ws_pattern() {
+    if builtin_is_main; then
+        echo "'secondary'"
+    else
+        echo "'built-in.*'"
+    fi
+}
+
 # Calculate optimal top gap based on resolution
 # Uses a lookup table for common resolutions, with interpolation for others
 calculate_top_gap() {
@@ -233,21 +273,30 @@ get_fingerprint() {
     resolutions=$(system_profiler SPDisplaysDataType 2>/dev/null | grep -E "Resolution:" | sort)
     # Bail if no displays detected (system_profiler returns empty in some non-GUI contexts)
     [[ -z "$resolutions" ]] && return 1
-    echo "$resolutions" | /sbin/md5 | cut -c1-8
+    # Fold in which display is main so swapping the main display on the SAME
+    # physical monitors (e.g. via System Settings) still re-triggers a rebuild and
+    # lets the 7-9 assignment follow — resolutions alone wouldn't change then.
+    local bim="sec"
+    builtin_is_main && bim="main"
+    printf '%s|builtin=%s' "$resolutions" "$bim" | /sbin/md5 | cut -c1-8
 }
 
 # Update aerospace.toml with new gap values
 update_aerospace_config() {
     local outer_top="$1"
+    local ws_pattern="$2"
 
     cp "$AEROSPACE_CONFIG" "$AEROSPACE_CONFIG.bak"
 
     local tmp_file
     tmp_file=$(mktemp)
 
-    awk -v ot="$outer_top" '
-    /^\[gaps\]/ { in_gaps=1 }
-    /^\[/ && !/^\[gaps\]/ { in_gaps=0 }
+    awk -v ot="$outer_top" -v ws="$ws_pattern" '
+    # Track which section we are in; reset both flags on every section header.
+    /^\[/ {
+        in_gaps  = ($0 ~ /^\[gaps\]/)
+        in_wsmon = ($0 ~ /^\[workspace-to-monitor-force-assignment\]/)
+    }
 
     in_gaps && /outer\.top/ {
         # Preserve any comment
@@ -257,6 +306,18 @@ update_aerospace_config() {
             comment = ""
         }
         print "    outer.top =        " ot comment
+        next
+    }
+
+    # Rewrite the laptop-companion workspaces 7/8/9 to the chosen monitor pattern.
+    # Workspaces 1-6 (main) and 0 (sidecar) are intentionally left untouched.
+    in_wsmon && /^[[:space:]]*[789][[:space:]]*=/ {
+        if (match($0, /#.*/)) {
+            comment = " " substr($0, RSTART)
+        } else {
+            comment = ""
+        }
+        print "    " $1 " = " ws comment
         next
     }
     { print }
@@ -291,7 +352,12 @@ main() {
     top_gap_config=$(build_top_gap_config)
     log "New outer.top config: $top_gap_config"
 
-    update_aerospace_config "$top_gap_config"
+    # Decide where workspaces 7-9 live based on whether the built-in is main.
+    local ws_pattern
+    ws_pattern=$(companion_ws_pattern)
+    log "Workspaces 7-9 -> $ws_pattern"
+
+    update_aerospace_config "$top_gap_config" "$ws_pattern"
     log "Updated aerospace.toml"
 
     # Reload

@@ -17,7 +17,7 @@ App configuration; the window-manager stack (aerospace + sketchybar + borders + 
 - `configs/guide-window-manager.md` — overview of the aerospace + borders + sketchybar + autoraise setup. *Read before and after Editing when: documenting window manager behavior.*
 - `configs/aerospace/aerospace.toml` — AeroSpace tiling WM config (workspaces, keybindings, gaps) — `← ~/.aerospace.toml`. *Edit when: changing window-manager keybindings/layout. Run `aerospace reload-config` after.*
 - `configs/aerospace/*.plist` — LaunchAgents: `com.aerospace.display-profile.plist` (`← ~/Library/LaunchAgents/`, auto gap profile per display) and `com.aerospace.empty-watcher.plist` (`← ~/Library/LaunchAgents/`, empty-workspace daemon).
-- `configs/aerospace/*.sh` — WM helper scripts run by aerospace/LaunchAgents: `apply-display-profile.sh`, `empty-workspace-watcher.sh`, `open-dock-app.sh`, `performance-mode.sh`, `secondary-bar-toggle.sh`, `track-workspace-mru.sh`.
+- `configs/aerospace/*.sh` — WM helper scripts run by aerospace/LaunchAgents: `apply-display-profile.sh` (auto top-gaps **and** the workspace 7-9 monitor assignment — flips between `'built-in.*'` and `'secondary'` per which display is main, so home/travel both work), `empty-workspace-watcher.sh`, `open-dock-app.sh`, `performance-mode.sh`, `secondary-bar-toggle.sh`, `track-workspace-mru.sh`.
 - `configs/aerospace/doc.aerospace.md`, `features.aerospace.md` — AeroSpace reference/feature notes.
 - `configs/sketchybar/sketchybarrc` — status-bar entry point (sources colors/icons, loads items + plugins) — dir `← ~/.config/sketchybar`. *Edit when: changing the status bar.*
 - `configs/sketchybar/colors.sh`, `icons.sh` — shared palette and icon glyphs.

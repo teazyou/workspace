@@ -76,12 +76,21 @@ automatically-unhide-macos-hidden-apps = true
 persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
 
 # Assign workspaces to specific monitors
-# Workspaces 1-6 -> Main monitor (HDMI, menu-bar display)
-# Workspaces 7-9 -> Secondary monitor (Built-in Retina)
-# Workspace  0   -> Third monitor (Sidecar / AirPlay), only when connected
-# Note: 7-9 and 0 use name regexes (not 'secondary'), which is only defined
-# for 2-monitor setups — with 3 monitors connected 'secondary' leaked ws9
-# onto the main display. Name regexes pin each to its real monitor.
+# Workspaces 1-6 -> Main monitor (the menu-bar display)
+# Workspaces 7-9 -> The "laptop-companion" secondary screen — AUTO-MANAGED.
+#   These three lines are rewritten by apply-display-profile.sh on every monitor
+#   change (see companion_ws_pattern there), so a single config works in both
+#   places:
+#     - built-in is SECONDARY (home: an external is main) -> 'built-in.*' (MacBook)
+#     - built-in is MAIN       (travel: portable is secondary) -> 'secondary'
+#   Naming the MacBook explicitly at home keeps 7-9 off an iPad sidecar; falling
+#   back to 'secondary' when the MacBook is main moves them onto the portable
+#   external (which reports an empty name and can't be matched by a regex).
+#   Whatever value is committed here is just the last state written; the watcher
+#   corrects it within ~5s of a display change.
+# Workspace  0   -> Third monitor (Sidecar / AirPlay), only when connected.
+#   0 uses a name regex (not 'secondary'): with 3 monitors 'secondary' is
+#   ambiguous and leaked it onto the main display.
 [workspace-to-monitor-force-assignment]
     1 = 'main'
     2 = 'main'
@@ -89,9 +98,9 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
     4 = 'main'
     5 = 'main'
     6 = 'main'
-    7 = 'built-in.*'
-    8 = 'built-in.*'
-    9 = 'built-in.*'
+    7 = 'secondary'
+    8 = 'secondary'
+    9 = 'secondary'
     0 = 'sidecar.*'
 
 # A callback that runs every time binding mode changes
@@ -118,7 +127,7 @@ on-mode-changed = []
     outer.left =       5
     outer.bottom =     5
     # Top gap for SketchyBar on all monitors
-    outer.top =        [{ monitor."built-in.*" = 4 }, { monitor.main = 42 }, 5]
+    outer.top =        [{ monitor."built-in.*" = 8 }, { monitor."display.*" = 35 }, 35]
     outer.right =      5
 
 # 'main' binding mode declaration
