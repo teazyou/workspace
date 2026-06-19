@@ -70,10 +70,10 @@ done
 #                                 background.drawing=off      \
 #                                 label.drawing=off
 
-# Bracket for main workspaces (1-6) - red outline only; the per-space items carry
-# the 80% dark fill so the active highlight stays single-layer (no double opacity)
+# Bracket for main workspaces (1-6) - black 70% fill + red outline (matches the
+# right-side groups); the focus bubble (set per-item by aerospace.sh) layers on top
 spaces_main_bracket=(
-  background.color=$TRANSPARENT
+  background.color=$DARK_BG
   background.corner_radius=10
   background.border_width=1
   background.border_color=$PINK
@@ -85,9 +85,9 @@ spaces_main_bracket=(
 sketchybar --add bracket spaces_main space.1 space.2 space.3 space.4 space.5 space.6 \
            --set spaces_main "${spaces_main_bracket[@]}"
 
-# Bracket for secondary workspaces (7-9) - red outline only (fill on the items)
+# Bracket for secondary workspaces (7-9) - black 70% fill + red outline
 spaces_secondary_bracket=(
-  background.color=$TRANSPARENT
+  background.color=$DARK_BG
   background.corner_radius=10
   background.border_width=1
   background.border_color=$PINK
@@ -99,9 +99,9 @@ spaces_secondary_bracket=(
 sketchybar --add bracket spaces_secondary space.7 space.8 space.9 \
            --set spaces_secondary "${spaces_secondary_bracket[@]}"
 
-# Bracket for third workspace (0) - red outline only (fill on the items)
+# Bracket for third workspace (0) - black 70% fill + red outline
 spaces_third_bracket=(
-  background.color=$TRANSPARENT
+  background.color=$DARK_BG
   background.corner_radius=10
   background.border_width=1
   background.border_color=$PINK

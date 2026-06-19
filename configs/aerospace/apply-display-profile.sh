@@ -12,6 +12,14 @@ LOG_FILE="/tmp/aerospace-display-profile.log"
 # Reference gap for a standard 1440p external monitor
 REFERENCE_GAP=42
 
+# Extra top spacing between the SketchyBar and the app window.
+# BAR_GAP_PAD:        added to every monitor's bar gap in ALL scenarios.
+# MAIN_ONLY_BAR_EXTRA: added on top when the bar is shown ONLY on the main
+#                      screen (secondary bar hidden) — applied to whichever
+#                      display still draws the bar.
+BAR_GAP_PAD=2
+MAIN_ONLY_BAR_EXTRA=2
+
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
 }
@@ -198,6 +206,12 @@ build_top_gap_config() {
             gap=$(( (gap + 1) / 2 ))
         fi
 
+        # +BAR_GAP_PAD base spacing between the SketchyBar and the app, applied
+        # in every scenario where the bar is shown (added AFTER the built-in
+        # halving so the pad itself isn't halved). The bar-off branch below adds
+        # a further MAIN_ONLY_BAR_EXTRA on the screen that still draws the bar.
+        gap=$(( gap + BAR_GAP_PAD ))
+
         # Remember the gap of the main display (the one with the menu bar)
         if [[ "$is_main" == "true" ]]; then
             main_gap="$gap"
@@ -240,22 +254,27 @@ build_top_gap_config() {
         single_gap="${single_gap% \}}"
         echo "$single_gap"
     elif [[ "$bar_off" == "true" && -n "$main_gap" ]]; then
-        # Bar hidden on secondaries (those screens show no bar), so reclaim top:
-        #   built-in MAIN (bar shown on it)    -> 2
-        #   built-in SECONDARY (no bar there)  -> 4  (2px base + 2px extra)
-        #   main external (bar still drawn)    -> full $main_gap
+        # Bar hidden on secondaries (those screens show no bar), so reclaim top.
+        # The screen that still draws the bar (the main one) gets the padded gap
+        # PLUS MAIN_ONLY_BAR_EXTRA, since the bar is now only on the main screen:
+        #   built-in MAIN (only bar drawn)     -> 2 + main-only extra
+        #   built-in SECONDARY (no bar there)  -> 4  (reclaim, no bar)
+        #   main external (only bar drawn)     -> padded $main_gap + main-only extra
         #   other external secondaries         -> $bottom_gap (match the bottom gap)
         # First match wins: built-in (FIRST) takes $builtin_top regardless of its
         # slot; a non-built-in main then matches monitor.main; remaining external
         # secondaries fall through to the bottom-matching default.
         local builtin_top=4
-        [[ "$builtin_is_main" == "true" ]] && builtin_top=2
+        [[ "$builtin_is_main" == "true" ]] && builtin_top=$(( 2 + MAIN_ONLY_BAR_EXTRA ))
+        # Main screen still draws the bar, so add the main-only extra on top of
+        # its already-padded gap.
+        local main_only_gap=$(( main_gap + MAIN_ONLY_BAR_EXTRA ))
         # Mirror outer.bottom so a bar-less external secondary's top == its bottom.
         local bottom_gap
         bottom_gap=$(grep -E '^[[:space:]]*outer\.bottom' "$AEROSPACE_CONFIG" 2>/dev/null | grep -oE '[0-9]+' | head -1 || true)
         [[ -z "$bottom_gap" ]] && bottom_gap=5
-        log "Secondary bar hidden — built-in $builtin_top (main 2 / secondary 4), main external keeps $main_gap, external secondaries -> bottom gap $bottom_gap"
-        echo "[{ monitor.\"built-in.*\" = $builtin_top }, { monitor.main = $main_gap }, $bottom_gap]"
+        log "Secondary bar hidden — built-in $builtin_top (main 2+extra / secondary 4), main external keeps $main_only_gap, external secondaries -> bottom gap $bottom_gap"
+        echo "[{ monitor.\"built-in.*\" = $builtin_top }, { monitor.main = $main_only_gap }, $bottom_gap]"
     else
         # Multiple monitors - use array format (per-resolution entries).
         local result="["

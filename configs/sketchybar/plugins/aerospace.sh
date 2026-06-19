@@ -126,16 +126,17 @@ fi
 # Determine highlight color based on monitor - dark red theme
 if [ "$IS_FOCUSED" = true ]; then
     # Main monitor (focused) - firebrick highlight, matches active window border
-    # 0xCC alpha = 80% opacity, matching DARK_BG bar transparency
-    BG_COLOR="0xccb22222"
+    # 0xff alpha = fully opaque — the focus bubble is solid so the active space
+    # reads clearly on top of the 70% DARK_BG fill behind it
+    BG_COLOR="0xffb22222"
 elif [ "$IS_VISIBLE" = true ]; then
-    # Secondary/tertiary monitors - slightly darker (80% opacity)
+    # Secondary/tertiary monitors - fully opaque bubble
     if [ "$MONITOR_INDEX" -eq 2 ]; then
-        BG_COLOR="0xcc8a3048"
+        BG_COLOR="0xff8a3048"
     elif [ "$MONITOR_INDEX" -ge 3 ]; then
-        BG_COLOR="0xcc75283d"
+        BG_COLOR="0xff75283d"
     else
-        BG_COLOR="0xcc8a3048"
+        BG_COLOR="0xff8a3048"
     fi
 else
     # Not visible - no bubble (transparent); only the focused/visible space per
