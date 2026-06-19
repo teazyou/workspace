@@ -1,7 +1,7 @@
 #!/bin/bash
 
-source "$HOME/.config/sketchybar/icons.sh"
 source "$HOME/.config/sketchybar/colors.sh"
+source "$HOME/.config/sketchybar/icons.sh"
 
 # Get actual ethernet interfaces (exclude Wi-Fi which is usually en0)
 # Use networksetup to find real ethernet adapters

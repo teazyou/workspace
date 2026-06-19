@@ -9,6 +9,7 @@ configs/    app configs (aerospace, sketchybar, borders, autoraise, vscode, iter
 zsh/        ~/.zshrc + sourced configs and aliases
 scripts/    install/system scripts (installs/, git/, checkpoint, obsi)
 functions/  shared SH helpers sourced by scripts
+prompts/    reusable copy-paste Claude prompts (workflow launchers)
 logs/       runtime logs + checkpoint state (gitignored)
 ```
 
@@ -59,6 +60,10 @@ Install, git, system, and checkpoint scripts.
 ## functions
 Shared SH helpers sourced by other scripts.
 - `functions/brew.sh` — idempotent `brew` install/tap wrappers used by `scripts/installs/install_brew.sh`.
+
+## prompts
+Reusable copy-paste Claude prompts; not sourced by anything — saved so a task can be re-launched verbatim in a fresh session.
+- `prompts/workflow/window-manager-code-review.md` — paste-prompt that launches the multi-agent dynamic Workflow (study → review → plan → coherence → implement → verify → report) over the window-manager config stack. Its first step is a **study** agent (Opus, xhigh) that reads `guide-window-manager.md` (and the config folders) and returns the config-unit and lens lists (also written to `_spec/workflow-spec.json` as an artifact); the Workflow then fans out the fixed split strategy (one sub-agent per config-unit × lens) over those lists at runtime — one self-contained autonomous run. All artifacts go to a freshly-recreated `./window-manager-code-review/` at the repo root. *Edit when: changing the review pipeline's steps/units/lenses.*
 
 ## Optional / low-touch
 - `logs/` — runtime output, gitignored except `.gitkeep`: `checkpoint_cron.log`, `checkpoint_launchd.{out,err}.log`, `checkpoint_state/*.sig` (per-repo content fingerprints).

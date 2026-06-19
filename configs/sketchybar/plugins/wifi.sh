@@ -1,7 +1,7 @@
 #!/bin/bash
 
-source "$HOME/.config/sketchybar/icons.sh"
 source "$HOME/.config/sketchybar/colors.sh"
+source "$HOME/.config/sketchybar/icons.sh"
 
 # Check if Wi-Fi interface has an IP address (works on macOS 26+)
 WIFI_IP=$(ipconfig getifaddr en0 2>/dev/null)

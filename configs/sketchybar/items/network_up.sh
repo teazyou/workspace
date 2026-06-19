@@ -1,20 +1,14 @@
 #!/bin/bash
 
-# CriticalElement style network up - pink accent
+# CriticalElement style network up - pink accent. Shares monitor_item_base
+# (defined in sketchybarrc before this item is sourced); only the per-item
+# overrides differ.
 network_up=(
+  "${monitor_item_base[@]}"
   icon=$NETWORK_UP
-  icon.font="$FONT:Normal:15.0"
-  icon.color=$PINK
   icon.padding_left=8
-  icon.padding_right=2
-  label.font="$FONT:Bold:14.0"
-  label.color=$PINK
-  label.padding_left=2
   label.padding_right=6
   label="0 B/s"
-  background.drawing=off
-  padding_left=0
-  padding_right=0
   # Passive: no update_freq/script. network_down is the sole poller and sets this
   # item's label in the same batched --set (see plugins/network_speed.sh).
 )

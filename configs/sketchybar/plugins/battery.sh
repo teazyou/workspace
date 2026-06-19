@@ -1,7 +1,7 @@
 #!/bin/bash
 
-source "$HOME/.config/sketchybar/icons.sh"
 source "$HOME/.config/sketchybar/colors.sh"
+source "$HOME/.config/sketchybar/icons.sh"
 
 # One awk over `pmset -g batt` extracts the integer percentage (first NN%
 # token) and an AC-power flag, replacing two grep|cut fork chains. Output:

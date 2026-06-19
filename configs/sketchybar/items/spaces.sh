@@ -80,9 +80,12 @@ sketchybar --add item aerospace_coordinator left \
 #                                 background.drawing=off      \
 #                                 label.drawing=off
 
-# Bracket for main workspaces (1-6) - black 70% fill + red outline (matches the
-# right-side groups); the focus bubble (set per-item by aerospace.sh) layers on top
-spaces_main_bracket=(
+# Shared style for the three spaces group brackets - black 70% fill + red outline
+# (matches the right-side groups); the focus bubble (set per-item by aerospace.sh)
+# layers on top. DISTINCT from sketchybarrc's bracket_style: it deliberately omits
+# the background.padding_left/right=0 lines the right-side groups carry, so the
+# left-group spacing is unchanged.
+spaces_bracket_style=(
   background.color=$DARK_BG
   background.corner_radius=10
   background.border_width=1
@@ -92,33 +95,14 @@ spaces_main_bracket=(
   background.drawing=on
 )
 
+# Bracket for main workspaces (1-6)
 sketchybar --add bracket spaces_main space.1 space.2 space.3 space.4 space.5 space.6 \
-           --set spaces_main "${spaces_main_bracket[@]}"
+           --set spaces_main "${spaces_bracket_style[@]}"
 
-# Bracket for secondary workspaces (7-9) - black 70% fill + red outline
-spaces_secondary_bracket=(
-  background.color=$DARK_BG
-  background.corner_radius=10
-  background.border_width=1
-  background.border_color=$PINK
-  blur_radius=2
-  background.height=32
-  background.drawing=on
-)
-
+# Bracket for secondary workspaces (7-9)
 sketchybar --add bracket spaces_secondary space.7 space.8 space.9 \
-           --set spaces_secondary "${spaces_secondary_bracket[@]}"
+           --set spaces_secondary "${spaces_bracket_style[@]}"
 
-# Bracket for third workspace (0) - black 70% fill + red outline
-spaces_third_bracket=(
-  background.color=$DARK_BG
-  background.corner_radius=10
-  background.border_width=1
-  background.border_color=$PINK
-  blur_radius=2
-  background.height=32
-  background.drawing=on
-)
-
+# Bracket for third workspace (0)
 sketchybar --add bracket spaces_third space.0 \
-           --set spaces_third "${spaces_third_bracket[@]}"
+           --set spaces_third "${spaces_bracket_style[@]}"

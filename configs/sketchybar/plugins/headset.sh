@@ -1,7 +1,7 @@
 #!/bin/bash
 
-source "$HOME/.config/sketchybar/icons.sh"
 source "$HOME/.config/sketchybar/colors.sh"
+source "$HOME/.config/sketchybar/icons.sh"
 
 # Check for a connected Bluetooth headphone/headset.
 # Uses ioreg (milliseconds) instead of `system_profiler SPBluetoothDataType`

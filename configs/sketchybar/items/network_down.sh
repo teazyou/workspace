@@ -1,20 +1,14 @@
 #!/bin/bash
 
-# CriticalElement style network down - pink accent
+# CriticalElement style network down - pink accent. Shares monitor_item_base
+# (defined in sketchybarrc before this item is sourced); only the per-item
+# overrides differ. network_down is the sole poller for both traffic labels.
 network_down=(
+  "${monitor_item_base[@]}"
   icon=$NETWORK_DOWN
-  icon.font="$FONT:Normal:15.0"
-  icon.color=$PINK
   icon.padding_left=6
-  icon.padding_right=2
-  label.font="$FONT:Bold:14.0"
-  label.color=$PINK
-  label.padding_left=2
   label.padding_right=8
   label="0 B/s"
-  background.drawing=off
-  padding_left=0
-  padding_right=0
   update_freq=5
   script="$PLUGIN_DIR/network_speed.sh"
 )

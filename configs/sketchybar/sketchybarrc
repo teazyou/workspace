@@ -3,11 +3,14 @@
 source "$HOME/.config/sketchybar/colors.sh"
 source "$HOME/.config/sketchybar/icons.sh"
 
-ITEM_DIR="$HOME/.config/sketchybar/items"
-PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
+# Exported so consumers spawned as subprocesses see them: items/*.sh are sourced
+# (inherit these anyway), but script=-spawned plugins run as separate processes
+# and rely on FONT / PLUGIN_DIR being in the environment.
+export ITEM_DIR="$HOME/.config/sketchybar/items"
+export PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 
 # Font from neutonfoo/dotfiles
-FONT="JetBrainsMono Nerd Font"
+export FONT="JetBrainsMono Nerd Font"
 
 # Setting up the general bar appearance - CriticalElement floating style
 bar=(
@@ -55,16 +58,13 @@ defaults=(
 
 sketchybar --default "${defaults[@]}"
 
-# Left Side Items
-# source "$ITEM_DIR/apple.sh"
-source "$ITEM_DIR/spaces.sh"
-
-# Right Side Items (order matters, right-most first)
-# source "$ITEM_DIR/settings.sh"
-source "$ITEM_DIR/calendar.sh"
-
-# Bracket for calendar group (time + date)
-calendar_bracket=(
+# Shared bracket style for the right-side groups (calendar, audio, resources,
+# connectivity, traffic). One definition so a theme change is a single edit.
+# NOTE: the left spaces brackets use a DISTINCT spaces_bracket_style in
+# items/spaces.sh (without the background.padding_left/right=0 lines) to keep
+# the left-group spacing unchanged. Defined before the first item source so
+# spaces.sh and the right groups can both reference the convention.
+bracket_style=(
   background.color=$DARK_BG
   background.corner_radius=10
   background.border_width=1
@@ -75,8 +75,35 @@ calendar_bracket=(
   background.padding_left=0
   background.padding_right=0
 )
+
+# Shared base for the monitor pills (cpu, ram, network_up, network_down). These
+# items are SOURCED (not spawned), so they see this array in the same shell.
+# Each item appends only its per-item overrides (glyph, seed label, icon
+# paddings, label.padding_right, and update_freq/script for the active pollers —
+# network_up is passive). One definition so a restyle of the pills is one edit.
+monitor_item_base=(
+  icon.font="$FONT:Normal:15.0"
+  icon.color=$PINK
+  icon.padding_right=2
+  label.font="$FONT:Bold:14.0"
+  label.color=$PINK
+  label.padding_left=2
+  background.drawing=off
+  padding_left=0
+  padding_right=0
+)
+
+# Left Side Items
+# source "$ITEM_DIR/apple.sh"
+source "$ITEM_DIR/spaces.sh"
+
+# Right Side Items (order matters, right-most first)
+# source "$ITEM_DIR/settings.sh"
+source "$ITEM_DIR/calendar.sh"
+
+# Bracket for calendar group (time + date)
 sketchybar --add bracket calendar_group time date \
-           --set calendar_group "${calendar_bracket[@]}"
+           --set calendar_group "${bracket_style[@]}"
 
 # Spacer between calendar and audio
 sketchybar --add item spacer0 right --set spacer0 width=5 background.drawing=off icon.drawing=off label.drawing=off
@@ -109,64 +136,20 @@ source "$ITEM_DIR/network_down.sh"
 source "$ITEM_DIR/network_up.sh"
 
 # Bracket for audio group (volume + headset)
-audio_bracket=(
-  background.color=$DARK_BG
-  background.corner_radius=10
-  background.border_width=1
-  background.border_color=$PINK
-  blur_radius=2
-  background.height=32
-  background.drawing=on
-  background.padding_left=0
-  background.padding_right=0
-)
 sketchybar --add bracket audio volume headset \
-           --set audio "${audio_bracket[@]}"
+           --set audio "${bracket_style[@]}"
 
 # Bracket for network traffic group (up + down)
-traffic_bracket=(
-  background.color=$DARK_BG
-  background.corner_radius=10
-  background.border_width=1
-  background.border_color=$PINK
-  blur_radius=2
-  background.height=32
-  background.drawing=on
-  background.padding_left=0
-  background.padding_right=0
-)
 sketchybar --add bracket traffic network_down network_up \
-           --set traffic "${traffic_bracket[@]}"
+           --set traffic "${bracket_style[@]}"
 
 # Bracket for system resources group (battery + cpu + ram)
-resources_bracket=(
-  background.color=$DARK_BG
-  background.corner_radius=10
-  background.border_width=1
-  background.border_color=$PINK
-  blur_radius=2
-  background.height=32
-  background.drawing=on
-  background.padding_left=0
-  background.padding_right=0
-)
 sketchybar --add bracket resources ram cpu battery \
-           --set resources "${resources_bracket[@]}"
+           --set resources "${bracket_style[@]}"
 
 # Bracket for network connectivity group (ethernet + wifi + vpn)
-connectivity_bracket=(
-  background.color=$DARK_BG
-  background.corner_radius=10
-  background.border_width=1
-  background.border_color=$PINK
-  blur_radius=2
-  background.height=32
-  background.drawing=on
-  background.padding_left=0
-  background.padding_right=0
-)
 sketchybar --add bracket connectivity vpn wifi ethernet \
-           --set connectivity "${connectivity_bracket[@]}"
+           --set connectivity "${bracket_style[@]}"
 
 # Paint the spaces strip once: fire the coordinator's event so plugins/aerospace.sh
 # runs a single batched repaint of every space.N item at startup. Avoids the
