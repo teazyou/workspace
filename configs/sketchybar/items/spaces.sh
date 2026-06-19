@@ -33,7 +33,9 @@ do
     label=""
     background.color=$TRANSPARENT
     background.height=26
-    background.corner_radius=10
+    # Radius kept smaller than the group bracket's so the shorter focus bubble
+    # doesn't read as an over-rounded pill
+    background.corner_radius=6
     background.drawing=on
     click_script="aerospace workspace $sid"
     script="$PLUGIN_DIR/aerospace.sh $sid"
@@ -68,9 +70,10 @@ done
 #                                 background.drawing=off      \
 #                                 label.drawing=off
 
-# Bracket for main workspaces (1-6) - CriticalElement pink border pill
+# Bracket for main workspaces (1-6) - red outline only; the per-space items carry
+# the 80% dark fill so the active highlight stays single-layer (no double opacity)
 spaces_main_bracket=(
-  background.color=$DARK_BG
+  background.color=$TRANSPARENT
   background.corner_radius=10
   background.border_width=1
   background.border_color=$PINK
@@ -82,9 +85,9 @@ spaces_main_bracket=(
 sketchybar --add bracket spaces_main space.1 space.2 space.3 space.4 space.5 space.6 \
            --set spaces_main "${spaces_main_bracket[@]}"
 
-# Bracket for secondary workspaces (7-9) - CriticalElement pink border pill
+# Bracket for secondary workspaces (7-9) - red outline only (fill on the items)
 spaces_secondary_bracket=(
-  background.color=$DARK_BG
+  background.color=$TRANSPARENT
   background.corner_radius=10
   background.border_width=1
   background.border_color=$PINK
@@ -96,9 +99,9 @@ spaces_secondary_bracket=(
 sketchybar --add bracket spaces_secondary space.7 space.8 space.9 \
            --set spaces_secondary "${spaces_secondary_bracket[@]}"
 
-# Bracket for third workspace (0) - CriticalElement pink border pill
+# Bracket for third workspace (0) - red outline only (fill on the items)
 spaces_third_bracket=(
-  background.color=$DARK_BG
+  background.color=$TRANSPARENT
   background.corner_radius=10
   background.border_width=1
   background.border_color=$PINK

@@ -125,19 +125,21 @@ fi
 
 # Determine highlight color based on monitor - dark red theme
 if [ "$IS_FOCUSED" = true ]; then
-    # Main monitor (focused) - rich burgundy highlight
-    BG_COLOR="0xffa33a55"
+    # Main monitor (focused) - firebrick highlight, matches active window border
+    # 0xCC alpha = 80% opacity, matching DARK_BG bar transparency
+    BG_COLOR="0xccb22222"
 elif [ "$IS_VISIBLE" = true ]; then
-    # Secondary/tertiary monitors - slightly darker
+    # Secondary/tertiary monitors - slightly darker (80% opacity)
     if [ "$MONITOR_INDEX" -eq 2 ]; then
-        BG_COLOR="0xff8a3048"
+        BG_COLOR="0xcc8a3048"
     elif [ "$MONITOR_INDEX" -ge 3 ]; then
-        BG_COLOR="0xff75283d"
+        BG_COLOR="0xcc75283d"
     else
-        BG_COLOR="0xff8a3048"
+        BG_COLOR="0xcc8a3048"
     fi
 else
-    # Not visible - transparent
+    # Not visible - no bubble (transparent); only the focused/visible space per
+    # screen gets a colored bubble
     BG_COLOR=$TRANSPARENT
 fi
 
@@ -152,7 +154,7 @@ elif [ "$IS_VISIBLE" = true ]; then
     ICON_COLOR="0xff1a1a2e"
     LABEL_COLOR="0xff1a1a2e"
 else
-    ICON_COLOR="0xffcf6679"
+    ICON_COLOR="0xffb35060"  # Dark red (de-pinked, matches inactive label)
     LABEL_COLOR="0xffb35060"  # Dark red (brighter)
 fi
 
@@ -192,9 +194,10 @@ elif [ "$IS_GROUP_FIRST" = true ] || [ "$IS_VISIBLE" = true ]; then
   ARGS+=( icon="$WORKSPACE_ID" icon.font="$NUM_FONT" icon.color=$ICON_COLOR icon.padding_left=5 icon.padding_right=5 \
           label="" label.drawing=off padding_left=1 padding_right=$EDGE_PAD_R )
 else
-  # DOT: empty, not group-first, not visible -> minimal width
+  # DOT: empty, not group-first, not visible -> minimal width, no pill backdrop
   ARGS+=( icon="$DOT_GLYPH" icon.font="$DOT_FONT" icon.color=$DOT_COLOR icon.padding_left=2 icon.padding_right=2 \
-          label="" label.drawing=off padding_left=0 padding_right=$DOT_PAD_R )
+          label="" label.drawing=off padding_left=0 padding_right=$DOT_PAD_R \
+          background.color=$TRANSPARENT )
 fi
 
 sketchybar "${ARGS[@]}"

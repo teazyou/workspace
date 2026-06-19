@@ -30,7 +30,7 @@ sketchybar --bar "${bar[@]}"
 defaults=(
   updates=when_shown
   icon.font="$FONT:Bold:19.0"
-  icon.color=0xffcf6679
+  icon.color=$PINK
   icon.padding_left=12
   icon.padding_right=4
   icon.y_offset=1
