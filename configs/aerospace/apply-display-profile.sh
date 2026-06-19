@@ -4,6 +4,8 @@
 
 set -euo pipefail
 
+source ~/workspace/configs/aerospace/lib-paths.sh
+
 AEROSPACE_CONFIG="$HOME/.aerospace.toml"
 STATE_FILE="/tmp/aerospace-display-profile.state"
 LOG_FILE="/tmp/aerospace-display-profile.log"
@@ -33,7 +35,8 @@ log() {
 # "Color LCD", its Display Type says "Built-in", or its Connection Type is
 # "Internal" — any one is enough.
 builtin_is_main() {
-    system_profiler SPDisplaysDataType 2>/dev/null | awk '
+    local sp_displays="${1:-$(system_profiler SPDisplaysDataType 2>/dev/null)}"
+    printf '%s\n' "$sp_displays" | awk '
         /^[[:space:]]+[A-Za-z].*:$/ {
             if (blk_main && blk_builtin) found=1
             blk_main=0; blk_builtin=0
@@ -57,7 +60,8 @@ builtin_is_main() {
 # to AeroSpace and can't be matched by a name regex, but it's the only non-main
 # screen in the travel setup so 'secondary' resolves to it unambiguously.
 companion_ws_pattern() {
-    if builtin_is_main; then
+    local sp_displays="${1:-$(system_profiler SPDisplaysDataType 2>/dev/null)}"
+    if builtin_is_main "$sp_displays"; then
         echo "'secondary'"
     else
         echo "'built-in.*'"
@@ -123,6 +127,7 @@ calculate_top_gap() {
 
 # Get monitor info and build config
 get_monitors_config() {
+    local sp_displays="${1:-$(system_profiler SPDisplaysDataType 2>/dev/null)}"
     local monitors=()
     local current_name=""
     local current_res=""
@@ -142,21 +147,23 @@ get_monitors_config() {
             is_main=false
         fi
 
-        # Detect Retina display (built-in or external Retina)
-        if [[ "$line" =~ "Retina" ]]; then
-            is_retina=true
-        fi
-
         # Detect the main display (carries the menu bar)
         if [[ "$line" =~ Main\ Display:\ Yes ]]; then
             is_main=true
         fi
 
-        # Detect resolution (take first resolution line per monitor)
+        # Detect resolution (take first resolution line per monitor).
+        # Only treat the display as Retina when the Resolution line ITSELF says
+        # "Retina" — an external display whose Display Type mentions Retina but
+        # whose Resolution line does not must not be routed through the MacBook
+        # retina gap table.
         if [[ -z "$current_res" && "$line" =~ Resolution:\ ([0-9]+)\ x\ ([0-9]+) ]]; then
             current_res="${BASH_REMATCH[1]}x${BASH_REMATCH[2]}"
+            if [[ "$line" =~ "Retina" ]]; then
+                is_retina=true
+            fi
         fi
-    done < <(system_profiler SPDisplaysDataType 2>/dev/null)
+    done < <(printf '%s\n' "$sp_displays")
 
     # Don't forget last monitor
     if [[ -n "$current_name" && -n "$current_res" ]]; then
@@ -164,11 +171,16 @@ get_monitors_config() {
     fi
 
     # Output monitor info
-    printf '%s\n' "${monitors[@]}"
+    # Guard against an empty array so set -u (nounset) doesn't abort the whole
+    # gap rebuild when system_profiler yields no name+Resolution block.
+    if (( ${#monitors[@]} )); then
+        printf '%s\n' "${monitors[@]}"
+    fi
 }
 
 # Build the outer.top config string
 build_top_gap_config() {
+    local sp_displays="${1:-$(system_profiler SPDisplaysDataType 2>/dev/null)}"
     local -a gap_entries=()
     local default_gap=30
     local main_gap=""
@@ -231,14 +243,14 @@ build_top_gap_config() {
         if (( gap > default_gap )); then
             default_gap=$gap
         fi
-    done < <(get_monitors_config)
+    done < <(get_monitors_config "$sp_displays")
 
     # When SketchyBar is hidden on the secondary monitors, keep the bar gap
     # only on the main monitor (where the bar still shows) and reclaim the
     # freed top space on every other monitor — regardless of monitor count.
     # The old `monitor.secondary` keyword only works for 2-monitor setups,
     # so use `monitor.main` + a small default instead.
-    local bar_state_file="/tmp/secondary-bar.state"
+    local bar_state_file="$SECONDARY_BAR_STATE"
     local bar_off=false
     if [[ -f "$bar_state_file" ]] && [[ "$(cat "$bar_state_file" 2>/dev/null)" == "off" ]]; then
         bar_off=true
@@ -288,15 +300,16 @@ build_top_gap_config() {
 
 # Get current fingerprint (for change detection)
 get_fingerprint() {
+    local sp_displays="${1:-$(system_profiler SPDisplaysDataType 2>/dev/null)}"
     local resolutions
-    resolutions=$(system_profiler SPDisplaysDataType 2>/dev/null | grep -E "Resolution:" | sort)
+    resolutions=$(printf '%s\n' "$sp_displays" | grep -E "Resolution:" | sort)
     # Bail if no displays detected (system_profiler returns empty in some non-GUI contexts)
     [[ -z "$resolutions" ]] && return 1
     # Fold in which display is main so swapping the main display on the SAME
     # physical monitors (e.g. via System Settings) still re-triggers a rebuild and
     # lets the 7-9 assignment follow — resolutions alone wouldn't change then.
     local bim="sec"
-    builtin_is_main && bim="main"
+    builtin_is_main "$sp_displays" && bim="main"
     printf '%s|builtin=%s' "$resolutions" "$bim" | /sbin/md5 | cut -c1-8
 }
 
@@ -351,9 +364,17 @@ update_aerospace_config() {
 main() {
     local force="${1:-}"
 
+    # Capture the SPDisplaysDataType blob ONCE per tick and feed it to every
+    # consumer (get_fingerprint, build_top_gap_config -> get_monitors_config,
+    # companion_ws_pattern) instead of each spawning its own system_profiler.
+    # All those functions still default-arg to a fresh capture when called
+    # standalone, so they remain independently runnable.
+    local sp_displays
+    sp_displays="$(system_profiler SPDisplaysDataType 2>/dev/null)"
+
     # Check for changes
     local fingerprint
-    fingerprint=$(get_fingerprint) || { log "No displays detected, skipping"; exit 0; }
+    fingerprint=$(get_fingerprint "$sp_displays") || { log "No displays detected, skipping"; exit 0; }
 
     if [[ -f "$STATE_FILE" && "$force" != "--force" ]]; then
         local last_fp
@@ -368,12 +389,12 @@ main() {
 
     # Calculate and apply new config
     local top_gap_config
-    top_gap_config=$(build_top_gap_config)
+    top_gap_config=$(build_top_gap_config "$sp_displays")
     log "New outer.top config: $top_gap_config"
 
     # Decide where workspaces 7-9 live based on whether the built-in is main.
     local ws_pattern
-    ws_pattern=$(companion_ws_pattern)
+    ws_pattern=$(companion_ws_pattern "$sp_displays")
     log "Workspaces 7-9 -> $ws_pattern"
 
     update_aerospace_config "$top_gap_config" "$ws_pattern"

@@ -8,6 +8,8 @@
 # State (last-focused window id per app) lives in /tmp/dock-cycle-<bundle_id>.state
 # and is only used as a tiebreaker when returning from another app.
 
+source ~/workspace/configs/aerospace/lib-paths.sh
+
 position="${1:-0}"
 workspace=$((position + 1))
 
@@ -15,7 +17,7 @@ app_path=$(/usr/libexec/PlistBuddy -c "Print :persistent-apps:${position}:tile-d
 [[ -z "$app_path" ]] && exit 0
 
 app_path="${app_path#file://}"
-app_path=$(python3 -c "import urllib.parse; print(urllib.parse.unquote('$app_path'))")
+app_path=$(python3 -c 'import sys,urllib.parse; print(urllib.parse.unquote(sys.argv[1]))' "$app_path")
 
 bundle_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$app_path/Contents/Info.plist" 2>/dev/null)
 
@@ -50,16 +52,19 @@ done < <(aerospace list-windows --monitor all --app-bundle-id "$bundle_id" --for
 #    the user navigated away mid-launch), silently move it. Then clear
 #    the grace marker. Hard cap ~18s.
 if [[ ${#windows[@]} -eq 0 ]]; then
-    grace_file="/tmp/aerospace-empty-watcher-grace-${workspace}"
-    touch "$grace_file"
+    grace_marker="$(grace_file "$workspace")"
+    touch "$grace_marker"
     aerospace workspace "$workspace"
     open "$app_path"
 
     (
         i=0
-        while [[ $i -lt 90 ]]; do
+        max_iters=$(( PLACEMENT_CAP_SECONDS * 5 ))
+        while [[ $i -lt $max_iters ]]; do
             sleep 0.2
-            entry=$(aerospace list-windows --monitor all --app-bundle-id "$bundle_id" --format '%{window-id}|%{workspace}' 2>/dev/null | head -n 1)
+            # Read just the first window row from a process substitution instead
+            # of piping through `head -n1` (one fewer fork per 200ms poll tick).
+            read -r entry < <(aerospace list-windows --monitor all --app-bundle-id "$bundle_id" --format '%{window-id}|%{workspace}' 2>/dev/null)
             if [[ -n "$entry" ]]; then
                 wid="${entry%%|*}"
                 wws="${entry##*|}"
@@ -77,7 +82,7 @@ if [[ ${#windows[@]} -eq 0 ]]; then
             fi
             i=$((i + 1))
         done
-        rm -f "$grace_file"
+        rm -f "$grace_marker"
         exit 0
     ) </dev/null >/dev/null 2>&1 &
 

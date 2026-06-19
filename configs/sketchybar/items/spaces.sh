@@ -38,12 +38,14 @@ do
     background.corner_radius=6
     background.drawing=on
     click_script="aerospace workspace $sid"
-    script="$PLUGIN_DIR/aerospace.sh $sid"
   )
 
+  # No per-item script= / aerospace_workspace_change subscription anymore: the
+  # hidden aerospace_coordinator item (added below) repaints ALL space items in a
+  # single batched pass on each workspace change. Items keep only the click path.
   sketchybar --add item space.$sid left    \
              --set space.$sid "${space[@]}" \
-             --subscribe space.$sid aerospace_workspace_change mouse.clicked
+             --subscribe space.$sid mouse.clicked
 
   # Add spacer after space.6 (between main and secondary workspaces)
   if [ "$sid" = "6" ]; then
@@ -57,6 +59,14 @@ do
                --set spaces_spacer_secondary width=3 background.drawing=off icon.drawing=off label.drawing=off
   fi
 done
+
+# Hidden coordinator: a single non-drawing item that owns the
+# aerospace_workspace_change subscription. On each workspace change it runs
+# plugins/aerospace.sh ONCE, which repaints every space.N item in one batched
+# --set (instead of N separate per-item script invocations).
+sketchybar --add item aerospace_coordinator left \
+           --set aerospace_coordinator drawing=off script="$PLUGIN_DIR/aerospace.sh" \
+           --subscribe aerospace_coordinator aerospace_workspace_change
 
 # Add new space button - CriticalElement style (DISABLED)
 # sketchybar --add item new_space left                        \

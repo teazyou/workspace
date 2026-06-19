@@ -171,6 +171,37 @@ border so they read as distinct panels:
 The border red `#b22222` is kept in sync with the JankyBorders `active_color`
 (`0xffb22222`) so the popups match the window borders.
 
+## Custom workbench CSS (`vscode_vibrancy.imports`) — for things with no setting
+
+Some looks have **no native VS Code setting** — e.g. the active tab's border is
+locked to ~1px (`tab.activeBorder` only sets its *colour*, not its thickness). Rather
+than install a separate Custom-CSS extension, Vibrancy Continued can inject your own
+CSS/JS straight into the workbench via:
+
+```jsonc
+"vscode_vibrancy.imports": [
+  "/Users/teazyou/workspace/configs/vscode/custom.css"  // absolute path, forward slashes
+],
+```
+
+The injected file lives in the repo at [custom.css](custom.css) (so it *is* version-
+controlled, unlike the Claude Code webview patch). Current use: a **4px bright-red bar
+on the active tab** (the active tab otherwise has only the 1px theme border + a faint
+red tint, which read as "not enough"). The rule uses an inset box-shadow so it doesn't
+depend on VS Code's internal tab markup:
+
+```css
+.monaco-workbench .tabs-container > .tab.active {
+  box-shadow: inset 0 -4px 0 0 #ff3030 !important;  /* -4px = bottom; 4px = top */
+}
+```
+
+- Re-apply after editing the CSS (or the `imports` list) with **"Reload Vibrancy"**,
+  not a plain window reload.
+- The active-tab *colour/tint* still comes from `colorCustomizations`
+  (`tab.activeBorder`, `tab.activeBackground`, `tab.activeForeground`); only the
+  **thickness** needs the injected CSS.
+
 ## Surface groups in `colorCustomizations` (what's transparent vs. tinted)
 
 - **Fully transparent (`…00`)** — show the desktop/vibrancy straight through:

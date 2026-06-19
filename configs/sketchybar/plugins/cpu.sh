@@ -1,12 +1,13 @@
 #!/bin/bash
 
-CPU_INFO=$(top -l 1 -n 0 2>/dev/null | grep -E "^CPU" | tail -1)
-USER=$(echo "$CPU_INFO" | awk '{print $3}' | tr -d '%')
-SYS=$(echo "$CPU_INFO" | awk '{print $5}' | tr -d '%')
+# Single awk over the last "CPU usage" line of `top` parses the user ($3) and
+# sys ($5) percentages, strips the '%', sums them and truncates to an integer —
+# replacing the echo|awk|tr|bc|cut fork chain. Empty/absent fields print "0".
+TOTAL=$(top -l 1 -n 0 2>/dev/null | awk '
+  /^CPU/ {
+    usr=$3; sys=$5; sub(/%/, "", usr); sub(/%/, "", sys); line=1
+  }
+  END { if (line) printf "%d", usr + sys; else printf "0" }
+')
 
-if [ -n "$USER" ] && [ -n "$SYS" ]; then
-  TOTAL=$(echo "$USER + $SYS" | bc 2>/dev/null | cut -d. -f1)
-  sketchybar --set $NAME label="${TOTAL:-0}%"
-else
-  sketchybar --set $NAME label="0%"
-fi
+sketchybar --set $NAME label="${TOTAL:-0}%"

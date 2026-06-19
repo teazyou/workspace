@@ -109,4 +109,33 @@ __icon_map() {
   echo "$icon_result"
 }
 
-__icon_map "$1"
+# Shorten common app display names for the spaces strip. Lives here alongside
+# __icon_map so the two app-display-name maps are edited in one place. Sourced
+# (not run) by plugins/aerospace.sh, which calls it directly.
+shorten_app_name() {
+    local app="$1"
+    case "$app" in
+        "Google Chrome") echo "Chrome" ;;
+        "Visual Studio Code") echo "Code" ;;
+        "Microsoft Edge") echo "Edge" ;;
+        "Microsoft Word") echo "Word" ;;
+        "Microsoft Excel") echo "Excel" ;;
+        "Microsoft PowerPoint") echo "PPT" ;;
+        "Microsoft Outlook") echo "Outlook" ;;
+        "System Preferences") echo "Prefs" ;;
+        "System Settings") echo "Settings" ;;
+        "Activity Monitor") echo "Activity" ;;
+        "Sublime Text") echo "Sublime" ;;
+        "IntelliJ IDEA") echo "IDEA" ;;
+        "Android Studio") echo "Android" ;;
+        "Docker Desktop") echo "Docker" ;;
+        "Brave Browser") echo "Brave" ;;
+        *) echo "$app" ;;
+    esac
+}
+
+# Only emit an icon when executed directly (icon_map.sh "<app>"). When this file
+# is sourced for shorten_app_name(), skip the call so no stray glyph is printed.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    __icon_map "$1"
+fi

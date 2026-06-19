@@ -34,11 +34,20 @@
 # (AirPlay)" break literal-name matching. We use the numeric monitor-id
 # instead (verified to work with `aerospace focus-monitor <id>`).
 
-grace_seconds=20
+source ~/workspace/configs/aerospace/lib-paths.sh
 
-# Returns 0 if "<mon-id> <ws>" appears as a line in $1.
+# Returns 0 if "<mon-id> <ws>" appears as a whole line in $1. Fork-free Bash 3.2
+# membership test: wrap both the blob and the needle in newlines so a `case`
+# glob only matches a complete line (no partial-line false positives).
 contains_pair() {
-    printf '%s\n' "$1" | grep -qFx "$2"
+    case "
+$1
+" in
+        *"
+$2
+"*) return 0 ;;
+    esac
+    return 1
 }
 
 while true; do
@@ -48,7 +57,7 @@ while true; do
     nonempty_pairs=$(aerospace list-workspaces --monitor all --empty no --format '%{monitor-id} %{workspace}' 2>/dev/null)
 
     if [[ -z "$orig_focused_mon" || -z "$visible_pairs" ]]; then
-        sleep 0.5
+        sleep "$POLL_INTERVAL"
         continue
     fi
 
@@ -72,10 +81,10 @@ while true; do
         fi
 
         # Skip if a fresh grace marker exists for this monitor's visible ws.
-        grace_file="/tmp/aerospace-empty-watcher-grace-${vis}"
-        if [[ -f "$grace_file" ]]; then
-            age=$(( $(date +%s) - $(stat -f %m "$grace_file" 2>/dev/null || echo 0) ))
-            if [[ $age -lt $grace_seconds ]]; then
+        grace_marker="$(grace_file "$vis")"
+        if [[ -f "$grace_marker" ]]; then
+            age=$(( $(date +%s) - $(stat -f %m "$grace_marker" 2>/dev/null || echo 0) ))
+            if [[ $age -lt $GRACE_SECONDS ]]; then
                 continue
             fi
         fi
@@ -89,8 +98,8 @@ while true; do
 
         # 1) MRU walk (newest-last in the file → reverse with `tail -r`, BSD).
         target=""
-        mru_file="/tmp/aerospace-ws-mru-mon-${mon}.state"
-        if [[ -n "$mon_nonempty" && -f "$mru_file" ]]; then
+        mru_path="$(mru_file "$mon")"
+        if [[ -n "$mon_nonempty" && -f "$mru_path" ]]; then
             while IFS= read -r cand; do
                 [[ -z "$cand" || "$cand" == "$vis" ]] && continue
                 if printf '%s\n' "$mon_ws_list"  | grep -qFx "$cand" \
@@ -98,7 +107,7 @@ while true; do
                     target="$cand"
                     break
                 fi
-            done < <(tail -r "$mru_file" 2>/dev/null)
+            done < <(tail -r "$mru_path" 2>/dev/null)
         fi
 
         # 2) Fallback: first non-empty workspace AeroSpace lists for this monitor.
@@ -132,5 +141,5 @@ while true; do
         fi
     done
 
-    sleep 0.5
+    sleep "$POLL_INTERVAL"
 done

@@ -168,7 +168,11 @@ connectivity_bracket=(
 sketchybar --add bracket connectivity vpn wifi ethernet \
            --set connectivity "${connectivity_bracket[@]}"
 
-# Forcing all item scripts to run (never do this in production)
-sketchybar --update
+# Paint the spaces strip once: fire the coordinator's event so plugins/aerospace.sh
+# runs a single batched repaint of every space.N item at startup. Avoids the
+# `sketchybar --update` thundering herd (which synchronously runs EVERY polling
+# plugin on every bar restart / perf-mode toggle / display flip). update_freq
+# items self-populate from their literal label= seeds on their own first tick.
+sketchybar --trigger aerospace_workspace_change
 
 echo "sketchybar configuration loaded..."

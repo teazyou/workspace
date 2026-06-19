@@ -36,6 +36,9 @@ mouseDelta=1.0
 # Don't re-focus immediately after a Space/workspace change.
 ignoreSpaceChanged=true
 
-# Cursor warping is handled by AeroSpace's mouse-follows-focus callback
-# (on-focus-changed = move-mouse window-lazy-center in aerospace.toml), so
-# AutoRaise's own warp is left disabled to avoid two tools fighting over the cursor.
+# Cursor warping is handled per-keybinding in aerospace.toml: each focus/move/
+# workspace binding appends `move-mouse window-lazy-center`. The global
+# on-focus-changed / on-focused-monitor-changed callbacks are deliberately empty
+# (they also fired on plain mouse-over, recentering the cursor whenever you
+# crossed a window border). AutoRaise's own warp is left disabled so the two
+# tools don't fight over the cursor.

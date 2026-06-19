@@ -3,9 +3,16 @@
 source "$HOME/.config/sketchybar/icons.sh"
 source "$HOME/.config/sketchybar/colors.sh"
 
-BATTERY_INFO="$(pmset -g batt)"
-PERCENTAGE=$(echo "$BATTERY_INFO" | grep -Eo "\d+%" | cut -d% -f1)
-CHARGING=$(echo "$BATTERY_INFO" | grep 'AC Power')
+# One awk over `pmset -g batt` extracts the integer percentage (first NN%
+# token) and an AC-power flag, replacing two grep|cut fork chains. Output:
+# "<percent> <0|1>"; percent empty when no battery line is present.
+read -r PERCENTAGE CHARGING <<< "$(pmset -g batt | awk '
+  /AC Power/ { ac=1 }
+  {
+    if (match($0, /[0-9]+%/) && pct=="") { pct=substr($0, RSTART, RLENGTH-1) }
+  }
+  END { printf "%s %d", pct, ac }
+')"
 
 if [ "$PERCENTAGE" = "" ]; then
   exit 0
@@ -19,7 +26,7 @@ case ${PERCENTAGE} in
   *) ICON=$BATTERY_0 ;;
 esac
 
-if [[ "$CHARGING" != "" ]]; then
+if [[ "$CHARGING" == "1" ]]; then
   ICON=$BATTERY_CHARGING
 fi
 

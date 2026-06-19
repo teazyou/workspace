@@ -100,6 +100,9 @@
     "vscode_vibrancy.type": "transparent",
     "vscode_vibrancy.opacity": 0.60,
     "vscode_vibrancy.forceFramelessWindow": true,
+    "vscode_vibrancy.imports": [
+        "/Users/teazyou/workspace/configs/vscode/custom.css"
+    ],
     "workbench.colorCustomizations": {
         "terminal.background": "#00000000",
         "editorPane.background": "#1e1e1e00",
@@ -111,11 +114,14 @@
         "panelStickyScroll.background": "#1e1e1e00",
         "tab.activeBackground": "#1e1e1e00",
         "tab.unfocusedActiveBackground": "#1e1e1e00",
+        "tab.activeBorder": "#ff3030",
+        "tab.unfocusedActiveBorder": "#ff3030FF",
+        "tab.activeForeground": "#ffffffEE",
         "sideBar.background": "#1e1e1e00",
-        "sideBarTitle.background": "#1e1e1eff",
-        "sideBarStickyScroll.background": "#1e1e1eff",
+        "sideBarTitle.background": "#1e1e1e99",
+        "sideBarStickyScroll.background": "#1e1e1e99",
         "activityBar.background": "#1e1e1e99",
-        "editor.background": "#1e1e1e00",
+        "editor.background": "#1e1e1e99",
         "editorStickyScroll.background": "#1e1e1e99",
         "editorStickyScrollGutter.background": "#1e1e1e99",
         "tab.inactiveBackground": "#1e1e1e99",
@@ -128,8 +134,8 @@
         "notificationCenterHeader.background": "#1e1e1ee6",
         "menu.background": "#1e1e1ee6",
         "quickInput.background": "#1e1e1ee6",
-        "widget.border": "#b22222",
-        "editorWidget.border": "#b22222",
+        "widget.border": "#b22222dd",
+        "editorWidget.border": "#b22222dd",
         "editorHoverWidget.border": "#b22222",
         "editorSuggestWidget.border": "#b22222",
         "inlineChat.border": "#b22222",
@@ -145,5 +151,6 @@
     "breadcrumbs.enabled": false,
     "claudeCode.enableNewConversationShortcut": true,
     "workbench.editor.closeEmptyGroups": false,
-    "redhat.telemetry.enabled": false
+    "redhat.telemetry.enabled": false,
+    "diffEditor.hideUnchangedRegions.enabled": true
 }

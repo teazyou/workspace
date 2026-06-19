@@ -5,13 +5,18 @@ source "$HOME/.config/sketchybar/colors.sh"
 CACHE_DIR="/tmp/sketchybar_network"
 mkdir -p "$CACHE_DIR"
 
+# Poll interval in seconds used to convert the byte delta into a per-second rate.
+# MUST match items/network_down.sh's update_freq (network_down is the sole poller;
+# network_up is passive). Change both together.
+UPDATE_FREQ=5
+
 # Get bytes from active network interface
 get_bytes() {
   # Get primary interface (en0 for wifi, en1 for ethernet, etc.)
   INTERFACE=$(route -n get default 2>/dev/null | grep 'interface:' | awk '{print $2}')
 
   if [ -z "$INTERFACE" ]; then
-    echo "0 0"
+    echo "none 0 0"
     return
   fi
 
@@ -20,7 +25,7 @@ get_bytes() {
   BYTES_IN=$(echo "$STATS" | awk '{print $7}')
   BYTES_OUT=$(echo "$STATS" | awk '{print $10}')
 
-  echo "${BYTES_IN:-0} ${BYTES_OUT:-0}"
+  echo "$INTERFACE ${BYTES_IN:-0} ${BYTES_OUT:-0}"
 }
 
 # Format bytes to human readable
@@ -42,33 +47,44 @@ format_speed() {
   fi
 }
 
-# Read current bytes
-read -r BYTES_IN BYTES_OUT <<< "$(get_bytes)"
+# Single-poller model: network_down is the sole poller (its update_freq drives
+# this script); network_up is passive and gets its label in the same batched set
+# below. The route+netstat pipeline already computes BOTH directions, so there is
+# one shared cache and one computation per tick instead of running it twice.
 
-# Read previous bytes from cache (use separate files per direction to avoid race condition)
-CACHE_FILE="$CACHE_DIR/prev_bytes_${NAME:-default}"
+# Read current interface + bytes
+read -r INTERFACE BYTES_IN BYTES_OUT <<< "$(get_bytes)"
+
+# Read previous interface + bytes from the single shared cache
+CACHE_FILE="$CACHE_DIR/prev_bytes"
+PREV_IFACE=""
 PREV_IN=0
 PREV_OUT=0
 if [ -f "$CACHE_FILE" ]; then
-  read -r PREV_IN PREV_OUT < "$CACHE_FILE"
+  read -r PREV_IFACE PREV_IN PREV_OUT < "$CACHE_FILE"
 fi
 
-# Save current bytes to cache
-echo "$BYTES_IN $BYTES_OUT" > "$CACHE_FILE"
+# Save current interface + bytes to cache
+echo "$INTERFACE $BYTES_IN $BYTES_OUT" > "$CACHE_FILE"
 
-# Calculate speed (bytes per second, update_freq is 5 seconds)
-SPEED_IN=$(( (BYTES_IN - PREV_IN) / 5 ))
-SPEED_OUT=$(( (BYTES_OUT - PREV_OUT) / 5 ))
+# Calculate speed (bytes per second; UPDATE_FREQ matches the item update_freq).
+# On the first run or an interface flip, the new interface's counters are
+# unrelated to the cached ones, so zero the delta for this tick instead of
+# reporting a bogus spike.
+if [ -z "$PREV_IFACE" ] || [ "$PREV_IFACE" != "$INTERFACE" ]; then
+  SPEED_IN=0
+  SPEED_OUT=0
+else
+  SPEED_IN=$(( (BYTES_IN - PREV_IN) / UPDATE_FREQ ))
+  SPEED_OUT=$(( (BYTES_OUT - PREV_OUT) / UPDATE_FREQ ))
+fi
 
-# Handle negative values (interface change or overflow)
+# Handle negative values (overflow)
 [ "$SPEED_IN" -lt 0 ] && SPEED_IN=0
 [ "$SPEED_OUT" -lt 0 ] && SPEED_OUT=0
 
-# Update the appropriate item based on $NAME
-if [ "$NAME" = "network_up" ]; then
-  LABEL=$(format_speed $SPEED_OUT)
-  sketchybar --set $NAME label="$LABEL"
-elif [ "$NAME" = "network_down" ]; then
-  LABEL=$(format_speed $SPEED_IN)
-  sketchybar --set $NAME label="$LABEL"
-fi
+# One batched set drives BOTH labels from this single poll.
+LABEL_DOWN=$(format_speed $SPEED_IN)
+LABEL_UP=$(format_speed $SPEED_OUT)
+sketchybar --set network_down label="$LABEL_DOWN" \
+           --set network_up label="$LABEL_UP"

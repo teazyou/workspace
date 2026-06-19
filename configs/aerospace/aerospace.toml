@@ -19,7 +19,7 @@ after-startup-command = [
     # (re)start re-establishes the defaults deterministically (the toggle scripts
     # key off these states), then run each toggle from its clean state: no
     # secondary-bar.state => OFF/hidden, no performance-mode.state => ON.
-    'exec-and-forget for i in {1..20}; do sketchybar --query volume >/dev/null 2>&1 && break; sleep 0.3; done; rm -f /tmp/performance-mode.state /tmp/secondary-bar.state; "$HOME"/workspace/configs/aerospace/secondary-bar-toggle.sh; "$HOME"/workspace/configs/aerospace/performance-mode.sh'
+    'exec-and-forget source ~/workspace/configs/aerospace/lib-paths.sh; for i in {1..20}; do sketchybar --query volume >/dev/null 2>&1 && break; sleep 0.3; done; rm -f "$PERFORMANCE_MODE_STATE" "$SECONDARY_BAR_STATE"; ~/workspace/configs/aerospace/secondary-bar-toggle.sh; ~/workspace/configs/aerospace/performance-mode.sh'
 ]
 
 # Notify Sketchybar about workspace change + track workspace MRU for the

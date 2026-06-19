@@ -15,8 +15,8 @@ network_up=(
   background.drawing=off
   padding_left=0
   padding_right=0
-  update_freq=5
-  script="$PLUGIN_DIR/network_speed.sh"
+  # Passive: no update_freq/script. network_down is the sole poller and sets this
+  # item's label in the same batched --set (see plugins/network_speed.sh).
 )
 
 sketchybar --add item network_up right \

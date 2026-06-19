@@ -5,7 +5,9 @@
 
 set -euo pipefail
 
-STATE_FILE="/tmp/performance-mode.state"
+source ~/workspace/configs/aerospace/lib-paths.sh
+
+STATE_FILE="$PERFORMANCE_MODE_STATE"
 DISPLAY_PROFILE_PLIST="$HOME/Library/LaunchAgents/com.aerospace.display-profile.plist"
 GUI_DOMAIN="gui/$(id -u)"
 
@@ -15,7 +17,30 @@ ITEMS_ICON_ONLY=(headset)
 BRACKETS=(audio traffic)
 SPACERS=(spacer0 spacer1 spacer2 spacer3)
 
-gaming_mode_on() {
+# Bootstrap a LaunchAgent and verify it actually loaded, rather than swallowing
+# a bootstrap race with `|| true`. If the verify fails, retry once after a short
+# settle, then kickstart it. Returns 0 on success, 1 if it still isn't loaded.
+ensure_loaded() {
+  local plist="$1"
+  local label
+  label="$(basename "$plist" .plist)"
+
+  launchctl bootstrap "$GUI_DOMAIN" "$plist" 2>/dev/null || true
+  if launchctl print "$GUI_DOMAIN/$label" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  sleep 0.3
+  launchctl bootstrap "$GUI_DOMAIN" "$plist" 2>/dev/null || true
+  if launchctl print "$GUI_DOMAIN/$label" >/dev/null 2>&1; then
+    launchctl kickstart "$GUI_DOMAIN/$label" 2>/dev/null || true
+    return 0
+  fi
+
+  return 1
+}
+
+performance_mode_on() {
   # Stop display-profile LaunchAgent
   launchctl bootout "$GUI_DOMAIN" "$DISPLAY_PROFILE_PLIST" 2>/dev/null || true
 
@@ -36,9 +61,11 @@ gaming_mode_on() {
   echo "Performance mode ON"
 }
 
-gaming_mode_off() {
-  # Restart display-profile LaunchAgent
-  launchctl bootstrap "$GUI_DOMAIN" "$DISPLAY_PROFILE_PLIST" 2>/dev/null || true
+performance_mode_off() {
+  # Restart display-profile LaunchAgent — verify it actually loaded rather than
+  # swallowing a bootstrap race, which would leave it unloaded until a full WM
+  # restart.
+  ensure_loaded "$DISPLAY_PROFILE_PLIST" || true
 
   # Restore sketchybar items (with labels)
   for item in "${ITEMS_WITH_LABEL[@]}"; do
@@ -67,7 +94,7 @@ gaming_mode_off() {
 
 # Toggle based on current state
 if [[ -f "$STATE_FILE" ]] && [[ "$(cat "$STATE_FILE")" == "on" ]]; then
-  gaming_mode_off
+  performance_mode_off
 else
-  gaming_mode_on
+  performance_mode_on
 fi

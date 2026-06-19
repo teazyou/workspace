@@ -34,3 +34,13 @@ export POPUP_BACKGROUND_COLOR=0xEB1e1e2e
 export POPUP_BORDER_COLOR=$BORDER_INACTIVE
 
 export SHADOW_COLOR=$BLACK
+
+# Spaces palette (plugins/aerospace.sh coordinator). Centralized here so the
+# whole spaces strip recolors from one place, like the rest of the bar.
+export SPACE_FOCUS_BG=$BORDER_ACTIVE   # focused-monitor space bubble (= active border red)
+export SPACE_MON2_BG=0xff8a3048        # 2nd visible monitor bubble
+export SPACE_MON3_BG=0xff75283d        # 3rd+ visible monitor bubble
+export SPACE_ACTIVE_ICON=0xff1a1a2e    # number glyph on a focused/visible bubble
+export SPACE_FOCUS_LABEL=0xfffff0f3    # app-name label on the focused bubble (reddish white)
+export SPACE_INACTIVE_FG=0xffb35060    # inactive space number + app label (dark red)
+export SPACE_DOT_COLOR=0xff6e4250      # empty-filler dot glyph (dim placeholder)

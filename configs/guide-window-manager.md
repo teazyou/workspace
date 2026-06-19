@@ -65,11 +65,11 @@
 - Single source of truth for outer.top — detects the main display via `Main Display: Yes` in system_profiler and tracks its gap (main_gap)
 - Reads /tmp/secondary-bar.state — when "off" (2+ monitors, main detected), emits `[{ monitor.main = <main_gap> }, 10]` so the bar gap stays only on the main monitor (where the bar still shows) and all other monitors reclaim to 10, regardless of monitor count; otherwise keeps the per-resolution multi-entry array. The old `monitor.secondary` override is gone (it only worked for 2-monitor setups)
 - **Also auto-manages the workspace 7-9 monitor assignment** (the "laptop-companion" workspaces) in aerospace.toml's `[workspace-to-monitor-force-assignment]`, rewriting just the `7/8/9 =` lines (1-6 `main` and 0 `sidecar.*` untouched). `companion_ws_pattern`: when the MacBook built-in is SECONDARY (an external is main, e.g. home desk) → `'built-in.*'` (names the MacBook explicitly so 7-9 never grab an iPad sidecar); when the built-in is itself MAIN (e.g. travel with a portable external) → `'secondary'`, because `'built-in.*'` would then collide with workspaces 1-6 on the main display. The portable external reports an empty monitor name to AeroSpace so it can't be matched by a name regex — `'secondary'` resolves to it as the only non-main screen in the travel setup
-- Trigger model for the 7-9 flip: applied on every AeroSpace (re)start via the startup `secondary-bar-toggle.sh → apply-display-profile.sh --force` chain (runs before performance mode boots out this LaunchAgent), and on hot display swaps within ~5s **when performance mode is OFF** (performance mode unloads this agent, so a hot swap while it's ON waits for the next restart / perf-mode toggle)
+- Trigger model for the 7-9 flip: applied on every AeroSpace (re)start via the startup `secondary-bar-toggle.sh → apply-display-profile.sh --force` chain (runs before performance mode boots out this LaunchAgent), and on hot display swaps within ~15s **when performance mode is OFF** (performance mode unloads this agent, so a hot swap while it's ON waits for the next restart / perf-mode toggle)
 - Edit for: gap values per resolution, adding new resolution mappings, the 7-9 companion-monitor logic
 
 `./configs/aerospace/com.aerospace.display-profile.plist`
-- LaunchAgent that runs apply-display-profile.sh every 5 seconds
+- LaunchAgent that runs apply-display-profile.sh every 15 seconds
 - Detects monitor connect/disconnect and auto-applies optimal gaps
 - Install to ~/Library/LaunchAgents/ and launchctl load to activate
 - Edit for: check interval timing
@@ -174,7 +174,7 @@
 
 `./configs/borders/bordersrc`
 - JankyBorders config (window border styling)
-- Tokyo Night theme: active=0xffc0caf5, inactive=0xff414868
+- Dark-red theme: active=0xffb22222, inactive=0xff4d1a1a
 - Options: style=round, width=4.0, hidpi=on
 - Edit for: border colors, width, style
 

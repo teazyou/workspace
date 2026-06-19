@@ -9,7 +9,9 @@
 
 set -euo pipefail
 
-STATE_FILE="/tmp/secondary-bar.state"
+source ~/workspace/configs/aerospace/lib-paths.sh
+
+STATE_FILE="$SECONDARY_BAR_STATE"
 
 if [[ -f "$STATE_FILE" ]] && [[ "$(cat "$STATE_FILE")" == "off" ]]; then
   sketchybar --bar display=all

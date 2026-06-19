@@ -24,7 +24,9 @@ AGENTS=(
 
 echo "==> Stopping window-manager stack"
 
-# Unload LaunchAgents (KeepAlive=true, so they must be booted out, not just killed)
+# Unload LaunchAgents. display-profile is RunAtLoad + StartInterval (no KeepAlive);
+# empty-watcher + AutoRaise are KeepAlive. All three are booted out (not just
+# killed) so launchd doesn't immediately respawn the KeepAlive ones.
 for agent in "${AGENTS[@]}"; do
   launchctl bootout "$DOMAIN/$agent" 2>/dev/null && echo "    unloaded $agent"
 done
@@ -42,14 +44,26 @@ echo "==> Starting window-manager stack"
 # AeroSpace first — its after-startup-command relaunches sketchybar + borders
 open -a AeroSpace && echo "    started AeroSpace (+ sketchybar + borders)"
 
-# Wait for AeroSpace to be up before the agents that depend on it
+# Wait for AeroSpace to be ready before the agents that depend on it. Break on a
+# readiness query (the socket the agents talk to is up), not mere process
+# existence — pgrep can succeed while the socket is still initializing.
 for _ in 1 2 3 4 5 6 7 8 9 10; do
-  pgrep -x AeroSpace >/dev/null 2>&1 && break
+  aerospace list-workspaces --focused >/dev/null 2>&1 && break
   sleep 0.5
 done
 
+# If performance mode is ON, it deliberately boots out the display-profile agent;
+# don't re-bootstrap it here or we'd leave it running while perf mode is nominally
+# ON. empty-watcher + AutoRaise still load unconditionally.
+PERF_STATE=""
+[[ -f /tmp/performance-mode.state ]] && PERF_STATE="$(cat /tmp/performance-mode.state 2>/dev/null)"
+
 # Reload LaunchAgents (display-profile reloads config, empty-watcher + AutoRaise daemons)
 for agent in "${AGENTS[@]}"; do
+  if [[ "$agent" == "com.aerospace.display-profile" && "$PERF_STATE" == "on" ]]; then
+    echo "    skipped $agent (performance mode ON)"
+    continue
+  fi
   launchctl bootstrap "$DOMAIN" "$AGENTS_DIR/$agent.plist" 2>/dev/null \
     && echo "    loaded $agent"
 done
