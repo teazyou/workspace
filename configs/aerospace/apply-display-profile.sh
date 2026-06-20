@@ -19,8 +19,14 @@ REFERENCE_GAP=42
 # MAIN_ONLY_BAR_EXTRA: added on top when the bar is shown ONLY on the main
 #                      screen (secondary bar hidden) — applied to whichever
 #                      display still draws the bar.
+# BUILTIN_MAIN_BAR_EXTRA: extra breathing room below the bar on the MacBook
+#                      built-in ONLY when it is itself the MAIN (primary)
+#                      display drawing the lone bar (secondary bar hidden).
+#                      Scoped to that one case, so external-main and
+#                      built-in-secondary setups are untouched.
 BAR_GAP_PAD=2
 MAIN_ONLY_BAR_EXTRA=2
+BUILTIN_MAIN_BAR_EXTRA=5
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG_FILE"
@@ -269,7 +275,7 @@ build_top_gap_config() {
         # Bar hidden on secondaries (those screens show no bar), so reclaim top.
         # The screen that still draws the bar (the main one) gets the padded gap
         # PLUS MAIN_ONLY_BAR_EXTRA, since the bar is now only on the main screen:
-        #   built-in MAIN (only bar drawn)     -> 2 + main-only extra
+        #   built-in MAIN (only bar drawn)     -> 2 + main-only extra + builtin-main extra
         #   built-in SECONDARY (no bar there)  -> 4  (reclaim, no bar)
         #   main external (only bar drawn)     -> padded $main_gap + main-only extra
         #   other external secondaries         -> $bottom_gap (match the bottom gap)
@@ -277,7 +283,7 @@ build_top_gap_config() {
         # slot; a non-built-in main then matches monitor.main; remaining external
         # secondaries fall through to the bottom-matching default.
         local builtin_top=4
-        [[ "$builtin_is_main" == "true" ]] && builtin_top=$(( 2 + MAIN_ONLY_BAR_EXTRA ))
+        [[ "$builtin_is_main" == "true" ]] && builtin_top=$(( 2 + MAIN_ONLY_BAR_EXTRA + BUILTIN_MAIN_BAR_EXTRA ))
         # Main screen still draws the bar, so add the main-only extra on top of
         # its already-padded gap.
         local main_only_gap=$(( main_gap + MAIN_ONLY_BAR_EXTRA ))
@@ -285,7 +291,7 @@ build_top_gap_config() {
         local bottom_gap
         bottom_gap=$(grep -E '^[[:space:]]*outer\.bottom' "$AEROSPACE_CONFIG" 2>/dev/null | grep -oE '[0-9]+' | head -1 || true)
         [[ -z "$bottom_gap" ]] && bottom_gap=5
-        log "Secondary bar hidden — built-in $builtin_top (main 2+extra / secondary 4), main external keeps $main_only_gap, external secondaries -> bottom gap $bottom_gap"
+        log "Secondary bar hidden — built-in $builtin_top (main 2+extra+builtin-main extra / secondary 4), main external keeps $main_only_gap, external secondaries -> bottom gap $bottom_gap"
         echo "[{ monitor.\"built-in.*\" = $builtin_top }, { monitor.main = $main_only_gap }, $bottom_gap]"
     else
         # Multiple monitors - use array format (per-resolution entries).
