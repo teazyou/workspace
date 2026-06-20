@@ -96,7 +96,7 @@
     "claudeCode.preferredLocation": "panel",
     "window.customTitleBarVisibility": "never",
     "workbench.activityBar.location": "top",
-    "workbench.colorTheme": "Dark Red",
+    "workbench.colorTheme": "Red",
     "vscode_vibrancy.type": "transparent",
     "vscode_vibrancy.opacity": 0.60,
     "vscode_vibrancy.forceFramelessWindow": true,
