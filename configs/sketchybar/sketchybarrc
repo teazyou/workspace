@@ -12,15 +12,26 @@ export PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 # Font from neutonfoo/dotfiles
 export FONT="JetBrainsMono Nerd Font"
 
-# Setting up the general bar appearance - CriticalElement floating style
+# Single template value for the bar's side spacing — applied to BOTH padding_left
+# and padding_right so the left group (spaces) and right group (time/status) sit
+# the same distance from the screen edge. The right-most item (time) carries NO
+# outer label.padding_right anymore; this is the sole source of the edge gap.
+BAR_SIDE_PADDING=8
+
+# Setting up the general bar appearance - CriticalElement floating style.
+# The bar fill stays fully TRANSPARENT (color=$TRANSPARENT). A coloured bar fills
+# the ENTIRE width — including the empty middle between the left/right groups — so
+# it renders as a full-width rectangle that tints the wallpaper. Instead the grey
+# lives on the item groups only (the brackets, via DARK_BG), so just the left +
+# right pill clusters are tinted and the wallpaper shows through everywhere else.
 bar=(
   height=58
   color=$TRANSPARENT
   shadow=off
   position=top
   sticky=on
-  padding_left=0
-  padding_right=0
+  padding_left=$BAR_SIDE_PADDING
+  padding_right=$BAR_SIDE_PADDING
   y_offset=-6
   margin=6
   blur_radius=0

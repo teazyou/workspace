@@ -12,7 +12,9 @@ time_item=(
   label.font="$FONT:Bold:14.0"
   label.color=$PINK
   label.padding_left=4
-  label.padding_right=8
+  # No outer right padding: the bar's BAR_SIDE_PADDING (sketchybarrc) owns the
+  # right-edge gap so it stays symmetric with the left edge.
+  label.padding_right=0
   label="$(date '+%H:%M')"
   background.drawing=off
   update_freq=1

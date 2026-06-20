@@ -22,13 +22,13 @@ export BORDER_INACTIVE=0xff4d1a1a  # dark red   — unselected/inactive elements
 export PINK=$BORDER_ACTIVE
 
 # General bar colors
-export BAR_COLOR=0x00000000  # Fully transparent for floating items effect
+export BAR_COLOR=0x00000000  # Fully transparent — the bar fill stays clear so the empty middle shows the wallpaper; grey lives on the groups (DARK_BG)
 export ICON_COLOR=$WHITE
 export LABEL_COLOR=$WHITE
 export BACKGROUND_1=0xEB1e1e2e
 export BACKGROUND_2=0xEB1e1e2e
 export WARM_GRAY=0xFFD3CDC5
-export DARK_BG=0xB3000000  # black at 70% opacity (0xB3 alpha) — pill/bracket backgrounds (left spaces + right groups)
+export DARK_BG=0xCC1e1e1e  # near-black (slight grey lift, RGB 1e1e1e) at 80% opacity (0xCC alpha) — pill/bracket backgrounds (left spaces + right groups)
 
 export POPUP_BACKGROUND_COLOR=0xEB1e1e2e
 export POPUP_BORDER_COLOR=$BORDER_INACTIVE
