@@ -30,7 +30,7 @@
 .monaco-workbench .editor-group-container.active>.title .tabs-container>.tab.active>.tab-border-bottom-container {
     height: 2px !important;
     /* bar thickness */
-    background-color: #ff3030 !important;
+    background-color: #ff3030af !important;
     /* bar colour */
 }
 

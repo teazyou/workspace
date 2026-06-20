@@ -85,6 +85,12 @@ Key takeaways for future edits:
 
 ## Patching the webview CSS — the tool IN/OUT box bug
 
+> The IN/OUT fix below is one of several Claude Code **webview** patches. The full set
+> (grey chat boxes, floating-message compaction, full-width input, shrunk toolbar, …) and
+> a one-command re-apply script live in [guide-claude-code.md](guide-claude-code.md). This
+> section keeps the IN/OUT explanation because it stems directly from the `sideBar.background`
+> transparency fix above.
+
 Making `sideBar.background` transparent (the panel fix above) has a side effect: the
 **tool usage box** (the collapsed IN/OUT preview shown for Bash/Edit/etc. tool calls)
 becomes **invisible** — empty boxes with no text.
