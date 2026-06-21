@@ -13,7 +13,7 @@ config-version = 2
 # Launch JankyBorders with a dark red theme
 after-startup-command = [
     'exec-and-forget sketchybar',
-    'exec-and-forget borders active_color=0xffb22222 inactive_color=0xff4d1a1a width=3.0 style=round hidpi=on order=above',
+    'exec-and-forget borders active_color=0xffb22222 inactive_color=0xff4d1a1a width=2.0 style=round hidpi=on order=above',
     # Default modes at startup: performance mode ON + the bar hidden on secondary
     # monitors. Wait for the bar items to exist, reset the /tmp state files so a
     # (re)start re-establishes the defaults deterministically (the toggle scripts
