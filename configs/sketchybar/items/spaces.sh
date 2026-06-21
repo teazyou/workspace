@@ -60,12 +60,22 @@ do
   fi
 done
 
-# Hidden coordinator: a single non-drawing item that owns the
-# aerospace_workspace_change subscription. On each workspace change it runs
-# plugins/aerospace.sh ONCE, which repaints every space.N item in one batched
-# --set (instead of N separate per-item script invocations).
+# Hidden coordinator: a single item that owns the aerospace_workspace_change
+# subscription. On each workspace change it runs plugins/aerospace.sh ONCE, which
+# repaints every space.N item in one batched --set (instead of N separate per-item
+# script invocations).
+#
+# IMPORTANT: it must stay drawing=ON. Current sketchybar builds DO NOT execute an
+# item's script while it is drawing=off (verified: a drawing=off item never fires
+# its script on events, --update, or update_freq; flipping to drawing=on fires it
+# every time). A drawing=off coordinator silently stopped repainting the bar, so
+# the spaces never refreshed which app/space was focused. Instead we keep it drawn
+# but visually invisible — width=0 with icon/label/background drawing off — so the
+# script still runs but the item occupies no space and shows nothing.
 sketchybar --add item aerospace_coordinator left \
-           --set aerospace_coordinator drawing=off script="$PLUGIN_DIR/aerospace.sh" \
+           --set aerospace_coordinator drawing=on width=0 \
+                 icon.drawing=off label.drawing=off background.drawing=off \
+                 script="$PLUGIN_DIR/aerospace.sh" \
            --subscribe aerospace_coordinator aerospace_workspace_change
 
 # Add new space button - CriticalElement style (DISABLED)
