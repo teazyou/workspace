@@ -150,7 +150,7 @@
     "window.autoDetectColorScheme": false,
     "breadcrumbs.enabled": false,
     "claudeCode.enableNewConversationShortcut": true,
-    "workbench.editor.closeEmptyGroups": false,
+    "workbench.editor.closeEmptyGroups": true,
     "redhat.telemetry.enabled": false,
     "diffEditor.hideUnchangedRegions.enabled": true,
     "editor.fontSize": 16
