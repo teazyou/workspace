@@ -125,8 +125,9 @@
 - `focus-monitor` is called by numeric monitor-id (not name) — monitor names can contain glob metacharacters like `(` `)` (e.g. "Sidecar Display (AirPlay)") which break the name-pattern matching AeroSpace uses
 - Per-workspace grace: if `/tmp/aerospace-empty-watcher-grace-<visible_ws>` exists with fresh mtime (<20s), that one monitor's bounce is skipped (other monitors still bounce). Touched by open-dock-app.sh during app launches
 - The 20s grace cap is intentionally slightly longer than open-dock-app.sh's ~18s placement-enforcer cap so slow Electron cold-starts don't get bounced mid-launch
+- Every `aerospace` call goes through the `aero()` timeout wrapper (defined in `lib-paths.sh`), NOT bare `aerospace`. The `aerospace` CLI is a client that talks to the AeroSpace.app server over a socket; when the server restarts/wedges (seen after a display change) an in-flight client call can block on that socket forever, and a bare `$(aerospace …)` then hangs this whole daemon — bash blocks on the command substitution and launchd KeepAlive can't help because the process is alive, just stuck (this silently killed the watcher for >1 day). `aero` runs `aerospace` in the background with a hard `AERO_TIMEOUT` (3s) watchdog that SIGKILLs a hung call, so a wedged server degrades to an empty result the loop skips and retries next tick instead of a permanent hang. Bash-native (no GNU `timeout` on macOS)
 - Bash 3.2 compatible: no `declare -A`, no `mapfile` — uses parallel arrays and grep-based set membership
-- Edit for: poll interval, fallback logic, grace_seconds cap
+- Edit for: poll interval, fallback logic, grace_seconds cap, `AERO_TIMEOUT`/`aero()` in lib-paths.sh
 
 `./configs/aerospace/track-workspace-mru.sh`
 - Called from aerospace.toml exec-on-workspace-change with $AEROSPACE_FOCUSED_WORKSPACE

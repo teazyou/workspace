@@ -33,6 +33,45 @@ PLACEMENT_CAP_SECONDS=18
 # Poll cadence for the empty-workspace-watcher main loop (seconds).
 POLL_INTERVAL=0.5
 
+# Hard wall-clock cap (seconds) for a single `aerospace` CLI call via aero().
+AERO_TIMEOUT="${AERO_TIMEOUT:-3}"
+
+# --- AeroSpace call wrapper ---------------------------------------------
+# `aerospace` is a thin client that talks to the AeroSpace.app server over a
+# socket. If the server restarts or wedges (observed after a display change),
+# an in-flight client call can block on that socket FOREVER. A bare
+# `$(aerospace …)` inside a long-running loop then hangs the whole daemon: bash
+# blocks waiting for the command substitution to finish, and launchd KeepAlive
+# can't help because the process is alive — just stuck. (This is exactly how the
+# empty-workspace-watcher silently died for >1 day.)
+#
+# `aero` runs `aerospace` with a hard timeout so a wedged server degrades to an
+# empty/failed result the caller can skip and retry on the next tick, instead of
+# a permanent hang. Stock macOS has no GNU `timeout`, so this is bash-native:
+# run aerospace in the background, arm a watchdog that SIGKILLs it after
+# AERO_TIMEOUT, and `wait` for whichever happens first.
+#
+# Safe inside `$(…)`: only aerospace writes to the captured stdout; the watchdog
+# has its fds redirected to /dev/null so it never holds the command-substitution
+# pipe open (otherwise every call would block for the full timeout). Returns
+# aerospace's real exit code, or 137 (128+SIGKILL) when it was timed out.
+# Bash 3.2 compatible (no `wait -n`, no associative arrays).
+aero() {
+    aerospace "$@" &
+    local apid=$!
+    { sleep "$AERO_TIMEOUT"; kill -9 "$apid" 2>/dev/null; } >/dev/null 2>&1 &
+    local wpid=$!
+    wait "$apid" 2>/dev/null
+    local rc=$?
+    # aerospace finished (or was killed): tear the watchdog down before it can
+    # fire on a now-reaped (possibly reused) pid, and reap its `sleep` child so
+    # none linger.
+    kill "$wpid" 2>/dev/null
+    pkill -P "$wpid" 2>/dev/null
+    wait "$wpid" 2>/dev/null
+    return "$rc"
+}
+
 # --- Path builders -------------------------------------------------------
 # Per-workspace grace marker touched by open-dock-app.sh and read by the watcher.
 grace_file() {

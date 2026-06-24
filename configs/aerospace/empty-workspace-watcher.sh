@@ -52,9 +52,9 @@ $2
 
 while true; do
     # --- Snapshot AeroSpace state once per tick ---
-    orig_focused_mon=$(aerospace list-monitors --focused --format '%{monitor-id}' 2>/dev/null)
-    visible_pairs=$(aerospace list-workspaces --monitor all --visible --format '%{monitor-id} %{workspace}' 2>/dev/null)
-    nonempty_pairs=$(aerospace list-workspaces --monitor all --empty no --format '%{monitor-id} %{workspace}' 2>/dev/null)
+    orig_focused_mon=$(aero list-monitors --focused --format '%{monitor-id}' 2>/dev/null)
+    visible_pairs=$(aero list-workspaces --monitor all --visible --format '%{monitor-id} %{workspace}' 2>/dev/null)
+    nonempty_pairs=$(aero list-workspaces --monitor all --empty no --format '%{monitor-id} %{workspace}' 2>/dev/null)
 
     if [[ -z "$orig_focused_mon" || -z "$visible_pairs" ]]; then
         sleep "$POLL_INTERVAL"
@@ -90,7 +90,7 @@ while true; do
         fi
 
         # Workspaces assigned to this monitor (one per line).
-        mon_ws_list=$(aerospace list-workspaces --monitor "$mon" --format '%{workspace}' 2>/dev/null)
+        mon_ws_list=$(aero list-workspaces --monitor "$mon" --format '%{workspace}' 2>/dev/null)
         [[ -z "$mon_ws_list" ]] && continue
 
         # Non-empty workspaces on this monitor (filter the global non-empty list).
@@ -134,10 +134,10 @@ while true; do
         [[ -z "$target" || "$target" == "$vis" ]] && continue
 
         if [[ "$mon" == "$orig_focused_mon" ]]; then
-            aerospace workspace --fail-if-noop "$target" 2>/dev/null
+            aero workspace --fail-if-noop "$target" 2>/dev/null
         else
-            aerospace workspace "$target" 2>/dev/null \
-                && aerospace focus-monitor "$orig_focused_mon" 2>/dev/null
+            aero workspace "$target" 2>/dev/null \
+                && aero focus-monitor "$orig_focused_mon" 2>/dev/null
         fi
     done
 
