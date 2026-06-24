@@ -28,14 +28,17 @@ export DIVISION_BORDER_WIDTH=0
 # opaque). Blur is disabled because an opaque fill has nothing behind it to blur.
 export DIVISION_BLUR=0
 
-# ── Drop shadow (rendered directly BELOW each division) ──────────────────────
-# Subtle lift off the wallpaper. angle is degrees in [0,360); 270 = straight down.
-# (Must stay positive — SketchyBar stores the angle unsigned, so a negative like
-# -90 wraps to a bogus 166°. If it ever renders above instead of below, use 90.)
+# ── Drop shadow (cast to the BOTTOM-RIGHT of each division) ──────────────────
+# SketchyBar uses SCREEN coords (y points DOWN): angle in [0,360) with 0 = right,
+# 90 = straight down, 45 = bottom-right, 270 = up. (Verified empirically: 315
+# renders top-right.) Must stay positive — SketchyBar stores the angle unsigned.
 export DIVISION_SHADOW_DRAWING=on
-export DIVISION_SHADOW_COLOR=0x99000000   # ~60% black
-export DIVISION_SHADOW_ANGLE=270
-export DIVISION_SHADOW_DISTANCE=3
+# SketchyBar shadows are HARD-EDGED — there is no blur/spray property (verified:
+# `Invalid property 'blur'`). So we soften toward a more natural look via a
+# lower-opacity colour instead of a real blur.
+export DIVISION_SHADOW_COLOR=0x80000000   # ~50% black (softened; no native shadow blur)
+export DIVISION_SHADOW_ANGLE=45            # bottom-right
+export DIVISION_SHADOW_DISTANCE=4          # offset in px
 
 # ── Inter-division spacing ───────────────────────────────────────────────────
 # The single gap between every adjacent division — identical on the left (spaces)

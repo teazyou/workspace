@@ -8,7 +8,7 @@ options=(
     style=round
     width=1.0
     hidpi=on
-    active_color=0xff9e2020
+    active_color=0xffaa2222
     # Unfocused windows get NO border (fully transparent — JankyBorders has no
     # "draw active only" toggle, so a transparent inactive colour is how we hide it).
     inactive_color=0x00000000

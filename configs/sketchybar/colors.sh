@@ -13,7 +13,7 @@ export GREY=0xff939ab7
 export TRANSPARENT=0x00000000
 
 # Window-border-matched reds (keep in sync with configs/borders/bordersrc)
-export BORDER_ACTIVE=0xff9e2020    # muted firebrick — selected/active elements (= borders active_color)
+export BORDER_ACTIVE=0xffaa2222    # firebrick (slightly brightened) — selected/active elements (= borders active_color)
 export BORDER_INACTIVE=0xff4d1a1a  # dark red — popup borders only now (borders inactive_color is transparent: no border on unfocused windows)
 
 # Bar accent now mirrors the window borders' two-red scheme. PINK is kept as the
@@ -37,7 +37,7 @@ export SHADOW_COLOR=$BLACK
 
 # Spaces palette (plugins/aerospace.sh coordinator). Centralized here so the
 # whole spaces strip recolors from one place, like the rest of the bar.
-export SPACE_FOCUS_BG=0xff9e2020       # focused-monitor space bubble — muted firebrick, fully OPAQUE (matches BORDER_ACTIVE/PINK)
+export SPACE_FOCUS_BG=0xffaa2222       # focused-monitor space bubble — firebrick, fully OPAQUE (matches BORDER_ACTIVE/PINK)
 export SPACE_MON2_BG=0xff8a3048        # 2nd visible monitor bubble (opaque)
 export SPACE_MON3_BG=0xff75283d        # 3rd+ visible monitor bubble (opaque)
 export SPACE_ACTIVE_ICON=0xff1a1a2e    # number glyph on a focused/visible bubble
