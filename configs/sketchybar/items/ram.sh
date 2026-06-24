@@ -1,13 +1,14 @@
 #!/bin/bash
 
-# CriticalElement style ram - pink accent. Shares monitor_item_base (defined in
-# sketchybarrc before this item is sourced); only the per-item overrides differ.
+# RAM shows RAW used GB (not %) with NO icon — it shares the cpu item's stats icon
+# and sits right next to the cpu %. Middle element of the resources division; its
+# label.padding_left is the gap from the cpu % (ELEMENT_GAP from theme.sh).
 ram=(
   "${monitor_item_base[@]}"
-  icon=󰘚
-  icon.padding_left=6
-  label.padding_right=8
-  label=0%
+  icon.drawing=off
+  label.padding_left=$ELEMENT_GAP
+  label.padding_right=0
+  label=0GB
   update_freq=5
   script="$PLUGIN_DIR/ram.sh"
 )

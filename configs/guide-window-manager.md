@@ -38,6 +38,8 @@
 - ./configs/sketchybar/colors.sh
 - ./configs/sketchybar/icons.sh
 - ./configs/sketchybar/theme.sh
+- ./configs/sketchybar/helpers/wifi_rssi.swift
+- ./configs/sketchybar/wifi_home_ssids.example
 - ./configs/sketchybar/items/*.sh (18 files)
 - ./configs/sketchybar/plugins/*.sh (25 files)
 - ./configs/vscode/settings.json
@@ -102,10 +104,10 @@
 
 `./configs/aerospace/performance-mode.sh`
 - Toggles performance mode on/off (alt+shift+; then p via aerospace.toml service mode)
-- ON: unloads display-profile LaunchAgent, hides the audio + traffic groups — items volume, headset, network_down, network_up and their brackets (audio, traffic). (JankyBorders is left running, same as normal mode.)
+- ON: unloads display-profile LaunchAgent, hides cpu + ram (battery STAYS) and the traffic group (network_down/up + bracket). KEEPS the volume/audio and connectivity groups visible. (JankyBorders left running.)
 - OFF: restores everything, reloads the display-profile LaunchAgent, re-enables all items
-- Keeps workspace spaces (left), time/date, resources (battery/cpu/ram) and connectivity (vpn/wifi/ethernet) visible in both modes
-- Spacer handling keeps spacing uniform: hides ONLY spacer0 + spacer3 (the spacers flanking the hidden audio/traffic groups) and keeps spacer1 + spacer2 drawn, so every remaining gap stays exactly one `GROUP_GAP` (theme.sh) wide — identical to normal mode. Toggles drawing only, never spacer width
+- Keeps workspace spaces (left), time/date, battery, connectivity (vpn/wifi/ethernet) and the volume/audio group visible in both modes
+- Hides items via item-level `drawing` only (preserving each item's own icon/label config — ram has no icon, volume keeps its muted state). Spacer handling: hides ONLY spacer3 (leading spacer of the hidden traffic group), keeping spacer0/1/2 so every remaining gap stays one `GROUP_GAP` (theme.sh) wide — identical to normal mode; never touches spacer width
 - State tracked via /tmp/performance-mode.state
 - Default at startup: ON — aerospace.toml's after-startup-command clears /tmp/performance-mode.state then runs this script, and no state ⇒ the toggle lands ON
 - Edit for: which items/groups to hide/show, the spacer hide/keep lists
@@ -177,8 +179,9 @@
 
 `./configs/borders/bordersrc`
 - JankyBorders config (window border styling)
-- Dark-red theme: active=0xffb22222, inactive=0xff4d1a1a
-- Options: style=round, width=4.0, hidpi=on
+- Muted-red theme: active_color=0xff9e2020 (focused window); inactive_color=0x00000000 (transparent → unfocused windows get NO border, since JankyBorders has no "active only" toggle)
+- Options: style=round, width=1.0, hidpi=on
+- active_color is kept in sync with colors.sh BORDER_ACTIVE/PINK (the bar accent mirrors the focused-border red)
 - Edit for: border colors, width, style
 
 `./configs/sketchybar/sketchybarrc`
@@ -195,10 +198,18 @@
 
 `./configs/sketchybar/theme.sh`
 - Visual TEMPLATE — single source of truth for "division" geometry (a division = any grouped pill: spaces 1-6 / 7-9 / 0, calendar, audio, resources, connectivity, traffic)
-- Tokens: `DIVISION_RADIUS` / `SPACE_BUBBLE_RADIUS` / `POPUP_RADIUS` (corner rounding), `DIVISION_BORDER_WIDTH` (0 = no border), `DIVISION_BLUR` (0 — fills are opaque), `DIVISION_SHADOW_*` (drop shadow below each division; angle must stay positive in [0,360), 270 = straight down — SketchyBar stores it unsigned so -90 wraps to a bogus 166°), `GROUP_GAP` (the single uniform gap between every division)
+- Tokens: `DIVISION_RADIUS` / `SPACE_BUBBLE_RADIUS` / `POPUP_RADIUS` (corner rounding), `DIVISION_BORDER_WIDTH` (0 = no border), `DIVISION_BLUR` (0 — fills are opaque), `DIVISION_SHADOW_*` (drop shadow below each division; angle must stay positive in [0,360), 270 = straight down — SketchyBar stores it unsigned so -90 wraps to a bogus 166°), `GROUP_GAP` (the single uniform gap BETWEEN divisions), `DIVISION_PAD` (inner pad between a division edge and its first/last element) and `ELEMENT_GAP` (gap between elements inside a division)
+- DIVISION_PAD/ELEMENT_GAP are applied via item paddings (NOT bracket bg padding — that does nothing in this build); kept EQUAL so a hiding edge element's neighbour gap doubles cleanly as the edge pad. The leftmost item gets DIVISION_PAD on its left, the rightmost DIVISION_PAD on its right, internal boundaries ELEMENT_GAP. Plugins that toggle visibility (ethernet/headset/network_speed) source theme.sh and set these
 - Sourced by sketchybarrc before any item; items/*.sh (sourced in the same shell) inherit the tokens. Colour palette stays in colors.sh (DARK_BG = opaque division fill)
 - Applied uniformly across BOTH bar sides and BOTH modes (normal + performance) — performance-mode.sh only toggles which spacers draw, never their width
 - Edit for: the bar's overall pill/division look — radius, border, shadow, opacity, inter-division spacing
+
+`./configs/sketchybar/helpers/wifi_rssi.swift`
+- Tiny CoreWLAN Swift helper that prints the current Wi-Fi link RSSI (dBm). Reads the CURRENT link only — no scan, and (verified) no Location permission needed — so it's cheap and non-disruptive. plugins/wifi.sh compiles it on demand to `helpers/wifi_rssi` (gitignored binary) and maps RSSI → the strength icon + the weak-signal auto-reconnect trigger. Needed because macOS 26 removed `airport` and neither networksetup nor ipconfig expose RSSI
+- Edit for: what the helper outputs (currently just RSSI)
+
+`./configs/sketchybar/wifi_home_ssids.example`
+- Template for the gitignored `wifi_home_ssids` (private SSID names) that arms wifi.sh's auto-reconnect: when on one of those SSIDs and signal hits 1 bar, Wi-Fi is bounced so macOS reconnects to the strongest AP. Any number of SSIDs works; empty/missing list = strength-icon-only, no auto-switch
 
 `./configs/sketchybar/colors.sh`
 - Color palette exports (CriticalElement Dotfiles theme)
@@ -215,14 +226,19 @@
 - Pattern: define item properties, add to bar, subscribe events
 - Active items: spaces.sh, calendar.sh, volume.sh, headset.sh, ram.sh, cpu.sh, battery.sh, vpn.sh, wifi.sh, ethernet.sh, network_down.sh, network_up.sh
 - Disabled items: apple.sh (commented), settings.sh (commented), front_app.sh (not sourced), brew.sh, github.sh, spotify.sh
+- Edge/element paddings come from theme.sh (DIVISION_PAD / ELEMENT_GAP), not per-item magic numbers — each item marks its left/right-edge vs internal paddings with those tokens
+- State-driven items: calendar = one clock icon + "Day DD HH:MM" (date+time pair); resources = single stats icon + "cpu% ramGB" + battery last; ethernet/headset show ONLY when connected; network_up/down show ONLY the direction with traffic; volume greys + drops % when muted; vpn = NordVPN app glyph tinted by connection; wifi = RSSI strength bars
 - Key file: spaces.sh (workspaces with aerospace integration)
 - Edit for: item appearance, positioning, which events trigger updates
 
 `./configs/sketchybar/plugins/*.sh`
 - Event handlers and data fetchers (25 files)
 - Pattern: receive events, query system, update sketchybar items
-- Key files: aerospace.sh (workspace state with app name display), battery.sh, cpu.sh, wifi.sh
-- aerospace.sh: simplified workspace display, shows app names next to workspace number, uses shorten_app_name() for common apps, multi-monitor support with distinct colors per monitor
+- Key files: aerospace.sh (workspace state), wifi.sh, network_speed.sh, volume.sh, headset.sh, ethernet.sh, ram.sh
+- aerospace.sh: workspace display with multi-monitor colors. Renders app ICONS via sketchybar-app-font (__icon_map in icon_map.sh) when EVERY app in a space is mapped, else falls back to text names (shorten_app_name). Subscribes front_app_switched so it repaints on app open, not only on workspace change
+- wifi.sh: maps current-link RSSI (helpers/wifi_rssi) → strength bars, plus opt-in auto-reconnect on a weak home network (gate on wifi_home_ssids + 1-bar debounce + cooldown → toggle Wi-Fi). wifi_click.sh toggles Wi-Fi power on click
+- network_speed.sh: single-poller (network_down) per-direction CONDITIONAL bandwidth (each shown only when its rate >0; bracket hidden when idle). Parses netstat byte counters FROM THE RIGHT (Ibytes=NF-4, Obytes=NF-1) so VPN/tunnel interfaces — which drop the Address column — read correctly
+- ram.sh outputs raw GB used (not %); volume.sh adds a muted state; ethernet.sh/headset.sh collapse the icon (drawing=off + zero pad) when disconnected while keeping the item drawing=on so the poller still runs
 - Edit for: logic of what's displayed, data sources, formatting
 
 `./configs/vscode/settings.json`

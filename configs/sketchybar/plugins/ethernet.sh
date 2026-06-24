@@ -2,6 +2,7 @@
 
 source "$HOME/.config/sketchybar/colors.sh"
 source "$HOME/.config/sketchybar/icons.sh"
+source "$HOME/.config/sketchybar/theme.sh"   # DIVISION_PAD, ELEMENT_GAP
 
 # Get actual ethernet interfaces (exclude Wi-Fi which is usually en0)
 # Use networksetup to find real ethernet adapters
@@ -17,12 +18,12 @@ while IFS= read -r line; do
   fi
 done < <(networksetup -listallhardwareports | grep -A1 "Ethernet Adapter\|Thunderbolt Ethernet\|USB.*LAN")
 
+# Show the icon only when connected; otherwise collapse it (icon.drawing=off +
+# zero padding) so the connectivity group has no ethernet gap. The item stays
+# drawing=on regardless so this poller keeps running.
 if [ -n "$ETHERNET_STATUS" ]; then
-  ICON=$ETHERNET_CONNECTED
-  COLOR=$PINK
+  sketchybar --set $NAME icon.drawing=on icon=$ETHERNET_CONNECTED icon.color=$PINK \
+                         icon.padding_left=$ELEMENT_GAP icon.padding_right=0
 else
-  ICON=$ETHERNET_DISCONNECTED
-  COLOR=$GREY
+  sketchybar --set $NAME icon.drawing=off icon.padding_left=0 icon.padding_right=0
 fi
-
-sketchybar --set $NAME icon=$ICON icon.color=$COLOR

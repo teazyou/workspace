@@ -11,21 +11,20 @@ STATE_FILE="$PERFORMANCE_MODE_STATE"
 DISPLAY_PROFILE_PLIST="$HOME/Library/LaunchAgents/com.aerospace.display-profile.plist"
 GUI_DOMAIN="gui/$(id -u)"
 
-# SketchyBar items to hide/restore
-ITEMS_WITH_LABEL=(volume network_down network_up)
-ITEMS_ICON_ONLY=(headset)
-BRACKETS=(audio traffic)
+# SketchyBar items hidden in performance mode (their pollers stop too). We hide
+# cpu + ram (battery stays) and the traffic group, but KEEP the volume/audio and
+# connectivity groups visible. Toggling the item-level `drawing` hides the whole
+# item while preserving each item's own icon/label config (ram has no icon, volume
+# has its muted state), so we don't force icon.drawing here.
+ITEMS_HIDE=(cpu ram network_down network_up)
+BRACKETS=(traffic)
 
-# Inter-division spacers. Performance mode hides the audio + traffic groups, so to
-# keep ONE uniform GROUP_GAP between the still-visible groups (connectivity |
-# resources | calendar) we hide ONLY the two spacers flanking the hidden groups —
-# spacer0 (audio↔calendar) and spacer3 (a leading edge once traffic is gone) — and
-# keep spacer1 + spacer2 drawn. Each remaining gap is then exactly one spacer wide,
-# identical to normal mode. (Widths live in theme.sh GROUP_GAP; this only toggles
-# drawing, never width.)
+# Inter-division spacers. Only the traffic group is hidden now, so only spacer3
+# (its leading spacer) is dropped; spacer0/1/2 stay so connectivity | resources |
+# audio | calendar keep one uniform GROUP_GAP between them — same as normal mode.
 SPACERS_ALL=(spacer0 spacer1 spacer2 spacer3)
-SPACERS_HIDE=(spacer0 spacer3)
-SPACERS_KEEP=(spacer1 spacer2)
+SPACERS_HIDE=(spacer3)
+SPACERS_KEEP=(spacer0 spacer1 spacer2)
 
 # Bootstrap a LaunchAgent and verify it actually loaded, rather than swallowing
 # a bootstrap race with `|| true`. If the verify fails, retry once after a short
@@ -54,9 +53,9 @@ performance_mode_on() {
   # Stop display-profile LaunchAgent
   launchctl bootout "$GUI_DOMAIN" "$DISPLAY_PROFILE_PLIST" 2>/dev/null || true
 
-  # Hide sketchybar items
-  for item in "${ITEMS_WITH_LABEL[@]}" "${ITEMS_ICON_ONLY[@]}"; do
-    sketchybar --set "$item" drawing=off icon.drawing=off label.drawing=off update_freq=0
+  # Hide sketchybar items (whole-item drawing off also stops their pollers)
+  for item in "${ITEMS_HIDE[@]}"; do
+    sketchybar --set "$item" drawing=off update_freq=0
   done
 
   for bracket in "${BRACKETS[@]}"; do
@@ -80,14 +79,10 @@ performance_mode_off() {
   # restart.
   ensure_loaded "$DISPLAY_PROFILE_PLIST" || true
 
-  # Restore sketchybar items (with labels)
-  for item in "${ITEMS_WITH_LABEL[@]}"; do
-    sketchybar --set "$item" drawing=on icon.drawing=on label.drawing=on update_freq=5
-  done
-
-  # Restore icon-only items (label stays off)
-  for item in "${ITEMS_ICON_ONLY[@]}"; do
-    sketchybar --set "$item" drawing=on icon.drawing=on update_freq=5
+  # Restore the hidden items (item-level drawing only; each item keeps its own
+  # icon/label config and the next poll repaints values/visibility).
+  for item in "${ITEMS_HIDE[@]}"; do
+    sketchybar --set "$item" drawing=on update_freq=5
   done
 
   for bracket in "${BRACKETS[@]}"; do

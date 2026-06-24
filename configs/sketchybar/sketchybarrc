@@ -105,10 +105,10 @@ bracket_style=(
 monitor_item_base=(
   icon.font="$FONT:Normal:15.0"
   icon.color=$PINK
-  icon.padding_right=2
+  icon.padding_right=$ELEMENT_GAP
   label.font="$FONT:Bold:14.0"
   label.color=$PINK
-  label.padding_left=2
+  label.padding_left=0
   background.drawing=off
   padding_left=0
   padding_right=0
@@ -136,18 +136,21 @@ source "$ITEM_DIR/headset.sh"
 # Spacer between audio and resources
 sketchybar --add item spacer1 right --set spacer1 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
-# System resources group: battery + cpu + ram
+# System resources group (L->R: cpu, ram, battery). Right items are added
+# right-most first, so source battery (rightmost/last), then ram, then cpu.
+source "$ITEM_DIR/battery.sh"
 source "$ITEM_DIR/ram.sh"
 source "$ITEM_DIR/cpu.sh"
-source "$ITEM_DIR/battery.sh"
 
 # Spacer between resources and connectivity
 sketchybar --add item spacer2 right --set spacer2 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
-# Network connectivity group: ethernet + wifi + vpn
+# Network connectivity group (L->R: wifi, ethernet, vpn). Right items are added
+# right-most first, so source vpn (rightmost), then ethernet, then wifi (leftmost)
+# — this puts ethernet immediately to the right of wifi.
 source "$ITEM_DIR/vpn.sh"
-source "$ITEM_DIR/wifi.sh"
 source "$ITEM_DIR/ethernet.sh"
+source "$ITEM_DIR/wifi.sh"
 
 # Spacer between connectivity and traffic
 sketchybar --add item spacer3 right --set spacer3 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off

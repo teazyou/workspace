@@ -1,16 +1,17 @@
 #!/bin/bash
 
-# CriticalElement style battery - red accent
+# Battery - rightmost element of the resources division (its label.padding_right is
+# the division's right inner pad). Paddings from theme.sh.
 battery=(
   icon=$BATTERY_100
   icon.font="$FONT:Normal:15.0"
   icon.color=$PINK
-  icon.padding_left=8
-  icon.padding_right=2
+  icon.padding_left=$ELEMENT_GAP
+  icon.padding_right=$ELEMENT_GAP
   label.font="$FONT:Bold:14.0"
   label.color=$PINK
-  label.padding_left=2
-  label.padding_right=6
+  label.padding_left=0
+  label.padding_right=$DIVISION_PAD
   label="--%"
   background.drawing=off
   padding_left=0

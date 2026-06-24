@@ -76,7 +76,8 @@ sketchybar --add item aerospace_coordinator left \
            --set aerospace_coordinator drawing=on width=0 \
                  icon.drawing=off label.drawing=off background.drawing=off \
                  script="$PLUGIN_DIR/aerospace.sh" \
-           --subscribe aerospace_coordinator aerospace_workspace_change
+           --subscribe aerospace_coordinator aerospace_workspace_change \
+                       front_app_switched space_windows_change
 
 # Add new space button - CriticalElement style (DISABLED)
 # sketchybar --add item new_space left                        \

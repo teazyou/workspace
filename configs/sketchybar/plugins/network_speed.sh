@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source "$HOME/.config/sketchybar/colors.sh"
+source "$HOME/.config/sketchybar/theme.sh"   # DIVISION_PAD, ELEMENT_GAP
 
 CACHE_DIR="/tmp/sketchybar_network"
 mkdir -p "$CACHE_DIR"
@@ -20,10 +21,14 @@ get_bytes() {
     return
   fi
 
-  # Get bytes in and out for the interface
+  # Get bytes in and out for the interface. Count columns FROM THE RIGHT: physical
+  # interfaces (en0) have an Address/MAC column but virtual/tunnel ones (utun* for
+  # VPN) do NOT, so a fixed $7/$10 reads the wrong field on a tunnel (Obytes became
+  # Coll=0 → upload always 0). The trailing layout is stable: ... Ibytes Opkts
+  # Oerrs Obytes Coll → Ibytes=$(NF-4), Obytes=$(NF-1) for both interface kinds.
   STATS=$(netstat -ib | grep -w "$INTERFACE" | head -1)
-  BYTES_IN=$(echo "$STATS" | awk '{print $7}')
-  BYTES_OUT=$(echo "$STATS" | awk '{print $10}')
+  BYTES_IN=$(echo "$STATS" | awk '{print $(NF-4)}')
+  BYTES_OUT=$(echo "$STATS" | awk '{print $(NF-1)}')
 
   echo "$INTERFACE ${BYTES_IN:-0} ${BYTES_OUT:-0}"
 }
@@ -86,5 +91,36 @@ fi
 # One batched set drives BOTH labels from this single poll.
 LABEL_DOWN=$(format_speed $SPEED_IN)
 LABEL_UP=$(format_speed $SPEED_OUT)
-sketchybar --set network_down label="$LABEL_DOWN" \
-           --set network_up label="$LABEL_UP"
+
+# Conditional visibility: show each direction only when its rate > 0, and hide the
+# whole traffic division when both are idle.
+#   - network_down is the SOLE POLLER, so the item must stay drawing=on (a
+#     drawing=off item never runs its script) — we hide its icon+label instead.
+#   - network_up is passive (no script), so it can be fully drawing=off.
+#   - the `traffic` bracket is toggled so no empty pill lingers when idle.
+DOWN_VIS=0; [ "$SPEED_IN" -gt 0 ]  && DOWN_VIS=1
+UP_VIS=0;   [ "$SPEED_OUT" -gt 0 ] && UP_VIS=1
+
+# Edge paddings (theme.sh): up is the LEFT element, down the RIGHT element of the
+# traffic division. The element present at a division edge gets DIVISION_PAD on
+# that side; the up<->down boundary gets ELEMENT_GAP. So the lone visible direction
+# still has proper inner padding on both sides.
+if [ "$UP_VIS" = 1 ]; then
+  if [ "$DOWN_VIS" = 1 ]; then UP_RP=0; else UP_RP=$DIVISION_PAD; fi
+  UP_ARGS=(drawing=on label="$LABEL_UP" label.padding_right=$UP_RP)
+else
+  UP_ARGS=(drawing=off)
+fi
+
+if [ "$DOWN_VIS" = 1 ]; then
+  if [ "$UP_VIS" = 1 ]; then DN_LP=$ELEMENT_GAP; else DN_LP=$DIVISION_PAD; fi
+  DOWN_ARGS=(icon.drawing=on label.drawing=on label="$LABEL_DOWN" icon.padding_left=$DN_LP)
+else
+  DOWN_ARGS=(icon.drawing=off label.drawing=off)
+fi
+
+if [ "$UP_VIS" = 1 ] || [ "$DOWN_VIS" = 1 ]; then TRAFFIC_DRAW=on; else TRAFFIC_DRAW=off; fi
+
+sketchybar --set network_down "${DOWN_ARGS[@]}" \
+           --set network_up "${UP_ARGS[@]}" \
+           --set traffic drawing=$TRAFFIC_DRAW

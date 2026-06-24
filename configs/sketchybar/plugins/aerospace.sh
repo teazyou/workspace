@@ -46,6 +46,8 @@ ALL_WINDOWS=$(aerospace list-windows --all --format '%{workspace}|%{app-name}' 2
 
 FONT="JetBrainsMono Nerd Font"
 NUM_FONT="$FONT:Bold:13.0"        # matches the static number font in spaces.sh
+TEXT_FONT="$FONT:Bold:13.0"       # app NAMES — fallback when a space has any unmapped app
+APP_FONT="sketchybar-app-font:Regular:14.0"  # app ICONS — used when every app in the space is mapped
 DOT_GLYPH="·"
 DOT_FONT="$FONT:Bold:18.0"        # bigger + bold so the empty-marker dot is clearly visible
 DOT_COLOR="$SPACE_DOT_COLOR"      # dim placeholder matching the inactive theme
@@ -89,7 +91,9 @@ for WORKSPACE_ID in $ALL_WORKSPACES; do
     # entry and append one '*' per EXTRA instance (no space): four iTerm2 windows
     # render as "iTerm2***". Distinct apps keep their first-seen order. Uses
     # parallel indexed arrays (no associative arrays) to stay bash 3.2 compatible.
-    APPS=""
+    APPS=""        # text label: app names (+ window-count stars) — fallback
+    ICONS=""       # app-font label: one icon glyph per distinct app
+    ALL_KNOWN=true # false as soon as any app has no mapped icon
     APP_LIST=$(printf '%s\n' "$ALL_WINDOWS" | awk -F'|' -v ws="$WORKSPACE_ID" '$1==ws {sub(/^[^|]*\|/, ""); print}')
 
     if [ -n "$APP_LIST" ]; then
@@ -116,7 +120,8 @@ for WORKSPACE_ID in $ALL_WORKSPACES; do
         done <<< "$APP_LIST"
 
         for idx in "${!ORDER[@]}"; do
-            SHORT_NAME=$(shorten_app_name "${ORDER[idx]}")
+            app="${ORDER[idx]}"
+            SHORT_NAME=$(shorten_app_name "$app")
             extra=$(( COUNTS[idx] - 1 ))
             stars=""
             [ "$extra" -gt 0 ] && stars=$(printf '%*s' "$extra" '' | tr ' ' '*')
@@ -125,6 +130,17 @@ for WORKSPACE_ID in $ALL_WORKSPACES; do
                 APPS="$entry"
             else
                 APPS="$APPS $entry"
+            fi
+
+            # App-font icon token for this app (":default:" when not in the map).
+            # A space renders as icons only when EVERY app maps; one unmapped app
+            # falls the whole space back to text names.
+            token=$(__icon_map "$app")
+            [ "$token" = ":default:" ] && ALL_KNOWN=false
+            if [ -z "$ICONS" ]; then
+                ICONS="$token"
+            else
+                ICONS="$ICONS $token"
             fi
         done
     fi
@@ -192,9 +208,16 @@ for WORKSPACE_ID in $ALL_WORKSPACES; do
     ARGS+=( --set space.$WORKSPACE_ID background.color=$BG_COLOR )
 
     if [ -n "$APPS" ]; then
-      # OCCUPIED: number + app names
+      # OCCUPIED: number + either app ICONS (every app mapped) or app NAMES (text
+      # fallback). label.font is set explicitly each paint so it never sticks on
+      # the wrong font when a space flips between the two modes.
+      if [ "$ALL_KNOWN" = true ]; then
+        SPACE_LABEL="$ICONS"; SPACE_LABEL_FONT="$APP_FONT"
+      else
+        SPACE_LABEL="$APPS";  SPACE_LABEL_FONT="$TEXT_FONT"
+      fi
       ARGS+=( icon="$WORKSPACE_ID" icon.font="$NUM_FONT" icon.color=$ICON_COLOR icon.padding_left=5 icon.padding_right=3 \
-              label="$APPS" label.color=$LABEL_COLOR label.drawing=on padding_left=1 padding_right=$EDGE_PAD_R )
+              label="$SPACE_LABEL" label.font="$SPACE_LABEL_FONT" label.color=$LABEL_COLOR label.drawing=on padding_left=1 padding_right=$EDGE_PAD_R )
     elif [ "$IS_GROUP_FIRST" = true ] || [ "$IS_VISIBLE" = true ]; then
       # NUMBER ONLY: group-first always, or focused/visible empty so position is visible.
       # Symmetric icon padding (5/5) so the highlight bubble has room on both sides

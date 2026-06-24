@@ -86,6 +86,7 @@ caskInstall "BITWARDEN"         "bitwarden"
 caskInstall "ONYX"              "onyx"
 caskInstall "AEROSPACE"         "nikitabobko/tap/aerospace"  # tiling window manager (lives in its own tap)
 caskInstall "FONT-NERD"         "font-hack-nerd-font"  # required by sketchybar icons
+caskInstall "FONT-SKETCHYBAR"   "font-sketchybar-app-font"  # app icons in the spaces strip (plugins/icon_map.sh)
 caskInstall "CLEANMYMAC"        "cleanmymac"
 caskInstall "DISCORD"           "discord"
 caskInstall "OBSIDIAN"          "obsidian"             # used by ~/secondbrain workflow

@@ -43,3 +43,13 @@ export DIVISION_SHADOW_DISTANCE=3
 # spacer item (sketchybarrc + items/spaces.sh) uses this width; performance-mode.sh
 # only toggles which spacers draw, never their width, so the gap never changes.
 export GROUP_GAP=6
+
+# ── Intra-division padding ───────────────────────────────────────────────────
+# DIVISION_PAD — inner padding between a division's edge (bracket border) and its
+# first/last element. ELEMENT_GAP — gap between adjacent elements inside a division
+# (icon<->label and item<->item). Applied UNIFORMLY to every status division via
+# the item paddings, so spacing is controlled here instead of per-item.
+# Kept equal so that when an edge element hides (e.g. headset disconnects, or
+# cpu/ram in performance mode) the neighbour's gap cleanly doubles as the edge pad.
+export DIVISION_PAD=6
+export ELEMENT_GAP=6

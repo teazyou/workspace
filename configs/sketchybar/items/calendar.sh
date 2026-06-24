@@ -1,20 +1,18 @@
 #!/bin/bash
 
-# CriticalElement style: Split date and time into separate pills
+# One clock icon, then date + time side by side: "<clock> Thu 25 04:13".
+# Paddings come from theme.sh: DIVISION_PAD = inner edge of the division,
+# ELEMENT_GAP = gap between elements. date is the LEFT edge, time the RIGHT edge.
 
-# Time item - rightmost in group
+# Time item - rightmost in the group: time only, no icon. Its label.padding_right
+# is the division's right inner pad (the bar's BAR_SIDE_PADDING still owns the gap
+# from the division edge to the screen edge).
 time_item=(
-  icon=󱑎
-  icon.font="$FONT:Normal:15.0"
-  icon.color=$PINK
-  icon.padding_left=4
-  icon.padding_right=4
+  icon.drawing=off
   label.font="$FONT:Bold:14.0"
   label.color=$PINK
-  label.padding_left=4
-  # No outer right padding: the bar's BAR_SIDE_PADDING (sketchybarrc) owns the
-  # right-edge gap so it stays symmetric with the left edge.
-  label.padding_right=0
+  label.padding_left=$ELEMENT_GAP
+  label.padding_right=$DIVISION_PAD
   label="$(date '+%H:%M')"
   background.drawing=off
   update_freq=1
@@ -24,19 +22,17 @@ time_item=(
 sketchybar --add item time right       \
            --set time "${time_item[@]}"
 
-# Date item - calendar icon with day format 'Wed 21'
-# NOTE: The calendar icon ($CALENDAR) glyph has extra left spacing built into it,
-# so icon.padding_left is kept lower (2) compared to other group edge items (8)
+# Date item - clock icon + day, sits to the LEFT of the time.
 date_item=(
-  icon=$CALENDAR
+  icon=󱑎
   icon.font="$FONT:Normal:15.0"
   icon.color=$PINK
-  icon.padding_left=0
-  icon.padding_right=4
-  label.font="$FONT:Normal:14.0"
+  icon.padding_left=$DIVISION_PAD
+  icon.padding_right=$ELEMENT_GAP
+  label.font="$FONT:Bold:14.0"
   label.color=$PINK
-  label.padding_left=4
-  label.padding_right=4
+  label.padding_left=0
+  label.padding_right=0
   label="$(date '+%a %d')"
   background.drawing=off
   update_freq=60

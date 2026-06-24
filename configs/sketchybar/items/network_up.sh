@@ -1,16 +1,15 @@
 #!/bin/bash
 
-# CriticalElement style network up - pink accent. Shares monitor_item_base
-# (defined in sketchybarrc before this item is sourced); only the per-item
-# overrides differ.
+# Network up - LEFT element of the traffic division. Shares monitor_item_base.
+# Passive: plugins/network_speed.sh (driven by network_down) sets its label,
+# visibility, and dynamic right padding (gap to down, or right edge when down is
+# hidden). icon.padding_left is the division's left edge pad (theme.sh).
 network_up=(
   "${monitor_item_base[@]}"
   icon=$NETWORK_UP
-  icon.padding_left=8
-  label.padding_right=6
+  icon.padding_left=$DIVISION_PAD
+  label.padding_right=0
   label="0 B/s"
-  # Passive: no update_freq/script. network_down is the sole poller and sets this
-  # item's label in the same batched --set (see plugins/network_speed.sh).
 )
 
 sketchybar --add item network_up right \

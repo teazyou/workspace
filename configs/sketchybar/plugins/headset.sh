@@ -2,6 +2,7 @@
 
 source "$HOME/.config/sketchybar/colors.sh"
 source "$HOME/.config/sketchybar/icons.sh"
+source "$HOME/.config/sketchybar/theme.sh"   # DIVISION_PAD, ELEMENT_GAP
 
 # Check for a connected Bluetooth headphone/headset.
 # Uses ioreg (milliseconds) instead of `system_profiler SPBluetoothDataType`
@@ -16,12 +17,12 @@ HEADSET_STATUS=$(ioreg -r -c IOBluetoothDevice -l 2>/dev/null | awk '
   connected && minor         { print "1"; exit }
 ')
 
+# Show the headset icon only when a headset is connected; otherwise collapse it
+# (icon.drawing=off + zero padding) so the audio group has no empty slot. The item
+# stays drawing=on regardless so this poller keeps running.
 if [ -n "$HEADSET_STATUS" ]; then
-  ICON=$HEADSET_CONNECTED
-  COLOR=$PINK
+  sketchybar --set $NAME icon.drawing=on icon=$HEADSET_CONNECTED icon.color=$PINK \
+                         icon.padding_left=$DIVISION_PAD icon.padding_right=0
 else
-  ICON=$HEADSET_DISCONNECTED
-  COLOR=$GREY
+  sketchybar --set $NAME icon.drawing=off icon.padding_left=0 icon.padding_right=0
 fi
-
-sketchybar --set $NAME icon=$ICON icon.color=$COLOR

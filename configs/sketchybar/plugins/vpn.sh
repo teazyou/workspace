@@ -17,12 +17,12 @@ if [ -z "$VPN_STATUS" ]; then
   VPN_STATUS=$(scutil --nc list 2>/dev/null | grep "(Connected)")
 fi
 
+# The glyph is the fixed NordVPN app icon (set in items/vpn.sh); only the colour
+# conveys state — red when connected, grey when not.
 if [ -n "$VPN_STATUS" ]; then
-  ICON=$VPN_CONNECTED
   COLOR=$PINK
 else
-  ICON=$VPN_DISCONNECTED
   COLOR=$GREY
 fi
 
-sketchybar --set $NAME icon=$ICON icon.color=$COLOR
+sketchybar --set $NAME icon.color=$COLOR

@@ -51,6 +51,10 @@ export CALENDAR=󰃭
 # Wifi Icons
 export WIFI_CONNECTED=󰖩
 export WIFI_DISCONNECTED=󰖪
+# Wifi strength tiers — plugins/wifi.sh maps the current-link RSSI to these
+export WIFI_1=󰤟   # weak   (1 bar)
+export WIFI_2=󰤢   # medium (2 bars)
+export WIFI_3=󰤨   # strong (full)
 
 # Ethernet Icons
 export ETHERNET_CONNECTED=󰈀
@@ -62,6 +66,9 @@ export VPN_DISCONNECTED=󰦞
 
 # RAM Icon
 export RAM=󰘚
+
+# Combined CPU+RAM stats icon (single glyph for the resources readout)
+export STATS=󰓅
 
 # Headset Icons
 export HEADSET_CONNECTED=󰋋

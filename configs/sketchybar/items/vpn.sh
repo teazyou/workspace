@@ -1,16 +1,19 @@
 #!/bin/bash
 
-# CriticalElement style vpn - grey accent when disconnected
+# VPN - RIGHT edge of the connectivity division. NordVPN app glyph (sketchybar-app-
+# font, monochrome so it tints); plugins/vpn.sh toggles ONLY the colour (red when
+# connected, grey when off). Click opens NordVPN. Paddings from theme.sh.
 vpn=(
-  icon=$VPN_DISCONNECTED
-  icon.font="$FONT:Normal:15.0"
-  icon.color=$PINK
-  icon.padding_left=6
-  icon.padding_right=8
+  icon=":nord_vpn:"
+  icon.font="sketchybar-app-font:Regular:16.0"
+  icon.color=$GREY
+  icon.padding_left=$ELEMENT_GAP
+  icon.padding_right=$DIVISION_PAD
   label.drawing=off
   background.drawing=off
   padding_left=0
   padding_right=0
+  click_script="open -a NordVPN"
   script="$PLUGIN_DIR/vpn.sh"
   update_freq=5
 )

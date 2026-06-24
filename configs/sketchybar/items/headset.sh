@@ -1,12 +1,15 @@
 #!/bin/bash
 
-# CriticalElement style headset - grey accent when disconnected
+# Headset - LEFT edge of the audio division. Starts hidden (icon.drawing=off); the
+# item stays drawing=on so its poller runs (a drawing=off item never runs its
+# script). plugins/headset.sh sets the icon + paddings (theme.sh) when connected.
 headset=(
-  icon=$HEADSET_DISCONNECTED
+  icon=$HEADSET_CONNECTED
   icon.font="$FONT:Normal:15.0"
   icon.color=$PINK
-  icon.padding_left=8
-  icon.padding_right=8
+  icon.drawing=off
+  icon.padding_left=0
+  icon.padding_right=0
   label.drawing=off
   background.drawing=off
   padding_left=0

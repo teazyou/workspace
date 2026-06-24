@@ -1,0 +1,14 @@
+# Home Wi-Fi SSIDs for the auto-reconnect feature (plugins/wifi.sh).
+#
+# Copy this file to "wifi_home_ssids" (same folder) and list one SSID per line.
+# When you are connected to one of these networks AND the signal drops to 1 bar,
+# wifi.sh bounces Wi-Fi off/on so macOS reconnects to the strongest access point.
+#
+# - One SSID per line, exact name (case-sensitive).
+# - Lines starting with # and blank lines are ignored.
+# - Any number of SSIDs works (even 1). If "wifi_home_ssids" is missing or has no
+#   SSIDs, auto-reconnect is OFF (the strength icon still works regardless).
+#
+# Example:
+# MyHome-Living
+# MyHome-Bedroom
