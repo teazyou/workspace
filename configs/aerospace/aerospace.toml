@@ -277,3 +277,8 @@ run = 'layout floating'
 [[on-window-detected]]
 if.app-id = 'com.apple.Stickies'
 run = 'layout floating'
+
+# Float Preview windows by default (PDFs / images shouldn't grab a tile)
+[[on-window-detected]]
+if.app-id = 'com.apple.Preview'
+run = 'layout floating'
