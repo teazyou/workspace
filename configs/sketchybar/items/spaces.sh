@@ -34,8 +34,8 @@ do
     background.color=$TRANSPARENT
     background.height=26
     # Radius kept smaller than the group bracket's so the shorter focus bubble
-    # doesn't read as an over-rounded pill
-    background.corner_radius=6
+    # doesn't read as an over-rounded pill (see theme.sh SPACE_BUBBLE_RADIUS)
+    background.corner_radius=$SPACE_BUBBLE_RADIUS
     background.drawing=on
     click_script="aerospace workspace $sid"
   )
@@ -50,13 +50,13 @@ do
   # Add spacer after space.6 (between main and secondary workspaces)
   if [ "$sid" = "6" ]; then
     sketchybar --add item spaces_spacer_main left \
-               --set spaces_spacer_main width=3 background.drawing=off icon.drawing=off label.drawing=off
+               --set spaces_spacer_main width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
   fi
 
   # Add spacer after space.9 (between secondary and third workspaces)
   if [ "$sid" = "9" ]; then
     sketchybar --add item spaces_spacer_secondary left \
-               --set spaces_spacer_secondary width=3 background.drawing=off icon.drawing=off label.drawing=off
+               --set spaces_spacer_secondary width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
   fi
 done
 
@@ -97,12 +97,16 @@ sketchybar --add item aerospace_coordinator left \
 # left-group spacing is unchanged.
 spaces_bracket_style=(
   background.color=$DARK_BG
-  background.corner_radius=10
-  background.border_width=1
+  background.corner_radius=$DIVISION_RADIUS
+  background.border_width=$DIVISION_BORDER_WIDTH
   background.border_color=$PINK
-  blur_radius=2
+  blur_radius=$DIVISION_BLUR
   background.height=32
   background.drawing=on
+  background.shadow.drawing=$DIVISION_SHADOW_DRAWING
+  background.shadow.color=$DIVISION_SHADOW_COLOR
+  background.shadow.angle=$DIVISION_SHADOW_ANGLE
+  background.shadow.distance=$DIVISION_SHADOW_DISTANCE
 )
 
 # Bracket for main workspaces (1-6)

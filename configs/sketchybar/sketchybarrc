@@ -2,6 +2,9 @@
 
 source "$HOME/.config/sketchybar/colors.sh"
 source "$HOME/.config/sketchybar/icons.sh"
+# Visual template (division geometry: corner radius, border, blur, shadow, gap).
+# Single source of truth — change a value there to restyle the whole bar.
+source "$HOME/.config/sketchybar/theme.sh"
 
 # Exported so consumers spawned as subprocesses see them: items/*.sh are sourced
 # (inherit these anyway), but script=-spawned plugins run as separate processes
@@ -12,11 +15,14 @@ export PLUGIN_DIR="$HOME/.config/sketchybar/plugins"
 # Font from neutonfoo/dotfiles
 export FONT="JetBrainsMono Nerd Font"
 
-# Single template value for the bar's side spacing — applied to BOTH padding_left
-# and padding_right so the left group (spaces) and right group (time/status) sit
-# the same distance from the screen edge. The right-most item (time) carries NO
-# outer label.padding_right anymore; this is the sole source of the edge gap.
-BAR_SIDE_PADDING=8
+# Side inset of the bar content from each screen edge. With margin=0 (below) this
+# is the SOLE source of the left/right edge gap, so the first/last division sits
+# exactly this far from the screen edge. KEEP IT EQUAL TO aerospace
+# gaps.outer.left/right (=5 in aerospace.toml) so the bar's outer divisions line up
+# with the tiled-window ("app") area edges. Applied to BOTH padding_left and
+# padding_right so the left (spaces) and right (status) groups stay symmetric; the
+# right-most item (time) carries no outer label.padding_right.
+BAR_SIDE_PADDING=5
 
 # Setting up the general bar appearance - CriticalElement floating style.
 # The bar fill stays fully TRANSPARENT (color=$TRANSPARENT). A coloured bar fills
@@ -33,7 +39,7 @@ bar=(
   padding_left=$BAR_SIDE_PADDING
   padding_right=$BAR_SIDE_PADDING
   y_offset=-6
-  margin=6
+  margin=0          # edge gap comes solely from BAR_SIDE_PADDING (kept = aerospace outer.left/right)
   blur_radius=0
   notch_width=0
 )
@@ -54,14 +60,14 @@ defaults=(
   label.padding_right=12
   background.color=$DARK_BG
   background.height=30
-  background.corner_radius=10
+  background.corner_radius=$DIVISION_RADIUS
   background.drawing=on
-  background.border_width=3
+  background.border_width=$DIVISION_BORDER_WIDTH
   background.padding_left=8
-  blur_radius=2
+  blur_radius=$DIVISION_BLUR
   y_offset=2
   popup.background.border_width=2
-  popup.background.corner_radius=15
+  popup.background.corner_radius=$POPUP_RADIUS
   popup.background.border_color=$POPUP_BORDER_COLOR
   popup.background.color=$POPUP_BACKGROUND_COLOR
   popup.background.shadow.drawing=on
@@ -77,14 +83,18 @@ sketchybar --default "${defaults[@]}"
 # spaces.sh and the right groups can both reference the convention.
 bracket_style=(
   background.color=$DARK_BG
-  background.corner_radius=10
-  background.border_width=1
+  background.corner_radius=$DIVISION_RADIUS
+  background.border_width=$DIVISION_BORDER_WIDTH
   background.border_color=$PINK
-  blur_radius=2
+  blur_radius=$DIVISION_BLUR
   background.height=32
   background.drawing=on
   background.padding_left=0
   background.padding_right=0
+  background.shadow.drawing=$DIVISION_SHADOW_DRAWING
+  background.shadow.color=$DIVISION_SHADOW_COLOR
+  background.shadow.angle=$DIVISION_SHADOW_ANGLE
+  background.shadow.distance=$DIVISION_SHADOW_DISTANCE
 )
 
 # Shared base for the monitor pills (cpu, ram, network_up, network_down). These
@@ -117,14 +127,14 @@ sketchybar --add bracket calendar_group time date \
            --set calendar_group "${bracket_style[@]}"
 
 # Spacer between calendar and audio
-sketchybar --add item spacer0 right --set spacer0 width=5 background.drawing=off icon.drawing=off label.drawing=off
+sketchybar --add item spacer0 right --set spacer0 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
 # Audio group: volume + bluetooth headset
 source "$ITEM_DIR/volume.sh"
 source "$ITEM_DIR/headset.sh"
 
 # Spacer between audio and resources
-sketchybar --add item spacer1 right --set spacer1 width=5 background.drawing=off icon.drawing=off label.drawing=off
+sketchybar --add item spacer1 right --set spacer1 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
 # System resources group: battery + cpu + ram
 source "$ITEM_DIR/ram.sh"
@@ -132,7 +142,7 @@ source "$ITEM_DIR/cpu.sh"
 source "$ITEM_DIR/battery.sh"
 
 # Spacer between resources and connectivity
-sketchybar --add item spacer2 right --set spacer2 width=5 background.drawing=off icon.drawing=off label.drawing=off
+sketchybar --add item spacer2 right --set spacer2 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
 # Network connectivity group: ethernet + wifi + vpn
 source "$ITEM_DIR/vpn.sh"
@@ -140,7 +150,7 @@ source "$ITEM_DIR/wifi.sh"
 source "$ITEM_DIR/ethernet.sh"
 
 # Spacer between connectivity and traffic
-sketchybar --add item spacer3 right --set spacer3 width=5 background.drawing=off icon.drawing=off label.drawing=off
+sketchybar --add item spacer3 right --set spacer3 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
 # Network traffic group: up + down
 source "$ITEM_DIR/network_down.sh"

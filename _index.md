@@ -20,8 +20,9 @@ App configuration; the window-manager stack (aerospace + sketchybar + borders + 
 - `configs/aerospace/*.plist` — LaunchAgents: `com.aerospace.display-profile.plist` (`← ~/Library/LaunchAgents/`, auto gap profile per display) and `com.aerospace.empty-watcher.plist` (`← ~/Library/LaunchAgents/`, empty-workspace daemon).
 - `configs/aerospace/*.sh` — WM helper scripts run by aerospace/LaunchAgents: `apply-display-profile.sh` (auto top-gaps **and** the workspace 7-9 monitor assignment — flips between `'built-in.*'` and `'secondary'` per which display is main, so home/travel both work), `empty-workspace-watcher.sh`, `open-dock-app.sh`, `performance-mode.sh`, `secondary-bar-toggle.sh`, `track-workspace-mru.sh`.
 - `configs/aerospace/doc.aerospace.md`, `features.aerospace.md` — AeroSpace reference/feature notes.
-- `configs/sketchybar/sketchybarrc` — status-bar entry point (sources colors/icons, loads items + plugins) — dir `← ~/.config/sketchybar`. *Edit when: changing the status bar.*
+- `configs/sketchybar/sketchybarrc` — status-bar entry point (sources colors/icons/theme, loads items + plugins) — dir `← ~/.config/sketchybar`. *Edit when: changing the status bar.*
 - `configs/sketchybar/colors.sh`, `icons.sh` — shared palette and icon glyphs.
+- `configs/sketchybar/theme.sh` — **visual template / single source of truth** for "division" geometry (corner radius, border, blur, drop shadow, inter-division gap). Sourced by sketchybarrc before items; every bracket on both sides, in normal + performance mode, pulls from these tokens. *Edit when: restyling the bar's overall pill/division look (radius, shadow, spacing).*
 - `configs/sketchybar/items/*.sh` — one bar item definition per file (spaces, front_app, battery, wifi, etc.).
 - `configs/sketchybar/plugins/*.sh` — update/event scripts backing the items; `icon_map.sh` maps apps to glyphs.
 - `configs/borders/bordersrc` — JankyBorders window-border config — dir `← ~/.config/borders`.

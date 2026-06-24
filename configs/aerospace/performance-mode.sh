@@ -15,7 +15,17 @@ GUI_DOMAIN="gui/$(id -u)"
 ITEMS_WITH_LABEL=(volume network_down network_up)
 ITEMS_ICON_ONLY=(headset)
 BRACKETS=(audio traffic)
-SPACERS=(spacer0 spacer1 spacer2 spacer3)
+
+# Inter-division spacers. Performance mode hides the audio + traffic groups, so to
+# keep ONE uniform GROUP_GAP between the still-visible groups (connectivity |
+# resources | calendar) we hide ONLY the two spacers flanking the hidden groups —
+# spacer0 (audio↔calendar) and spacer3 (a leading edge once traffic is gone) — and
+# keep spacer1 + spacer2 drawn. Each remaining gap is then exactly one spacer wide,
+# identical to normal mode. (Widths live in theme.sh GROUP_GAP; this only toggles
+# drawing, never width.)
+SPACERS_ALL=(spacer0 spacer1 spacer2 spacer3)
+SPACERS_HIDE=(spacer0 spacer3)
+SPACERS_KEEP=(spacer1 spacer2)
 
 # Bootstrap a LaunchAgent and verify it actually loaded, rather than swallowing
 # a bootstrap race with `|| true`. If the verify fails, retry once after a short
@@ -53,8 +63,11 @@ performance_mode_on() {
     sketchybar --set "$bracket" drawing=off
   done
 
-  for spacer in "${SPACERS[@]}"; do
-    sketchybar --set "$spacer" drawing=off icon.drawing=off label.drawing=off update_freq=0
+  for spacer in "${SPACERS_HIDE[@]}"; do
+    sketchybar --set "$spacer" drawing=off
+  done
+  for spacer in "${SPACERS_KEEP[@]}"; do
+    sketchybar --set "$spacer" drawing=on
   done
 
   echo "on" > "$STATE_FILE"
@@ -81,7 +94,7 @@ performance_mode_off() {
     sketchybar --set "$bracket" drawing=on
   done
 
-  for spacer in "${SPACERS[@]}"; do
+  for spacer in "${SPACERS_ALL[@]}"; do
     sketchybar --set "$spacer" drawing=on
   done
 

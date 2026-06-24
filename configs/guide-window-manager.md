@@ -37,6 +37,7 @@
 - ./configs/sketchybar/sketchybarrc
 - ./configs/sketchybar/colors.sh
 - ./configs/sketchybar/icons.sh
+- ./configs/sketchybar/theme.sh
 - ./configs/sketchybar/items/*.sh (18 files)
 - ./configs/sketchybar/plugins/*.sh (25 files)
 - ./configs/vscode/settings.json
@@ -46,7 +47,7 @@
 `./configs/aerospace/aerospace.toml`
 - Main AeroSpace tiling window manager config
 - Defines keybindings (alt+hjkl=focus, alt+shift+hjkl=move, alt+1-9=workspace)
-- Configures gaps, monitors assignment, startup commands
+- Configures gaps, monitors assignment, startup commands (NOTE: `gaps.outer.left/right` = 5 must stay equal to sketchybar `BAR_SIDE_PADDING` so the bar's outer divisions align with the tiled-window area edges)
 - Launches sketchybar+borders on startup, then applies the default modes (performance mode ON + the bar hidden on secondary monitors) once the bar is up — a third `after-startup-command` waits for the bar items, resets the `/tmp` state files, and runs `secondary-bar-toggle.sh` then `performance-mode.sh` from their clean state, so each (re)start re-establishes the defaults deterministically
 - App launchers via cmd+1-9 use open-dock-app.sh: if the app isn't running, open it on workspace N (matching the Dock position); if running, focus it (cycles through its windows on repeated presses, returns to last-focused window when coming from another app)
 - alt+shift+; then p triggers aerospace/performance-mode.sh (toggles UI overhead reduction)
@@ -101,12 +102,13 @@
 
 `./configs/aerospace/performance-mode.sh`
 - Toggles performance mode on/off (alt+shift+; then p via aerospace.toml service mode)
-- ON: kills JankyBorders, unloads display-profile LaunchAgent, hides sketchybar polling items (cpu, ram, network, battery, volume, headset, vpn, wifi, ethernet) and their brackets
-- OFF: restores everything, restarts borders, reloads LaunchAgent, re-enables all items
-- Keeps workspace spaces (left) and time/date (right) always visible
+- ON: unloads display-profile LaunchAgent, hides the audio + traffic groups — items volume, headset, network_down, network_up and their brackets (audio, traffic). (JankyBorders is left running, same as normal mode.)
+- OFF: restores everything, reloads the display-profile LaunchAgent, re-enables all items
+- Keeps workspace spaces (left), time/date, resources (battery/cpu/ram) and connectivity (vpn/wifi/ethernet) visible in both modes
+- Spacer handling keeps spacing uniform: hides ONLY spacer0 + spacer3 (the spacers flanking the hidden audio/traffic groups) and keeps spacer1 + spacer2 drawn, so every remaining gap stays exactly one `GROUP_GAP` (theme.sh) wide — identical to normal mode. Toggles drawing only, never spacer width
 - State tracked via /tmp/performance-mode.state
 - Default at startup: ON — aerospace.toml's after-startup-command clears /tmp/performance-mode.state then runs this script, and no state ⇒ the toggle lands ON
-- Edit for: which items to hide/show, notification messages
+- Edit for: which items/groups to hide/show, the spacer hide/keep lists
 
 `./configs/aerospace/com.aerospace.empty-watcher.plist`
 - LaunchAgent that runs empty-workspace-watcher.sh as a long-running daemon
@@ -181,13 +183,22 @@
 
 `./configs/sketchybar/sketchybarrc`
 - Main sketchybar entry point (status bar)
-- Sources colors.sh, icons.sh, then items: spaces, calendar, volume, headset, ram, cpu, battery, vpn, wifi, ethernet, network_down, network_up
+- Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, volume, headset, ram, cpu, battery, vpn, wifi, ethernet, network_down, network_up
 - Commented out (disabled): apple.sh, settings.sh
 - Not sourced (disabled): front_app.sh, brew.sh, github.sh, spotify.sh
 - Defines bar: height=58, floating style, transparent bg
-- Defines defaults: pill style, corner_radius=10, font=JetBrainsMono
+- Edge alignment: `margin=0` + `BAR_SIDE_PADDING` place the outer divisions `BAR_SIDE_PADDING` px from each screen edge. Keep `BAR_SIDE_PADDING` = aerospace `gaps.outer.left/right` (5) so the left/right divisions line up with the tiled-window (app) area edges
+- Defines defaults + the shared `bracket_style`: division geometry (corner radius, border, blur, drop shadow) all pulled from theme.sh tokens; font=JetBrainsMono
 - Groups items into brackets: calendar_group, audio, traffic, resources, connectivity
-- Edit for: bar position, default item styling, enable/disable items
+- Inter-group spacer items (spacer0–3) all use theme.sh's `GROUP_GAP` width
+- Edit for: bar position, default item styling, enable/disable items (for the overall division look, edit theme.sh)
+
+`./configs/sketchybar/theme.sh`
+- Visual TEMPLATE — single source of truth for "division" geometry (a division = any grouped pill: spaces 1-6 / 7-9 / 0, calendar, audio, resources, connectivity, traffic)
+- Tokens: `DIVISION_RADIUS` / `SPACE_BUBBLE_RADIUS` / `POPUP_RADIUS` (corner rounding), `DIVISION_BORDER_WIDTH` (0 = no border), `DIVISION_BLUR` (0 — fills are opaque), `DIVISION_SHADOW_*` (drop shadow below each division; angle must stay positive in [0,360), 270 = straight down — SketchyBar stores it unsigned so -90 wraps to a bogus 166°), `GROUP_GAP` (the single uniform gap between every division)
+- Sourced by sketchybarrc before any item; items/*.sh (sourced in the same shell) inherit the tokens. Colour palette stays in colors.sh (DARK_BG = opaque division fill)
+- Applied uniformly across BOTH bar sides and BOTH modes (normal + performance) — performance-mode.sh only toggles which spacers draw, never their width
+- Edit for: the bar's overall pill/division look — radius, border, shadow, opacity, inter-division spacing
 
 `./configs/sketchybar/colors.sh`
 - Color palette exports (CriticalElement Dotfiles theme)
