@@ -98,8 +98,13 @@ LABEL_UP=$(format_speed $SPEED_OUT)
 #     drawing=off item never runs its script) — we hide its icon+label instead.
 #   - network_up is passive (no script), so it can be fully drawing=off.
 #   - the `traffic` bracket is toggled so no empty pill lingers when idle.
-DOWN_VIS=0; [ "$SPEED_IN" -gt 0 ]  && DOWN_VIS=1
-UP_VIS=0;   [ "$SPEED_OUT" -gt 0 ] && UP_VIS=1
+# A direction's division shows only when its rate clears MIN_RATE — set high enough
+# to ignore the constant background trickle (VPN keepalive, telemetry, sync deltas;
+# observed ~0.1-2.5 KB/s on this machine) so an idle direction's division actually
+# disappears. Raise if background still triggers it, lower to catch lighter traffic.
+MIN_RATE=5120   # bytes/s (5 KB/s)
+DOWN_VIS=0; [ "$SPEED_IN" -ge "$MIN_RATE" ]  && DOWN_VIS=1
+UP_VIS=0;   [ "$SPEED_OUT" -ge "$MIN_RATE" ] && UP_VIS=1
 
 # Up and down are SEPARATE divisions (brackets traffic_up / traffic_down), each
 # with static DIVISION_PAD edges (set in the item files) and shown only when its
