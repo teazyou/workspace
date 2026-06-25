@@ -50,7 +50,7 @@
 - Main AeroSpace tiling window manager config
 - Defines keybindings (alt+hjkl=focus, alt+shift+hjkl=move, alt+1-9=workspace)
 - Configures gaps, monitors assignment, startup commands (NOTE: `gaps.outer.left/right` = 5 must stay equal to sketchybar `BAR_SIDE_PADDING` so the bar's outer divisions align with the tiled-window area edges)
-- Launches sketchybar+borders on startup, then applies the default modes (performance mode ON + the bar hidden on secondary monitors) once the bar is up — a third `after-startup-command` waits for the bar items, resets the `/tmp` state files, and runs `secondary-bar-toggle.sh` then `performance-mode.sh` from their clean state, so each (re)start re-establishes the defaults deterministically
+- Launches sketchybar + borders (borders via `~/.config/borders/bordersrc`, the single source of truth) on startup, then applies the default modes (performance mode ON + the bar hidden on secondary monitors) once the bar is up — a third `after-startup-command` waits for the bar items, resets the `/tmp` state files, and runs `secondary-bar-toggle.sh` then `performance-mode.sh` from their clean state, so each (re)start re-establishes the defaults deterministically
 - App launchers via cmd+1-9 use open-dock-app.sh: if the app isn't running, open it on workspace N (matching the Dock position); if running, focus it (cycles through its windows on repeated presses, returns to last-focused window when coming from another app)
 - alt+shift+; then p triggers aerospace/performance-mode.sh (toggles UI overhead reduction)
 - alt+shift+; then b triggers aerospace/secondary-bar-toggle.sh (hides/shows SketchyBar on secondary monitor)
@@ -104,7 +104,7 @@
 
 `./configs/aerospace/performance-mode.sh`
 - Toggles performance mode on/off (alt+shift+; then p via aerospace.toml service mode)
-- ON: unloads display-profile LaunchAgent, hides cpu + ram (battery STAYS) and the traffic group (network_down/up + bracket). KEEPS the volume/audio and connectivity groups visible. (JankyBorders left running.)
+- ON: unloads display-profile LaunchAgent, hides cpu + ram (battery STAYS) and both traffic divisions (network_down/up + brackets traffic_up/traffic_down + spacer_ud). KEEPS the volume/audio and connectivity groups visible. (JankyBorders left running.)
 - OFF: restores everything, reloads the display-profile LaunchAgent, re-enables all items
 - Keeps workspace spaces (left), time/date, battery, connectivity (vpn/wifi/ethernet) and the volume/audio group visible in both modes
 - Hides items via item-level `drawing` only (preserving each item's own icon/label config — ram has no icon, volume keeps its muted state). Spacer handling: hides ONLY spacer3 (leading spacer of the hidden traffic group), keeping spacer0/1/2 so every remaining gap stays one `GROUP_GAP` (theme.sh) wide — identical to normal mode; never touches spacer width
@@ -180,8 +180,9 @@
 `./configs/borders/bordersrc`
 - JankyBorders config (window border styling)
 - Muted-red theme: active_color=0xff9e2020 (focused window); inactive_color=0x00000000 (transparent → unfocused windows get NO border, since JankyBorders has no "active only" toggle)
-- Options: style=round, width=1.0, hidpi=on
+- Options: style=round, width=1.0, hidpi=on, order=above
 - active_color is kept in sync with colors.sh BORDER_ACTIVE/PINK (the bar accent mirrors the focused-border red)
+- Launched at startup by aerospace.toml running this file (`~/.config/borders/bordersrc`) — single source of truth, so border edits here apply on the next WM restart
 - Edit for: border colors, width, style
 
 `./configs/sketchybar/sketchybarrc`
@@ -237,7 +238,7 @@
 - Key files: aerospace.sh (workspace state), wifi.sh, network_speed.sh, volume.sh, headset.sh, ethernet.sh, ram.sh
 - aerospace.sh: workspace display with multi-monitor colors. Renders app ICONS via sketchybar-app-font (__icon_map in icon_map.sh) when EVERY app in a space is mapped, else falls back to text names (shorten_app_name). Subscribes front_app_switched so it repaints on app open, not only on workspace change
 - wifi.sh: maps current-link RSSI (helpers/wifi_rssi) → strength bars, plus opt-in auto-reconnect on a weak home network (gate on wifi_home_ssids + 1-bar debounce + cooldown → toggle Wi-Fi). wifi_click.sh toggles Wi-Fi power on click
-- network_speed.sh: single-poller (network_down) per-direction CONDITIONAL bandwidth (each shown only when its rate >0; bracket hidden when idle). Parses netstat byte counters FROM THE RIGHT (Ibytes=NF-4, Obytes=NF-1) so VPN/tunnel interfaces — which drop the Address column — read correctly
+- network_speed.sh: single-poller (network_down). Up and down are SEPARATE divisions (brackets traffic_up / traffic_down with spacer_ud between), each shown only when its direction's rate >0 (spacer_ud shows only when both do; spacer3 = gap to connectivity). Parses netstat byte counters FROM THE RIGHT (Ibytes=NF-4, Obytes=NF-1) so VPN/tunnel interfaces — which drop the Address column — read correctly
 - ram.sh outputs raw GB used (not %); volume.sh adds a muted state; ethernet.sh/headset.sh collapse the icon (drawing=off + zero pad) when disconnected while keeping the item drawing=on so the poller still runs
 - Edit for: logic of what's displayed, data sources, formatting
 

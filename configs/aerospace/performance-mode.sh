@@ -17,13 +17,13 @@ GUI_DOMAIN="gui/$(id -u)"
 # item while preserving each item's own icon/label config (ram has no icon, volume
 # has its muted state), so we don't force icon.drawing here.
 ITEMS_HIDE=(cpu ram network_down network_up)
-BRACKETS=(traffic)
+BRACKETS=(traffic_up traffic_down)
 
 # Inter-division spacers. Only the traffic group is hidden now, so only spacer3
 # (its leading spacer) is dropped; spacer0/1/2 stay so connectivity | resources |
 # audio | calendar keep one uniform GROUP_GAP between them — same as normal mode.
-SPACERS_ALL=(spacer0 spacer1 spacer2 spacer3)
-SPACERS_HIDE=(spacer3)
+SPACERS_ALL=(spacer0 spacer1 spacer2 spacer3 spacer_ud)
+SPACERS_HIDE=(spacer3 spacer_ud)
 SPACERS_KEEP=(spacer0 spacer1 spacer2)
 
 # Bootstrap a LaunchAgent and verify it actually loaded, rather than swallowing

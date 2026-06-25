@@ -101,26 +101,29 @@ LABEL_UP=$(format_speed $SPEED_OUT)
 DOWN_VIS=0; [ "$SPEED_IN" -gt 0 ]  && DOWN_VIS=1
 UP_VIS=0;   [ "$SPEED_OUT" -gt 0 ] && UP_VIS=1
 
-# Edge paddings (theme.sh): up is the LEFT element, down the RIGHT element of the
-# traffic division. The element present at a division edge gets DIVISION_PAD on
-# that side; the up<->down boundary gets ELEMENT_GAP. So the lone visible direction
-# still has proper inner padding on both sides.
-if [ "$UP_VIS" = 1 ]; then
-  if [ "$DOWN_VIS" = 1 ]; then UP_RP=0; else UP_RP=$DIVISION_PAD; fi
-  UP_ARGS=(drawing=on label="$LABEL_UP" label.padding_right=$UP_RP)
-else
-  UP_ARGS=(drawing=off)
-fi
-
+# Up and down are SEPARATE divisions (brackets traffic_up / traffic_down), each
+# with static DIVISION_PAD edges (set in the item files) and shown only when its
+# direction has traffic. network_down is the sole poller so its item stays
+# drawing=on (toggle icon+label); network_up is passive (toggle drawing).
 if [ "$DOWN_VIS" = 1 ]; then
-  if [ "$UP_VIS" = 1 ]; then DN_LP=$ELEMENT_GAP; else DN_LP=$DIVISION_PAD; fi
-  DOWN_ARGS=(icon.drawing=on label.drawing=on label="$LABEL_DOWN" icon.padding_left=$DN_LP)
+  DOWN_ARGS=(icon.drawing=on label.drawing=on label="$LABEL_DOWN"); TD=on
 else
-  DOWN_ARGS=(icon.drawing=off label.drawing=off)
+  DOWN_ARGS=(icon.drawing=off label.drawing=off); TD=off
+fi
+if [ "$UP_VIS" = 1 ]; then
+  UP_ARGS=(drawing=on label="$LABEL_UP"); TU=on
+else
+  UP_ARGS=(drawing=off); TU=off
 fi
 
-if [ "$UP_VIS" = 1 ] || [ "$DOWN_VIS" = 1 ]; then TRAFFIC_DRAW=on; else TRAFFIC_DRAW=off; fi
+# Layout L->R: up | spacer_ud | down | spacer3 | connectivity. spacer_ud only when
+# BOTH divisions show; spacer3 (gap to connectivity) whenever EITHER shows.
+SUD=off; [ "$UP_VIS" = 1 ] && [ "$DOWN_VIS" = 1 ] && SUD=on
+S3=off;  { [ "$UP_VIS" = 1 ] || [ "$DOWN_VIS" = 1 ]; } && S3=on
 
 sketchybar --set network_down "${DOWN_ARGS[@]}" \
            --set network_up "${UP_ARGS[@]}" \
-           --set traffic drawing=$TRAFFIC_DRAW
+           --set traffic_down drawing=$TD \
+           --set traffic_up drawing=$TU \
+           --set spacer_ud drawing=$SUD \
+           --set spacer3 drawing=$S3

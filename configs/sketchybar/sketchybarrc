@@ -152,20 +152,25 @@ source "$ITEM_DIR/vpn.sh"
 source "$ITEM_DIR/ethernet.sh"
 source "$ITEM_DIR/wifi.sh"
 
-# Spacer between connectivity and traffic
+# Spacer between connectivity and the traffic divisions
 sketchybar --add item spacer3 right --set spacer3 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
-# Network traffic group: up + down
+# Network traffic — TWO separate divisions: down (right) and up (left). Each shows
+# only when its direction has traffic (plugins/network_speed.sh). network_down
+# (rightmost) is the sole poller; spacer_ud is the gap between the two divisions.
 source "$ITEM_DIR/network_down.sh"
+sketchybar --add item spacer_ud right --set spacer_ud width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 source "$ITEM_DIR/network_up.sh"
 
 # Bracket for audio group (volume + headset)
 sketchybar --add bracket audio volume headset \
            --set audio "${bracket_style[@]}"
 
-# Bracket for network traffic group (up + down)
-sketchybar --add bracket traffic network_down network_up \
-           --set traffic "${bracket_style[@]}"
+# Brackets — one per traffic direction, so up and down are separate divisions
+sketchybar --add bracket traffic_down network_down \
+           --set traffic_down "${bracket_style[@]}"
+sketchybar --add bracket traffic_up network_up \
+           --set traffic_up "${bracket_style[@]}"
 
 # Bracket for system resources group (battery + cpu + ram)
 sketchybar --add bracket resources ram cpu battery \
