@@ -8,7 +8,7 @@ Config files in this repo are **symlinked** into their real system locations (e.
 
 ## Repository map
 
-See @../_index.md for the map of what lives where (directories, key files, symlink targets).
+See _index.md for the map of what lives where (directories, key files, symlink targets).
 
 The window-manager setup (aerospace + borders + sketchybar) is documented in `configs/guide-window-manager.md`.
 
