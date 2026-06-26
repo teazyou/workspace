@@ -20,9 +20,10 @@ ITEMS_HIDE=(cpu ram network_down network_up)
 BRACKETS=(traffic_up traffic_down)
 
 # Inter-division spacers. Only the traffic group is hidden now, so only spacer3
-# (its leading spacer) is dropped; spacer0/1/2 stay so connectivity | resources |
-# audio | calendar keep one uniform GROUP_GAP between them — same as normal mode.
-SPACERS_ALL=(spacer0 spacer1 spacer2 spacer3 spacer_ud)
+# (its leading spacer) + spacer_ud are dropped; spacer0/1/2 stay so connectivity |
+# resources | audio | calendar keep one uniform GROUP_GAP between them — same as
+# normal mode. On OFF the traffic spacers are left to network_speed.sh (conditional
+# on real traffic), so only SPACERS_KEEP are force-restored.
 SPACERS_HIDE=(spacer3 spacer_ud)
 SPACERS_KEEP=(spacer0 spacer1 spacer2)
 
@@ -79,21 +80,39 @@ performance_mode_off() {
   # restart.
   ensure_loaded "$DISPLAY_PROFILE_PLIST" || true
 
-  # Restore the hidden items (item-level drawing only; each item keeps its own
-  # icon/label config and the next poll repaints values/visibility).
-  for item in "${ITEMS_HIDE[@]}"; do
-    sketchybar --set "$item" drawing=on update_freq=5
-  done
+  # Restore the always-visible resource items (cpu + ram) directly.
+  sketchybar --set cpu drawing=on update_freq=5 \
+             --set ram drawing=on update_freq=5
 
-  for bracket in "${BRACKETS[@]}"; do
-    sketchybar --set "$bracket" drawing=on
-  done
+  # Traffic is DIFFERENT: its visibility is conditional (network_speed.sh shows a
+  # direction only when it clears MIN_RATE). We must NOT blindly force the traffic
+  # items/brackets/spacers on here — doing so showed the traffic_* bracket while
+  # network_down's icon/label were still frozen `off` from when that direction was
+  # last idle, leaving an EMPTY pill until a later poll happened to correct it
+  # (the up/down "one segment empty" bug). Instead resume the sole poller and let
+  # network_speed.sh set the correct visibility from a clean baseline:
+  #   - network_down drawing=on + update_freq=5 (poller restarts);
+  #   - everything traffic-conditional starts hidden;
+  #   - the stale prev_bytes cache is dropped so the first recompute reports a real
+  #     (near-zero) delta instead of a giant spike from the frozen perf-mode gap.
+  sketchybar --set network_down drawing=on update_freq=5 \
+             --set network_up drawing=off \
+             --set traffic_down drawing=off \
+             --set traffic_up drawing=off \
+             --set spacer_ud drawing=off \
+             --set spacer3 drawing=off
+  rm -f /tmp/sketchybar_network/prev_bytes
 
-  for spacer in "${SPACERS_ALL[@]}"; do
+  # Always-on inter-group spacers (between calendar | audio | resources | connectivity).
+  for spacer in "${SPACERS_KEEP[@]}"; do
     sketchybar --set "$spacer" drawing=on
   done
 
-  # Force full refresh
+  # Recompute traffic visibility now (network_down is the sole poller) so the
+  # correct state lands immediately instead of after up to one update_freq.
+  "$HOME/.config/sketchybar/plugins/network_speed.sh"
+
+  # Force full refresh of the remaining restored items.
   sketchybar --update
 
   rm -f "$STATE_FILE"
