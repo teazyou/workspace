@@ -232,9 +232,21 @@ fi
 SUD=off; [ "$UP_VIS" = 1 ] && [ "$DOWN_VIS" = 1 ] && SUD=on
 S3=off;  { [ "$UP_VIS" = 1 ] || [ "$DOWN_VIS" = 1 ]; } && S3=on
 
+# EMPTY-PILL FIX — a SketchyBar bracket paints via TWO independent layers that the
+# item-level `drawing` flag does NOT control: the fill (background.drawing) AND the
+# drop shadow (background.shadow.drawing). Two traps, both verified via --query:
+#   1. `drawing=off` does NOT stop either paint layer — it only FREEZES the bracket's
+#      geometry at its last tracked width. So `drawing=off` while the member is hidden
+#      leaves an ~82px-wide frozen rectangle still painting its fill+shadow = the
+#      EMPTY PILL. (background.drawing=off kills the fill; background.shadow.drawing=off
+#      kills the shadow — a softened ~50% black box that reads as a grey pill.)
+#   2. So we keep the bracket drawing=ON permanently (it then TRACKS its member and
+#      COLLAPSES to ~2px when the member is empty, instead of freezing wide) and toggle
+#      BOTH paint layers ($TD/$TU) to show/hide it. (The perf-mode/lock work above fixed
+#      a different, rarer symptom; THIS is the normal-mode empty pill.)
 sketchybar --set network_down "${DOWN_ARGS[@]}" \
            --set network_up "${UP_ARGS[@]}" \
-           --set traffic_down drawing=$TD \
-           --set traffic_up drawing=$TU \
+           --set traffic_down drawing=on background.drawing=$TD background.shadow.drawing=$TD \
+           --set traffic_up drawing=on background.drawing=$TU background.shadow.drawing=$TU \
            --set spacer_ud drawing=$SUD \
            --set spacer3 drawing=$S3
