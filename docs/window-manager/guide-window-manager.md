@@ -23,9 +23,10 @@
 - ./configs/aerospace/apply-display-profile.sh
 - ./configs/aerospace/com.aerospace.display-profile.plist
 - ./configs/aerospace/com.aerospace.empty-watcher.plist
-- ./configs/aerospace/doc.aerospace.md
+- ./doc.aerospace.md
 - ./configs/aerospace/empty-workspace-watcher.sh
-- ./configs/aerospace/features.aerospace.md
+- ./features.aerospace.md
+- ./configs/aerospace/lib-paths.sh
 - ./configs/aerospace/open-dock-app.sh
 - ./configs/aerospace/performance-mode.sh
 - ./configs/aerospace/secondary-bar-toggle.sh
@@ -77,14 +78,14 @@
 - Install to ~/Library/LaunchAgents/ and launchctl load to activate
 - Edit for: check interval timing
 
-`./configs/aerospace/doc.aerospace.md`
-- AeroSpace + SketchyBar + JankyBorders installation and setup tutorial
-- Step-by-step instructions for AI assistants to configure the full stack
+`./doc.aerospace.md`
+- GENERIC upstream AeroSpace + SketchyBar + JankyBorders install/setup tutorial — step-by-step instructions for configuring the full stack from scratch
+- **NON-AUTHORITATIVE: uses default/example values that do NOT match this repo's live config.** Reference only; trust the live config files (and the descriptions in this guide) over it
 - Read-only reference, don't edit
 
-`./configs/aerospace/features.aerospace.md`
-- AeroSpace features documentation with keybinding reference
-- Covers tiling, workspaces, layouts, integration features
+`./features.aerospace.md`
+- GENERIC upstream AeroSpace feature/keybinding reference — covers tiling, workspaces, layouts, integration features
+- **NON-AUTHORITATIVE: lists keybindings (e.g. alt+f fullscreen, service-mode backspace=close-all-but-current) that are ABSENT from the live `aerospace.toml`.** Reference only; the real bindings live in the config
 - Read-only reference, don't edit
 
 `./configs/aerospace/open-dock-app.sh`
@@ -135,6 +136,15 @@
 - Bash 3.2 compatible: no `declare -A`, no `mapfile` — uses parallel arrays and grep-based set membership
 - Edit for: poll interval, fallback logic, grace_seconds cap, `AERO_TIMEOUT`/`aero()` in lib-paths.sh
 
+`./configs/aerospace/lib-paths.sh`
+- Shared library `source`d by ALL SIX aerospace scripts (apply-display-profile, performance-mode, secondary-bar-toggle, track-workspace-mru, empty-workspace-watcher, open-dock-app) AND by aerospace.toml's startup `after-startup-command` — the single source of truth for the cross-script contract, so a path/timing change lands everywhere from one edit
+- Defines the `/tmp` STATE-FILE paths: `PERFORMANCE_MODE_STATE` (/tmp/performance-mode.state) and `SECONDARY_BAR_STATE` (/tmp/secondary-bar.state). Every consumer runs under `set -euo pipefail`, so every name a consumer references MUST be defined here or sourcing trips on an unset var
+- Defines the COUPLED timing constants: `GRACE_SECONDS=20` and `PLACEMENT_CAP_SECONDS=18` (invariant GRACE_SECONDS ≥ PLACEMENT_CAP_SECONDS so the empty-watcher grace marker never expires while open-dock-app's placement enforcer is still placing the window), `POLL_INTERVAL=0.5` (empty-watcher loop cadence), `AERO_TIMEOUT=3` (aero() wall-clock cap)
+- Houses the hang-proof `aero()` wrapper (the bash-native `aerospace` timeout watchdog described above — runs aerospace backgrounded, SIGKILLs after AERO_TIMEOUT, returns its real exit code or 137) so every script shares ONE wedge-safe call path
+- Houses the path builders `grace_file <ws>` / `mru_file <mon-id>` / `mru_lock <mon-id>` and `file_age_seconds <path>` (BSD `stat -f %m` mtime age; echoes a large number when absent so callers treat "missing" as "stale")
+- Bash 3.2 compatible (no associative arrays / mapfile)
+- Edit for: state-file paths, the grace/placement/poll/timeout constants, the `aero()` watchdog, the path-builder helpers
+
 `./configs/aerospace/track-workspace-mru.sh`
 - Called from aerospace.toml exec-on-workspace-change with $AEROSPACE_FOCUSED_WORKSPACE
 - Derives the workspace's monitor-id via `aerospace list-workspaces --all --format '%{monitor-id} %{workspace}'` + awk lookup (workspaces are statically assigned to monitors via aerospace.toml `[workspace-to-monitor-force-assignment]`)
@@ -156,7 +166,7 @@
 - Edit for: changing target monitor (display=main); gap behavior lives in apply-display-profile.sh
 
 `./scripts/aerospace-restart.sh`
-- Full restart of the whole window-manager stack — wired to the `aerostart` shell alias (`zsh/alias/osx.zsh`)
+- Full restart of the whole window-manager stack — wired to the `aerospace-restart` shell alias (`zsh/alias/osx.zsh`)
 - Stop phase: `launchctl bootout` the three LaunchAgents (display-profile, empty-watcher, autoraise — they're KeepAlive so a plain kill respawns them) then `killall` AeroSpace, sketchybar, borders, AutoRaise
 - Start phase: `open -a AeroSpace` (its after-startup-command relaunches sketchybar + borders), waits for AeroSpace to be up, then `launchctl bootstrap` the three LaunchAgents again
 - Edit for: which agents/processes are cycled, start/stop ordering
@@ -168,9 +178,10 @@
 - `disableKey="option"`: holding alt fully suppresses AutoRaise. Since every AeroSpace binding is alt-based (alt+hjkl focus, alt+shift+hjkl move, alt+1-9 workspace), focus-follows-mouse is gated off during all keyboard window management — the cursor can't hijack the window you're manipulating
 - `pollMillis=200` + `delay=1` + `requireMouseStop=false`: no mouse-stop requirement — the window under the cursor is focused on each ~200ms poll tick, and the coarse poll interval itself debounces fast fly-overs (a flick past a window between ticks is skipped). `requireMouseStop` is set explicitly to `false` because AutoRaise defaults it to `true`. Lower `pollMillis` = snappier but more likely to grab windows you only flick past. (Alternative to the earlier stop-based tuning; under evaluation.) `delay>1` adds a hover-dwell (each unit above 1 = one poll); `delay=0` disables raising
 - `mouseDelta=1.0`: ignore pointer jitter smaller than this, so small unintentional nudges while the cursor rests don't re-trigger a focus change
-- Warping is left to AeroSpace's `on-focus-changed` callback (AutoRaise's own warp disabled) so the two tools don't fight over the cursor
+- `ignoreSpaceChanged=true`: don't re-focus under the cursor immediately after a Space/workspace change (so an alt+N workspace switch isn't instantly overridden by whatever the cursor happens to sit over on the new space)
+- Warping is handled PER-KEYBINDING in aerospace.toml (each focus/move/workspace binding appends `move-mouse window-lazy-center`); the global `on-focus-changed` / `on-focused-monitor-changed` callbacks are deliberately EMPTY (they also fired on plain mouse-over), and AutoRaise's own warp is left disabled so the two tools don't fight over the cursor
 - Requires Accessibility permission (System Settings → Privacy & Security → Accessibility → add `/opt/homebrew/bin/AutoRaise`) or it runs but does nothing
-- Edit for: pollMillis, delay, disableKey, ignoreApps, mouseDelta
+- Edit for: poll timing (pollMillis) / fly-over debounce, delay (hover-dwell), disableKey, requireMouseStop, ignoreSpaceChanged, mouseDelta
 
 `./configs/autoraise/com.autoraise.daemon.plist`
 - LaunchAgent that runs the AutoRaise binary as a background daemon (RunAtLoad + KeepAlive, ThrottleInterval=5), mirroring the `com.aerospace.*` pattern instead of `brew services`
@@ -181,9 +192,9 @@
 
 `./configs/borders/bordersrc`
 - JankyBorders config (window border styling)
-- Muted-red theme: active_color=0xff9e2020 (focused window); inactive_color=0x00000000 (transparent → unfocused windows get NO border, since JankyBorders has no "active only" toggle)
+- Muted-red theme: active_color=0xffaa2222 (focused window); inactive_color=0x00000000 (transparent → unfocused windows get NO border, since JankyBorders has no "active only" toggle)
 - Options: style=round, width=1.0, hidpi=on, order=above
-- active_color is kept in sync with colors.sh BORDER_ACTIVE/PINK (the bar accent mirrors the focused-border red)
+- active_color MUST stay in sync with colors.sh `BORDER_ACTIVE` (=`PINK`, both `0xffaa2222`) — colors.sh's header literally says "keep in sync with configs/borders/bordersrc"; the whole bar accent mirrors this focused-border red
 - Launched at startup by aerospace.toml running this file (`~/.config/borders/bordersrc`) — single source of truth, so border edits here apply on the next WM restart
 - Edit for: border colors, width, style
 
@@ -215,8 +226,9 @@
 - Template for the gitignored `wifi_home_ssids` (private SSID names) that arms wifi.sh's auto-reconnect: when on one of those SSIDs and signal hits 1 bar, Wi-Fi is bounced so macOS reconnects to the strongest AP. Any number of SSIDs works; empty/missing list = strength-icon-only, no auto-switch
 
 `./configs/sketchybar/colors.sh`
-- Color palette exports (CriticalElement Dotfiles theme)
-- Key: PINK=0xffcf6679, DARK_BG=0xEB1e1e2e, TRANSPARENT=0x00000000
+- Color palette exports (CriticalElement Dotfiles base)
+- Window-border-matched reds: `BORDER_ACTIVE=0xffaa2222` (firebrick; **keep in sync with configs/borders/bordersrc** `active_color`), `BORDER_INACTIVE=0xff4d1a1a` (popup borders only). `PINK` is repointed to `$BORDER_ACTIVE` — it stays the accent variable name referenced across every item, so the whole bar recolors from that one line
+- `DARK_BG=0xff1e1e1e` (near-black, fully OPAQUE — pill/bracket division fills; no transparency, see theme.sh `DIVISION_BLUR`); `BAR_COLOR=TRANSPARENT` (the empty middle shows the wallpaper); `TRANSPARENT=0x00000000`. Plus the spaces palette (`SPACE_FOCUS_BG` etc.) the aerospace.sh coordinator reads
 - Edit for: global color scheme changes
 
 `./configs/sketchybar/icons.sh`

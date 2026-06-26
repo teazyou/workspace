@@ -1,5 +1,7 @@
 # macOS Tiling Window Manager Setup - AI-Actionable Tutorial
 
+> ⚠️ **GENERIC / NON-AUTHORITATIVE.** This is an upstream install tutorial. Its values (colours, gaps, paddings, keybindings) are **defaults/examples that do NOT match this repo's live config** — e.g. it uses `active_color=0xffe1e3e4`/`0xffffffff`, `outer.top=40`, `accordion-padding=30`, `backspace=close-all`, none of which are what `configs/` actually sets. Kept for reference only. For how this machine is really configured, read [guide-window-manager.md](guide-window-manager.md) and the live files under `configs/`.
+
 This tutorial provides structured instructions for AI assistants to configure AeroSpace, SketchyBar, and JankyBorders on a user's macOS system. Each section includes preconditions, exact commands, verification steps, and troubleshooting guidance.
 
 ---

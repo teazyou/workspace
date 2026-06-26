@@ -2,7 +2,7 @@
 #
 # aerospace-restart.sh — full restart of the window-manager stack.
 #
-# Stops then restarts everything described in configs/guide-window-manager.md:
+# Stops then restarts everything described in docs/window-manager/guide-window-manager.md:
 #   - AeroSpace               (tiling WM; launches sketchybar + borders on startup)
 #   - sketchybar              (status bar)
 #   - borders / JankyBorders  (window borders)
@@ -10,7 +10,7 @@
 #   - com.aerospace.empty-watcher     LaunchAgent (empty-workspace daemon)
 #   - com.autoraise.daemon            LaunchAgent (focus-follows-mouse / AutoRaise)
 #
-# Wired to the `aerostart` alias (see zsh/alias/osx.zsh).
+# Wired to the `aerospace-restart` alias (see zsh/alias/osx.zsh).
 
 set -u
 

@@ -10,13 +10,14 @@ Config files in this repo are **symlinked** into their real system locations (e.
 
 See _index.md for the map of what lives where (directories, key files, symlink targets).
 
-The window-manager setup (aerospace + borders + sketchybar) is documented in `configs/guide-window-manager.md`.
+The window-manager setup (aerospace + borders + sketchybar) is documented in `docs/window-manager/guide-window-manager.md`. All prose/context docs live in `docs/` (subfoldered by area); see the `## docs` section of `_index.md` for the full list.
 
 ## Conventions
 
-- **Keep `_index.md` in sync.** When you add, move, remove, or rename a file, or change a symlink target, update `_index.md` in the same change so the map stays accurate.
+- **Read the associated context before acting.** Before working on any request, identify its topic and read the matching guide under `docs/` (and the relevant config files) FIRST — so you already know what exists, where it is, and why, instead of self-discovering by trial and error. The full list of guides is the `## docs` section of `_index.md`; start every task from `_index.md` + this file.
+- **Keep the map and the guides current.** When you add, move, remove, rename, or change the behavior of a file or symlink target, update BOTH `_index.md` AND the affected `docs/` guide in the same change so they never drift. Any new context/guide/reference documentation you write MUST live in `docs/`, in the matching area subfolder (create one if needed) — never place prose docs next to the configs they describe.
 - **NEVER lint in this folder or plan for it.** Linting is done manually.
-- **Read `configs/vscode/guide-transparency.md` before modifying any VS Code theme, colour, or transparency setting** (`workbench.colorTheme`, `workbench.colorCustomizations`, `vscode_vibrancy.*`). The transparency is a layered system where one value affects others (and the Claude Code panel); the guide explains the mechanics and the non-obvious fixes.
+- **Read `docs/vscode/transparency.md` before modifying any VS Code theme, colour, or transparency setting** (`workbench.colorTheme`, `workbench.colorCustomizations`, `vscode_vibrancy.*`). The transparency is a layered system where one value affects others (and the Claude Code panel); the guide explains the mechanics and the non-obvious fixes.
 
 ## Index
 

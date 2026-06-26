@@ -1,5 +1,7 @@
 # macOS Keyboard-Driven Window Management - Feature Documentation
 
+> ⚠️ **GENERIC / NON-AUTHORITATIVE.** This is an upstream feature/keybinding reference for the setup video. It lists **default keybindings that are NOT all enabled in this repo** — e.g. `alt + f` fullscreen and the service-mode `backspace` = close-all-windows-but-current are absent/commented in the live [aerospace.toml](../../configs/aerospace/aerospace.toml). Kept for reference only. For this machine's real bindings, read [guide-window-manager.md](guide-window-manager.md) and `configs/aerospace/aerospace.toml`.
+
 This document covers all features demonstrated in the AeroSpace, SketchyBar, and JankyBorders setup video tutorial.
 
 ---

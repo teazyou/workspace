@@ -5,12 +5,12 @@ How the see-through VS Code look is built, why it needed specific settings to wo
 that took experimentation to solve.
 
 > **Read this before changing any VS Code theme/colour/transparency setting** in
-> [settings.json](settings.json) — the transparency is a layered system and changing
+> [settings.json](../../configs/vscode/settings.json) — the transparency is a layered system and changing
 > one value affects others (and the Claude Code panel) in non-obvious ways.
 
 ## What does what (theme vs. transparency are two separate things)
 
-- **Theme (colours):** `"workbench.colorTheme": "Dark Red"` — a normal installed
+- **Theme (colours):** `"workbench.colorTheme": "Red"` — a normal installed
   colour theme. This only picks the palette; it has nothing to do with transparency.
 - **Transparency:** the **Vibrancy Continued** extension
   (`illixion.vscode-vibrancy-continued`, settings prefixed `vscode_vibrancy.*`).
@@ -38,7 +38,7 @@ and `forceFramelessWindow: true` removes the window chrome that otherwise blocks
 The third vibrancy setting is the global strength:
 
 ```jsonc
-"vscode_vibrancy.opacity": 0.60,  // 0 = fully transparent window, 1 = fully opaque. Base layer for everything.
+"vscode_vibrancy.opacity": 0.65,  // 0 = fully transparent window, 1 = fully opaque. Base layer for everything.
 ```
 
 > **Applying changes:** vibrancy settings do **not** take effect on a normal
@@ -87,7 +87,7 @@ Key takeaways for future edits:
 
 > The IN/OUT fix below is one of several Claude Code **webview** patches. The full set
 > (grey chat boxes, floating-message compaction, full-width input, shrunk toolbar, …) and
-> a one-command re-apply script live in [guide-claude-code.md](guide-claude-code.md). This
+> a one-command re-apply script live in [claude-code-panel.md](claude-code-panel.md). This
 > section keeps the IN/OUT explanation because it stems directly from the `sideBar.background`
 > transparency fix above.
 
@@ -169,13 +169,15 @@ border so they read as distinct panels:
 "menu.background":              "#1e1e1ee6",  // right-click / dropdown menus
 "notifications.background":     "#1e1e1ee6",
 "inlineChat.background":        "#1e1e1ee6",
-// matching red borders (firebrick #b22222 = window-border active_color, see configs/borders/bordersrc)
-"widget.border": "#b22222", "editorWidget.border": "#b22222", "menu.border": "#b22222",
-"pickerGroup.border": "#b22222", "editorSuggestWidget.border": "#b22222", /* …etc */
+// matching firebrick borders so the popups read as distinct panels (see configs/borders/bordersrc)
+"widget.border": "#b22222dd", "editorWidget.border": "#b22222dd",  // the two big widgets get a slightly translucent (dd) border
+"menu.border": "#b22222", "pickerGroup.border": "#b22222", "editorSuggestWidget.border": "#b22222", /* …etc, fully opaque */
 ```
 
-The border red `#b22222` is kept in sync with the JankyBorders `active_color`
-(`0xffb22222`) so the popups match the window borders.
+The border firebrick `#b22222` is the visual cousin of the JankyBorders/SketchyBar
+focused-window red (`active_color = 0xffaa2222` in configs/borders/bordersrc) — they are
+kept in the same firebrick family so the popups read against the same accent as the window
+borders. (They are NOT byte-identical: VS Code uses `#b22222`, the borders use `0xffaa2222`.)
 
 ## Custom workbench CSS (`vscode_vibrancy.imports`) — for things with no setting
 
@@ -190,23 +192,39 @@ CSS/JS straight into the workbench via:
 ],
 ```
 
-The injected file lives in the repo at [custom.css](custom.css) (so it *is* version-
-controlled, unlike the Claude Code webview patch). Current use: a **4px bright-red bar
-on the active tab** (the active tab otherwise has only the 1px theme border + a faint
-red tint, which read as "not enough"). The rule uses an inset box-shadow so it doesn't
-depend on VS Code's internal tab markup:
+The injected file lives in the repo at [custom.css](../../configs/vscode/custom.css) (so it *is* version-
+controlled, unlike the Claude Code webview patch). Current use: a **2px active-tab accent
+bar** (the active tab otherwise has only the ~1px theme border + a faint red tint, which
+read as "not enough"). The rule colours/sizes VS Code's **NATIVE** bottom-border element
+`.tab-border-bottom-container` (z-index:10) directly — NOT a `box-shadow` (the native red
+strip renders on top of a box-shadow, so a box-shadow loses). The native element only
+exists while `tab.activeBorder` / `tab.unfocusedActiveBorder` are set in settings.json, so
+those tokens must stay defined (any value); this CSS just overrides `height` (= bar
+thickness, since VS Code has no native tab-border-width setting) and `background-color`.
+
+It is scoped per editor-group focus so the focused split and the other split read
+differently:
 
 ```css
-.monaco-workbench .tabs-container > .tab.active {
-  box-shadow: inset 0 -4px 0 0 #ff3030 !important;  /* -4px = bottom; 4px = top */
+/* FOCUSED group: bright bar */
+.monaco-workbench .editor-group-container.active>.title .tabs-container>.tab.active>.tab-border-bottom-container {
+  height: 2px !important; background-color: #ff3030af !important;
+}
+/* UNFOCUSED group (other split): dim bar */
+.monaco-workbench .editor-group-container:not(.active)>.title .tabs-container>.tab.active>.tab-border-bottom-container {
+  height: 2px !important; background-color: #760000 !important;
 }
 ```
 
+The tab `background-color` (the light-red tint behind the tab text) is also set per
+focus state on the `.tab.active` element in the same file.
+
 - Re-apply after editing the CSS (or the `imports` list) with **"Reload Vibrancy"**,
   not a plain window reload.
-- The active-tab *colour/tint* still comes from `colorCustomizations`
-  (`tab.activeBorder`, `tab.activeBackground`, `tab.activeForeground`); only the
-  **thickness** needs the injected CSS.
+- The active-tab *tint colour* is set in `custom.css`; `colorCustomizations`
+  (`tab.activeBorder`, `tab.unfocusedActiveBorder`, `tab.activeBackground`,
+  `tab.activeForeground`) must keep the tokens defined so the native border element exists
+  — but the **thickness + final bar colour** come from the injected CSS.
 
 ## Surface groups in `colorCustomizations` (what's transparent vs. tinted)
 

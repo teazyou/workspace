@@ -4,7 +4,7 @@ Every visual tweak we made to the **Claude Code chat panel** (grey chat boxes, t
 floating/sticky message, full-width input, compact spacing, shrunk toolbar, …), plus a
 **one-command script to re-apply them all** after a Claude Code update.
 
-> Companion to [guide-transparency.md](guide-transparency.md). That guide covers the
+> Companion to [transparency.md](transparency.md). That guide covers the
 > VS Code *window* transparency (Vibrancy + `colorCustomizations` + `custom.css`). **This**
 > guide covers the *Claude Code chat panel*, which is a different world — see why below.
 
