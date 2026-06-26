@@ -71,7 +71,11 @@ performance_mode_on() {
 
   # Let network_speed.sh hide the traffic divisions itself (it reads the state file)
   # — the SOLE writer of those items, so no race with the poller can split a pill.
-  "$NET_SPEED"
+  # NET_SPEED_PERF=1 marks this as the AUTHORITATIVE run: it waits out any in-flight
+  # poll tick on network_speed.sh's writer lock so it is the LAST writer. This closes
+  # C1 (a stale in-flight tick cannot win the last `--set` and re-show a division
+  # after perf-ON has stopped the poller).
+  NET_SPEED_PERF=1 "$NET_SPEED"
 
   # Keep the inter-group spacers between the still-visible groups.
   for spacer in "${SPACERS_KEEP[@]}"; do
@@ -109,7 +113,9 @@ performance_mode_off() {
 
   # Recompute traffic visibility now (state is cleared, cache reset → clean
   # baseline) so the correct state lands immediately instead of after one poll.
-  "$NET_SPEED"
+  # Authoritative run (same lock policy as ON) so it wins the last write against
+  # any in-flight tick; the resumed poller then keeps it correct from here on.
+  NET_SPEED_PERF=1 "$NET_SPEED"
 
   # Force a full refresh of the remaining restored items.
   sketchybar --update

@@ -6,6 +6,92 @@ source "$HOME/.config/sketchybar/theme.sh"   # DIVISION_PAD, ELEMENT_GAP
 CACHE_DIR="/tmp/sketchybar_network"
 mkdir -p "$CACHE_DIR"
 
+# --- Writer lock (C1: serialize this run against performance-mode.sh) ---------
+# This poller AND performance-mode.sh (via its synchronous call to THIS script)
+# both decide traffic visibility from the same /tmp/performance-mode.state. A poll
+# tick already in flight when perf-ON runs could read state=off, get preempted
+# before its final `--set`, then resume and re-show a division on top of the
+# now-hidden state — and because perf-ON stops the poller (network_down
+# update_freq=0) nothing recomputes, so the stale division stays FROZEN visible.
+#
+# An mkdir-based advisory lock (bash 3.2 safe; no flock/declare -A; mirrors
+# track-workspace-mru.sh's lockdir idiom) makes the perf-state read + visibility
+# compute + final `--set` one atomic critical section. The lock is acquired here
+# and held through the final `--set` (released by the EXIT trap).
+#
+# Two callers, two policies — this is what closes C1 (proven: a generic
+# "give up after a short wait, proceed lock-free" fallback does NOT close it,
+# because a slow stale tick can then win the last write after perf-ON returns):
+#
+#   * POLL TICK (default): bounded ~250ms wait so the 5s poller NEVER hangs. If
+#     it can't acquire, it SKIPS this tick entirely (exit, no `--set`). A tick
+#     therefore only ever writes while it HOLDS the lock — and while it holds the
+#     lock, perf-ON cannot yet have written `on` (perf-ON blocks on the same
+#     lock). So a stale tick's `--set` can never land *after* a perf write.
+#
+#   * PERF-TRIGGERED run (NET_SPEED_PERF=1, set by performance-mode.sh): this run
+#     must be the AUTHORITATIVE last writer, so it waits up to ~3.5s for the lock —
+#     long enough to outlast any live holder (a real tick holds it well under a
+#     second). It NEVER breaks a LIVE lock (that would reintroduce C1); only the 3s
+#     stale-breaker reclaims a lock whose holder is presumed dead. So perf-ON gets
+#     to write the truth (state=on → hidden) LAST.
+#
+# Convergence (perf-ON path), both orderings end HIDDEN after perf-ON returns:
+#   tick-first : tick holds lock, plans SHOW; perf-ON writes `on`, stops poller,
+#                then waits → tick fires stale SHOW, releases → perf-ON takes the
+#                lock, reads `on`, HIDES. Final = hidden.
+#   perf-first : perf-ON takes lock, reads `on`, HIDES; a late tick then takes the
+#                lock, re-reads `on`, HIDES (no-op). Final = hidden.
+LOCK_DIR="$CACHE_DIR/writer.lock"
+
+# Stale-lock breaker (self-healing): a real holder keeps the lock for well under a
+# second (one `--set`); if a lockdir is older than 3s assume the holder died (EXIT
+# trap is skipped on SIGKILL) and reclaim it so a dead holder can't wedge the poller.
+if [ -d "$LOCK_DIR" ]; then
+  lock_mtime=$(stat -f %m "$LOCK_DIR" 2>/dev/null)
+  if [ -n "$lock_mtime" ] && [ "$(( $(date +%s) - lock_mtime ))" -gt 3 ]; then
+    rmdir "$LOCK_DIR" 2>/dev/null
+  fi
+fi
+
+# NEVER break a held lock to run concurrently — that destroys mutual exclusion and
+# C1 comes back (a still-running stale tick would `--set` after the breaker did).
+# Strict exclusion is preserved: the ONLY lock-removal of a held lock is the
+# self-healing stale-breaker above (holder presumed DEAD after 3s, EXIT trap
+# skipped on SIGKILL). A live holder is always waited out.
+if [ "${NET_SPEED_PERF:-0}" = "1" ]; then
+  # Authoritative run (perf-ON / perf-OFF): MUST be the last writer, so it waits
+  # for the lock long enough to outlast any live holder. A real poll tick holds the
+  # lock only for its netstat + arg-assembly + one `--set` — well under a second;
+  # ~3.5s of wait covers even a heavily-preempted tick. Past that the holder is
+  # treated as dead and the stale-breaker (3s) will have reclaimed the lockdir, so
+  # the next mkdir here succeeds — never a concurrent break of a LIVE lock.
+  for _ in $(seq 1 70); do
+    if mkdir "$LOCK_DIR" 2>/dev/null; then break; fi
+    # Re-run the stale-breaker each spin so a holder that dies mid-wait is reclaimed.
+    if [ -d "$LOCK_DIR" ]; then
+      lm=$(stat -f %m "$LOCK_DIR" 2>/dev/null)
+      [ -n "$lm" ] && [ "$(( $(date +%s) - lm ))" -gt 3 ] && rmdir "$LOCK_DIR" 2>/dev/null
+    fi
+    sleep 0.05
+  done
+  trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT
+else
+  # Poll tick: bounded ~250ms wait; if contended, SKIP this tick (never block the
+  # 5s poller, never write lock-free). A tick therefore only ever writes while it
+  # HOLDS the lock — so it can't write after a perf run that's waiting on the lock.
+  HAVE_LOCK=0
+  for _ in 1 2 3 4 5; do
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+      HAVE_LOCK=1
+      trap 'rmdir "$LOCK_DIR" 2>/dev/null' EXIT
+      break
+    fi
+    sleep 0.05
+  done
+  [ "$HAVE_LOCK" = 1 ] || exit 0
+fi
+
 # Poll interval in seconds used to convert the byte delta into a per-second rate.
 # MUST match items/network_down.sh's update_freq (network_down is the sole poller;
 # network_up is passive). Change both together.
@@ -114,6 +200,13 @@ UP_VIS=0;   [ "$SPEED_OUT" -ge "$MIN_RATE" ] && UP_VIS=1
 # member: an EMPTY pill (frozen, because perf-on then stops this poller). With both
 # writers computing the SAME result, any overlap converges to one consistent state.
 # State file path is owned by performance-mode.sh (PERFORMANCE_MODE_STATE).
+#
+# This read is INSIDE the writer lock acquired at the top, held through the final
+# `--set` below (released by the EXIT trap) — so a poll tick and the perf-triggered
+# run can't interleave: whichever runs LAST re-reads the state here and writes a
+# result consistent with it. Tick-first: it finishes its `--set` before perf-ON can
+# write `on`. Perf-first: the tick blocks, then reads `on` here and hides. Both
+# orderings converge to hidden after perf-ON returns (C1 fix).
 if [ "$(cat /tmp/performance-mode.state 2>/dev/null)" = "on" ]; then
   DOWN_VIS=0
   UP_VIS=0
