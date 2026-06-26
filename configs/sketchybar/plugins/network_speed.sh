@@ -106,6 +106,19 @@ MIN_RATE=5120   # bytes/s (5 KB/s)
 DOWN_VIS=0; [ "$SPEED_IN" -ge "$MIN_RATE" ]  && DOWN_VIS=1
 UP_VIS=0;   [ "$SPEED_OUT" -ge "$MIN_RATE" ] && UP_VIS=1
 
+# Performance mode hides the whole traffic group. Honor it HERE so this poller and
+# performance-mode.sh can never DISAGREE about visibility. They are two independent
+# writers of the same six traffic items; when a perf-mode toggle overlapped a poll
+# tick, their separate `--set` calls interleaved and split the decision — one drew a
+# bracket while the other hid its member item, leaving a bracket around a hidden
+# member: an EMPTY pill (frozen, because perf-on then stops this poller). With both
+# writers computing the SAME result, any overlap converges to one consistent state.
+# State file path is owned by performance-mode.sh (PERFORMANCE_MODE_STATE).
+if [ "$(cat /tmp/performance-mode.state 2>/dev/null)" = "on" ]; then
+  DOWN_VIS=0
+  UP_VIS=0
+fi
+
 # Up and down are SEPARATE divisions (brackets traffic_up / traffic_down), each
 # with static DIVISION_PAD edges (set in the item files) and shown only when its
 # direction has traffic. network_down is the sole poller so its item stays

@@ -11,20 +11,24 @@ STATE_FILE="$PERFORMANCE_MODE_STATE"
 DISPLAY_PROFILE_PLIST="$HOME/Library/LaunchAgents/com.aerospace.display-profile.plist"
 GUI_DOMAIN="gui/$(id -u)"
 
-# SketchyBar items hidden in performance mode (their pollers stop too). We hide
-# cpu + ram (battery stays) and the traffic group, but KEEP the volume/audio and
-# connectivity groups visible. Toggling the item-level `drawing` hides the whole
-# item while preserving each item's own icon/label config (ram has no icon, volume
-# has its muted state), so we don't force icon.drawing here.
-ITEMS_HIDE=(cpu ram network_down network_up)
-BRACKETS=(traffic_up traffic_down)
+# Performance mode hides cpu + ram (battery stays) and the whole traffic group,
+# but KEEPS the volume/audio and connectivity groups visible.
+#
+# IMPORTANT — single writer for traffic: the traffic items (network_down/up, the
+# traffic_* brackets, spacer_ud, spacer3) are owned by plugins/network_speed.sh.
+# This script must NOT also set them, or the two writers race during a toggle and
+# split a division's decision (bracket shown, member hidden) → an empty pill. So
+# perf mode only flips the STATE FILE + the poller (network_down drawing/freq) and
+# then runs network_speed.sh once; network_speed reads the state file and hides the
+# whole traffic group itself, consistently. cpu/ram are independent, so we toggle
+# them directly here.
+RESOURCE_ITEMS=(cpu ram)
+NET_SPEED="$HOME/.config/sketchybar/plugins/network_speed.sh"
 
-# Inter-division spacers. Only the traffic group is hidden now, so only spacer3
-# (its leading spacer) + spacer_ud are dropped; spacer0/1/2 stay so connectivity |
-# resources | audio | calendar keep one uniform GROUP_GAP between them — same as
-# normal mode. On OFF the traffic spacers are left to network_speed.sh (conditional
-# on real traffic), so only SPACERS_KEEP are force-restored.
-SPACERS_HIDE=(spacer3 spacer_ud)
+# Inter-division spacers that stay one uniform GROUP_GAP between the always-visible
+# groups (connectivity | resources | audio | calendar). The traffic spacers
+# (spacer3 / spacer_ud) are NOT here — network_speed.sh draws them only when a
+# direction is actually visible.
 SPACERS_KEEP=(spacer0 spacer1 spacer2)
 
 # Bootstrap a LaunchAgent and verify it actually loaded, rather than swallowing
@@ -54,23 +58,26 @@ performance_mode_on() {
   # Stop display-profile LaunchAgent
   launchctl bootout "$GUI_DOMAIN" "$DISPLAY_PROFILE_PLIST" 2>/dev/null || true
 
-  # Hide sketchybar items (whole-item drawing off also stops their pollers)
-  for item in "${ITEMS_HIDE[@]}"; do
-    sketchybar --set "$item" drawing=off update_freq=0
-  done
+  # Write the state FIRST so any network_speed.sh run (the one we trigger below, or
+  # an in-flight poll tick) sees performance mode = on and hides the traffic group.
+  echo "on" > "$STATE_FILE"
 
-  for bracket in "${BRACKETS[@]}"; do
-    sketchybar --set "$bracket" drawing=off
-  done
+  # Hide resources + stop the traffic poller (network_down). drawing=off collapses
+  # the item and update_freq=0 stops its plugin; with network_down hidden the poller
+  # won't run again until OFF restores it.
+  sketchybar --set cpu drawing=off update_freq=0 \
+             --set ram drawing=off update_freq=0 \
+             --set network_down drawing=off update_freq=0
 
-  for spacer in "${SPACERS_HIDE[@]}"; do
-    sketchybar --set "$spacer" drawing=off
-  done
+  # Let network_speed.sh hide the traffic divisions itself (it reads the state file)
+  # — the SOLE writer of those items, so no race with the poller can split a pill.
+  "$NET_SPEED"
+
+  # Keep the inter-group spacers between the still-visible groups.
   for spacer in "${SPACERS_KEEP[@]}"; do
     sketchybar --set "$spacer" drawing=on
   done
 
-  echo "on" > "$STATE_FILE"
   echo "Performance mode ON"
 }
 
@@ -80,42 +87,33 @@ performance_mode_off() {
   # restart.
   ensure_loaded "$DISPLAY_PROFILE_PLIST" || true
 
-  # Restore the always-visible resource items (cpu + ram) directly.
-  sketchybar --set cpu drawing=on update_freq=5 \
-             --set ram drawing=on update_freq=5
+  # Clear the state FIRST so network_speed.sh (the run below + the resumed poller)
+  # computes real traffic visibility instead of the perf-mode hide.
+  rm -f "$STATE_FILE"
 
-  # Traffic is DIFFERENT: its visibility is conditional (network_speed.sh shows a
-  # direction only when it clears MIN_RATE). We must NOT blindly force the traffic
-  # items/brackets/spacers on here — doing so showed the traffic_* bracket while
-  # network_down's icon/label were still frozen `off` from when that direction was
-  # last idle, leaving an EMPTY pill until a later poll happened to correct it
-  # (the up/down "one segment empty" bug). Instead resume the sole poller and let
-  # network_speed.sh set the correct visibility from a clean baseline:
-  #   - network_down drawing=on + update_freq=5 (poller restarts);
-  #   - everything traffic-conditional starts hidden;
-  #   - the stale prev_bytes cache is dropped so the first recompute reports a real
-  #     (near-zero) delta instead of a giant spike from the frozen perf-mode gap.
-  sketchybar --set network_down drawing=on update_freq=5 \
-             --set network_up drawing=off \
-             --set traffic_down drawing=off \
-             --set traffic_up drawing=off \
-             --set spacer_ud drawing=off \
-             --set spacer3 drawing=off
+  # Restore resources and resume the traffic poller (network_down). The traffic
+  # ITEMS/brackets/spacers are NOT touched here — network_speed.sh owns them, so
+  # this script and the poller can never disagree and leave an empty pill.
+  sketchybar --set cpu drawing=on update_freq=5 \
+             --set ram drawing=on update_freq=5 \
+             --set network_down drawing=on update_freq=5
+
+  # Drop the stale byte counters frozen during perf mode so the first recompute
+  # reports a real (near-zero) delta, not a giant spike from the perf-mode gap.
   rm -f /tmp/sketchybar_network/prev_bytes
 
-  # Always-on inter-group spacers (between calendar | audio | resources | connectivity).
+  # Keep the inter-group spacers between the always-visible groups.
   for spacer in "${SPACERS_KEEP[@]}"; do
     sketchybar --set "$spacer" drawing=on
   done
 
-  # Recompute traffic visibility now (network_down is the sole poller) so the
-  # correct state lands immediately instead of after up to one update_freq.
-  "$HOME/.config/sketchybar/plugins/network_speed.sh"
+  # Recompute traffic visibility now (state is cleared, cache reset → clean
+  # baseline) so the correct state lands immediately instead of after one poll.
+  "$NET_SPEED"
 
-  # Force full refresh of the remaining restored items.
+  # Force a full refresh of the remaining restored items.
   sketchybar --update
 
-  rm -f "$STATE_FILE"
   echo "Performance mode OFF"
 }
 
