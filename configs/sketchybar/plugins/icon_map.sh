@@ -35,6 +35,7 @@ __icon_map() {
     "Spark") icon_result=":spark:" ;;
     "Spotify") icon_result=":spotify:" ;;
     "Steam"|"Steam Helper") icon_result=":steam:" ;;
+    "Wuthering Waves") icon_result=":games:" ;;  # no dedicated glyph; generic game-controller icon
     "Music"|"音乐") icon_result=":music:" ;;
     "VLC") icon_result=":vlc:" ;;
     "IINA") icon_result=":iina:" ;;
