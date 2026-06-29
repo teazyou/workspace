@@ -59,6 +59,9 @@
     "workbench.secondarySideBar.defaultVisibility": "hidden",
     "accessibility.signalOptions.volume": 5,
     "git.confirmSync": false,
+    "git.scanRepositories": [
+        "/Users/teazyou/dev/sopaios-playground/.sopaios"
+    ],
     "gitlens.ai.model": "vscode",
     "gitlens.ai.vscode.model": "copilot:gpt-4.1",
     "window.title": "${folderName}",
