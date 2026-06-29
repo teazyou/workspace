@@ -67,6 +67,7 @@ __icon_map() {
     "Alfred") icon_result=":alfred:" ;;
     "1Password") icon_result=":1password:" ;;
     "Bitwarden") icon_result=":bitwarden:" ;;
+    "NordVPN") icon_result=":nord_vpn:" ;;
     "Docker Desktop"|"Docker") icon_result=":docker:" ;;
     "GitHub Desktop") icon_result=":github:" ;;
     "Fork") icon_result=":fork:" ;;
