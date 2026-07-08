@@ -101,7 +101,7 @@
     "workbench.activityBar.location": "top",
     "workbench.colorTheme": "Red",
     "vscode_vibrancy.type": "transparent",
-    "vscode_vibrancy.opacity": 0.65,
+    "vscode_vibrancy.opacity": 0.80,
     "vscode_vibrancy.forceFramelessWindow": true,
     "vscode_vibrancy.imports": [
         "/Users/teazyou/workspace/configs/vscode/custom.css"
