@@ -154,6 +154,9 @@
     "breadcrumbs.enabled": false,
     "claudeCode.enableNewConversationShortcut": true,
     "workbench.editor.closeEmptyGroups": true,
+    "workbench.editor.enablePreview": true,
+    "workbench.editor.enablePreviewFromQuickOpen": true,
+    "workbench.editor.enablePreviewFromCodeNavigation": true,
     "redhat.telemetry.enabled": false,
     "diffEditor.hideUnchangedRegions.enabled": true,
     "editor.fontSize": 16

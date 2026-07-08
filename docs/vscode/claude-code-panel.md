@@ -1,8 +1,14 @@
 # Claude Code panel — webview customizations
 
 Every visual tweak we made to the **Claude Code chat panel** (grey chat boxes, the
-floating/sticky message, full-width input, compact spacing, shrunk toolbar, …), plus a
-**one-command script to re-apply them all** after a Claude Code update.
+floating/sticky message, full-width input, compact spacing, shrunk toolbar, …) **plus one
+behaviour patch that stops the editor-tab location from force-locking its editor group**,
+and a **one-command script to re-apply them all** after a Claude Code update.
+
+> Two files are patched: `webview/index.css` (all the visual tweaks) and `extension.js`
+> (the editor-group-lock behaviour — see [its reference section](#editor-group-lock-extensionjs-not-css)).
+> The CSS patches need **Reload Webviews**; the `extension.js` patch needs a full
+> **Reload Window**.
 
 > Companion to [transparency.md](transparency.md). That guide covers the
 > VS Code *window* transparency (Vibrancy + `colorCustomizations` + `custom.css`). **This**
@@ -52,8 +58,12 @@ set -euo pipefail
 
 CSS=$(ls -dt ~/.vscode/extensions/anthropic.claude-code-*/webview/index.css 2>/dev/null | head -1 || true)
 [ -z "${CSS:-}" ] && { echo "❌ Claude Code extension index.css not found"; exit 1; }
+EXT=$(ls -dt ~/.vscode/extensions/anthropic.claude-code-*/extension.js 2>/dev/null | head -1 || true)
+[ -z "${EXT:-}" ] && { echo "❌ Claude Code extension.js not found"; exit 1; }
 echo "Patching: $CSS"
+echo "Patching: $EXT"
 cp "$CSS" "$CSS.bak-$(date +%Y%m%d-%H%M%S)"
+cp "$EXT" "$EXT.bak-$(date +%Y%m%d-%H%M%S)"
 
 P(){ perl -i -pe "$1" "$CSS"; }                                 # in-place substitution
 A(){ grep -qF "$1" "$CSS" || printf '\n%s\n' "$1" >> "$CSS"; }  # guarded append
@@ -106,6 +116,14 @@ A '.userMessage_07S1Yg{font-size:18px}'
 A '.messageInput_cKsPxg,.mentionMirror_cKsPxg{font-size:15px}'
 A '.inputFooter_gGYT1w{zoom:.6}'
 
+# ── extension.js: don't lock the Claude Code editor group ────────────────────
+# The editor-tab ("Panel (New Tab)") location force-locks its group right after creating
+# the webview panel (createPanel(...) -> executeCommand("workbench.action.lockEditorGroup")),
+# so CMD+N / opening files can't land in that locked group and spawn a NEW group instead.
+# Swap the lock command for unlock. Idempotent: once patched the string is
+# action.unlockEditorGroup, which this pattern ("action.lockEditorGroup") no longer matches.
+perl -i -pe 's/action\.lockEditorGroup/action.unlockEditorGroup/g' "$EXT"
+
 # ── verify (each line should say OK; MISSING => that element changed in a new version) ─
 echo; echo "Verification:"
 while IFS= read -r m; do
@@ -131,7 +149,12 @@ display:block!important;width:auto!important;max-width:none!important
 .messageInput_cKsPxg,.mentionMirror_cKsPxg{font-size:15px}
 .inputFooter_gGYT1w{zoom:.6}
 MARKERS
-echo; echo 'Done. Now: Cmd+Shift+P -> "Developer: Reload Webviews"'
+grep -qF "action.unlockEditorGroup" "$EXT" \
+  && echo "  OK      extension.js: editor-group lock disabled" \
+  || echo "  MISSING extension.js: action.lockEditorGroup not patched (element changed?)"
+echo; echo 'Done. Now: Cmd+Shift+P -> "Developer: Reload Window"'
+echo '  (a full window reload is required for the extension.js patch; "Reload Webviews"'
+echo '   alone only refreshes the index.css visual tweaks.)'
 ```
 
 If a line says **MISSING** after a Claude Code update, that element's original markup
@@ -182,6 +205,27 @@ CSS vars referenced: `--app-primary-background`=`sideBar.background` (we set tra
 | `.messagesContainer_07S1Yg` | append `font-size:16px` | Conversation body text +3px (base 13px). Doesn't touch the input text (separate element) or the floating message (explicit 11px). |
 | `.userMessage_07S1Yg` | append `font-size:18px` | Your own message bubbles in the conversation are +2px over the body. The more-specific `.stickyHeader_07S1Yg .userMessage_07S1Yg{font-size:11px}` rule keeps the floating copy small. |
 
+### Editor-group lock (extension.js, not CSS)
+`claudeCode.preferredLocation:"panel"` — labelled **"Panel (New Tab)"** — opens Claude Code
+as a full **editor tab**, and the extension immediately runs
+`workbench.action.lockEditorGroup` on that group (`createPanel(...) →
+executeCommand("workbench.action.lockEditorGroup")` in `extension.js`). A **locked** group
+won't accept new editors, so **CMD+N / opening a file spawns a *new* editor group** instead
+of reusing the active one. There is **no settings.json toggle** for this — the lock is
+hard-coded in the extension host bundle.
+
+The patch swaps that single call to `unlockEditorGroup`, so the group stays unlocked and new
+files open **alongside** the Claude tab in the same group (the Claude webview tab isn't a
+preview editor, so it's never replaced — the file just becomes a sibling tab).
+
+| Property | Value |
+|---|---|
+| **File** | `extension.js` (extension host bundle), **not** `webview/index.css` |
+| **Patch** | `perl -i -pe 's/action\.lockEditorGroup/action.unlockEditorGroup/g'` |
+| **Idempotent** | after patching the string is `action.unlockEditorGroup`; the pattern `action.lockEditorGroup` no longer matches → re-running is a no-op |
+| **Robustness** | matches on the stable command-string, not minified var names (`u`/`g`/`Se`/`w`), so it survives most updates |
+| **Reload** | **Developer: Reload Window** (extension host code) — *not* "Reload Webviews" |
+
 ## Tuning cheatsheet
 - **Grey shade** of the chat boxes: the `#2b2b2b` values (input bg ×2, bubble, truncation fade). Darker `#222`, lighter `#333`.
 - **Floating message text size**: `.stickyHeader_07S1Yg .userMessage_07S1Yg{font-size:…}`.
@@ -192,7 +236,11 @@ CSS vars referenced: `--app-primary-background`=`sideBar.background` (we set tra
   mic button). If typed text overlaps the mic icon, bump just that side back up.
 
 ## Reverting
-Each run writes a timestamped `index.css.bak-<ts>` next to the file; restore it to undo a
-run. A pristine copy from the first session is kept as `index.css.orig-transparency-bak`.
-To drop everything cleanly, reinstall/disable-enable the Claude Code extension (gives you a
-fresh `index.css`), or `cp index.css.orig-transparency-bak index.css`.
+Each run writes a timestamped `index.css.bak-<ts>` **and** `extension.js.bak-<ts>` next to
+each file; restore one to undo a run. A pristine copy of the CSS from the first session is
+kept as `index.css.orig-transparency-bak`. To drop everything cleanly, reinstall/disable-
+enable the Claude Code extension (gives you a fresh `index.css` **and** `extension.js`), or
+restore from the backups (`cp index.css.orig-transparency-bak index.css`; for the lock,
+`cp extension.js.bak-<ts> extension.js` or re-run with lock→unlock reversed).
+To keep the group **locked** (extension default) while still wanting a fresh look, just skip
+the `extension.js` `perl` line in the script.
