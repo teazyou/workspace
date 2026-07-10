@@ -159,5 +159,6 @@
     "workbench.editor.enablePreviewFromCodeNavigation": true,
     "redhat.telemetry.enabled": false,
     "diffEditor.hideUnchangedRegions.enabled": true,
-    "editor.fontSize": 16
+    "editor.fontSize": 16,
+    "claudeCode.claudeProcessWrapper": "/Users/teazyou/workspace/scripts/claude/sopaios.sh"
 }
