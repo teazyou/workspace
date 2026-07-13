@@ -92,6 +92,9 @@ bash "$INSTALLS/setup_dot_claude.sh"
 next_step "Hourly checkpoint LaunchAgent"
 bash "$INSTALLS/install_checkpoint_launchd.sh"
 
+next_step "Docling CLI (uv tool + ML models)"
+bash "$INSTALLS/install_docling.sh"
+
 log_info "All done"
 log_ok "Workspace install complete. Open a new iTerm2 window to load the new shell."
 log_ok "Tip: run 'reload' inside zsh to re-source ~/.zshrc at any time."

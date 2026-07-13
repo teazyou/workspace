@@ -14,7 +14,7 @@ Setup is split in two because of a chicken-and-egg problem: the real installer l
    ```
    curl -fsSL https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh | bash
    ```
-2. **[`installation.sh`](../../scripts/installs/installation.sh)** — the orchestrator. Runs 16 numbered steps, each a self-contained `install_*` / `setup_*` sub-script, all idempotent.
+2. **[`installation.sh`](../../scripts/installs/installation.sh)** — the orchestrator. Runs 17 numbered steps, each a self-contained `install_*` / `setup_*` sub-script, all idempotent.
 
 **Why bootstrap re-execs itself from a tempfile.** When invoked as `curl … | bash`, the script's stdin *is* the pipe still carrying the rest of its own source. Any child process that reads stdin (parts of the brew installer do) consumes that source; bash then hits EOF and exits silently mid-install. To avoid this, bootstrap detects the piped case (`[[ ! -t 0 ]]` and `WORKSPACE_BOOTSTRAP_REEXEC` unset), downloads a fresh copy to `mktemp /tmp/workspace-bootstrap.XXXXXX.sh`, sets `WORKSPACE_BOOTSTRAP_REEXEC=1`, and re-execs it with stdin reattached to `/dev/tty`. The same `< /dev/tty` trick is applied at the final handoff (`exec bash "$WORKSPACE/scripts/installs/installation.sh" < /dev/tty`) so that interactive prompts work even under the pipe.
 
@@ -27,7 +27,7 @@ Bootstrap hard-fails early if the user isn't in the `admin` group (`dseditgroup 
 
 ---
 
-## The 16-step orchestration
+## The 17-step orchestration
 
 [`installation.sh`](../../scripts/installs/installation.sh) auto-numbers its steps: `TOTAL_STEPS=$(grep -c '^next_step ' "${BASH_SOURCE[0]}")`, and a `next_step()` wrapper prints `"N/TOTAL — title"`. Adding or removing a step means editing only its own line — no other numbers need updating. All sub-scripts are invoked via `bash "$INSTALLS/<script>"` (a fresh subshell so a `set -e` failure bubbles up without poisoning the orchestrator's environment). `installation.sh` first exports the path vars every sub-script relies on: `WORKSPACE`, `SCRIPTS`, `FUNCTIONS`, `INSTALLS`, `APP_CONFIGS`.
 
@@ -49,6 +49,7 @@ Bootstrap hard-fails early if the user isn't in the `admin` group (`dseditgroup 
 | 14 | Clone secondbrain + create ~/dev | [`clone_repos.sh`](../../scripts/installs/clone_repos.sh) |
 | 15 | dot-claude submodule + ~/.claude symlink | [`setup_dot_claude.sh`](../../scripts/installs/setup_dot_claude.sh) |
 | 16 | Hourly checkpoint LaunchAgent | [`install_checkpoint_launchd.sh`](../../scripts/installs/install_checkpoint_launchd.sh) |
+| 17 | Docling CLI (uv tool + ML models) | [`install_docling.sh`](../../scripts/installs/install_docling.sh) |
 
 All sub-scripts source [`helper_prompt.sh`](../../scripts/installs/helper_prompt.sh) for the `log_ok` / `log_err` / `log_wait` / `log_info` / `log_step` output helpers and the `prompt_continue` / `prompt_command` manual-pause helpers. `helper_prompt.sh` defaults the path vars (`: "${INSTALLS:=…}"`) so each sub-script can also be run standalone, and it normalises the `\033[…m` color strings from `zsh/configs/colors.zsh` into real escapes via `printf %b` (zsh's `echo` interprets them, bash's doesn't).
 
@@ -63,7 +64,7 @@ The step order is **not** arbitrary. These four constraints are the reason it is
 3. **`clone_repos`'s `gh auth login` (step 14) is the auth GATE for the private dot-claude submodule (step 15).** The `configs/dot-claude` submodule is a *private* repo, uncloneable until `gh` holds a token. `setup_dot_claude.sh` checks `gh auth status` and **hard-exits** if not authenticated (`"gh CLI is not authenticated. Run clone_repos.sh first…"`). It then runs `gh auth setup-git` to wire git's HTTPS to the gh token before `git submodule update --init configs/dot-claude`. This is also why bootstrap clones the repo non-recursively — the submodule simply can't come down that early.
 4. **`install_touch_id_sudo` (step 7) runs before `install_xcode_mas` (step 13).** The Xcode step needs `sudo` for `xcodebuild -license accept` and `-runFirstLaunch`; with Touch-ID-for-sudo already wired, those prompts are a fingerprint instead of a typed password. (Functional even without it — sudo just falls back to a password — but the ordering is intentional.)
 
-Note also: `setup_dot_claude` (15) runs **after** `clone_repos` (14), and `oh_my_zsh` (2) runs **before** `setup_symlinks` (3) on purpose — the OMZ installer is told `KEEP_ZSHRC=yes RUNZSH=no CHSH=no` so it never writes its own `~/.zshrc`, leaving the slot clean for step 3 to symlink our real one into place.
+Note also: `setup_dot_claude` (15) runs **after** `clone_repos` (14), and `oh_my_zsh` (2) runs **before** `setup_symlinks` (3) on purpose — the OMZ installer is told `KEEP_ZSHRC=yes RUNZSH=no CHSH=no` so it never writes its own `~/.zshrc`, leaving the slot clean for step 3 to symlink our real one into place. And `install_docling` (17) is deliberately **last and self-contained**: uv is *not* in `install_brew.sh`'s formula list — the docling installer idempotently installs uv itself (`brew install uv`), so its only ordering requirement is Homebrew on PATH (true from bootstrap onward); sitting last also puts its ~1.2 GB model prefetch after every interactive pause point, so the tail of the run is unattended.
 
 ---
 
@@ -89,6 +90,7 @@ Each value below is read from the sub-script's actual source. The "idempotency c
 | 14 clone_repos | `~/dev`: `[[ -d ]]`; gh: `gh auth status`; secondbrain: `[[ -d ~/secondbrain/.git ]]` | **interactive:** `gh auth login` (browser/device-code flow) — the auth gate for step 15. `mkdir -p ~/dev` (empty; the `dev` zsh function cd's here). `gh repo clone teazyou/secondbrain`. |
 | 15 setup_dot_claude | submodule: populated (`$SRC/settings.json` or non-empty + `.git`); symlink: `~/.claude` already `-L` → `$SRC` | `gh auth setup-git` → `git -C "$WORKSPACE" submodule update --init configs/dot-claude` → symlink `~/.claude → configs/dot-claude`. A pre-existing real `~/.claude` dir is **moved** to `~/.claude.bak.$(date +%s)`, never deleted (OAuth token lives in Keychain, so the move doesn't log you out). Verifies `~/.claude/settings.json` resolves. **Treats the submodule as a black box** — only this wiring matters. |
 | 16 install_checkpoint_launchd | already-loaded label → `bootout` then `bootstrap` (always reload) | writes `~/Library/LaunchAgents/com.teazyou.checkpoint.plist` (`StartCalendarInterval` minute 0, `RunAtLoad=false`). First migrates away any old `checkpoint_cronjob.sh` crontab entry. LaunchAgent (not cron) because cron can't reach the login-keychain GitHub credential for `git push`. |
+| 17 install_docling | uv: `command -v uv` or `~/.local/bin/uv` present; docling: `[[ -x ~/.local/bin/docling ]]`; models: `~/.cache/docling/models` exists non-empty | isolated uv tool env with **uv-managed Python 3.12** (system python3 is 3.9, docling needs ≥3.10; uv auto-downloads the interpreter). Installs uv via `brew install uv` if absent — uv is NOT in `install_brew.sh`. Binary-path checks (not `command -v`) for the same no-`~/.zshrc` reason as step 5. Model prefetch (`docling-tools models download`, ~1.2 GB → enables offline `--artifacts-path` use) tolerates failure: the partial dir is removed and the run **continues** (docling fetches models on first use). Force redo: `uv tool uninstall docling` / `rm -rf ~/.cache/docling/models`. |
 
 ### Full `install_brew.sh` formula + cask lists (read from source)
 
