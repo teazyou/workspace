@@ -98,9 +98,9 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
     4 = 'main'
     5 = 'main'
     6 = 'main'
-    7 = 'built-in.*'
-    8 = 'built-in.*'
-    9 = 'built-in.*'
+    7 = 'secondary'
+    8 = 'secondary'
+    9 = 'secondary'
     0 = 'sidecar.*'
 
 # A callback that runs every time binding mode changes
@@ -127,7 +127,7 @@ on-mode-changed = []
     outer.left =       5
     outer.bottom =     5
     # Top gap for SketchyBar on all monitors
-    outer.top =        44
+    outer.top =        10
     outer.right =      5
 
 # 'main' binding mode declaration
