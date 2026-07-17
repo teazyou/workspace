@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- EXPERIMENTAL: fires scripts/claude/quota_keepalive.sh every 20 min so the
+	     Claude Code 5-hour quota block cycles continuously. NOT wired into the
+	     fresh-Mac install flow on purpose (see the script header for rationale
+	     and disable instructions). Symlinked into ~/Library/LaunchAgents/. -->
+	<key>Label</key>
+	<string>com.teazyou.claude-quota-keepalive</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>/Users/teazyou/workspace/scripts/claude/quota_keepalive.sh</string>
+	</array>
+	<key>StartInterval</key>
+	<integer>1200</integer>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/Users/teazyou/workspace/logs/quota_keepalive.launchd.err.log</string>
+</dict>
+</plist>
