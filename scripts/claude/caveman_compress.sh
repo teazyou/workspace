@@ -12,11 +12,9 @@
 #
 # Mechanics: deliberately NOT `claude -p` (print mode soon removed from
 # subscription plans). An interactive session needs a TTY for its Ink UI, so
-# the call is wrapped in `script -q <log>` (pseudo-TTY — same trick as
-# quota_keepalive.sh), which TEES the session to both the log file and the
-# terminal: the claude TUI renders live while running, and keystrokes are
-# forwarded (an unexpected permission prompt can be answered by hand).
-# The target file's mtime+size are recorded up front, then polled every 300 ms:
+# the call is wrapped in `script -q <log>` (pseudo-TTY, all output recorded —
+# same trick as quota_keepalive.sh). The target file's mtime+size are recorded
+# up front, then polled every 300 ms:
 #   file changed -> short grace (until </result> shows up in the log, max
 #                   RESULT_GRACE_SECONDS, so the final answer isn't cut off)
 #                -> kill the session -> print what it wrapped in <result></result>
@@ -74,7 +72,7 @@ LOG="$(mktemp -t caveman-compress)"
 PROMPT="/caveman-compress $FILE_ABS -- act silently until it's done, there is no human to read your output. Wrap your final answer between <result>...</result>"
 
 script -q "$LOG" "$CLAUDE_BIN" --model "$MODEL" --effort "$EFFORT" \
-  --add-dir "$(dirname "$FILE_ABS")" "$PROMPT" &
+  --add-dir "$(dirname "$FILE_ABS")" "$PROMPT" >/dev/null 2>&1 &
 WRAPPER_PID=$!
 
 # Kill ONLY the session started above: the wrapper must still be a direct
@@ -91,12 +89,6 @@ kill_claude() {
     wait "$WRAPPER_PID" 2>/dev/null
   fi
   WRAPPER_PID=""
-  # The killed TUI leaves the terminal in raw mode / alt-screen / hidden
-  # cursor — repair it before printing anything.
-  if [ -t 1 ]; then
-    stty sane 2>/dev/null
-    printf '\033[?1049l\033[?25h\033[0m\n'
-  fi
 }
 trap kill_claude EXIT INT TERM
 
