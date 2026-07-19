@@ -1,0 +1,84 @@
+/* Real blur-free window transparency — see the desktop wallpaper crisply.
+   REQUIRES the obsidian.asar patch (transparent:!0 on the main window):
+   run  scripts/obsidian/patch-transparency.sh  once per Obsidian update.
+   Text is left opaque so it stays readable. Do NOT enable Settings → Appearance →
+   Translucent window (that's the frosted vibrancy blur we're avoiding, broken on macOS 26).
+
+   SCOPE MODEL — transparency is applied PER SCOPE:
+     • editor panes (main document area, incl. Excalidraw)  → --alpha-editor
+     • sidebars (left file-explorer/outline + right panels) → --alpha-sidebar
+     • menus / modals / popups / command palette            → OPAQUE (no transparency)
+     • titlebar / status bar                                → left blank to blend
+   Editor and sidebar default to the SAME value; change one to diverge them. */
+
+:root {
+  /* THE KNOBS: 0 = fully see-through (max wallpaper) … 1 = opaque (no wallpaper). */
+  --alpha-editor: 0.35;   /* editor document panes + Excalidraw */
+  --alpha-sidebar: 0.35;  /* left + right sidebars (kept equal to editor) */
+}
+
+/* ---- transparent window chain so tinted panes reveal the desktop ---- */
+.app-container,
+.horizontal-main-container,
+.workspace,
+.workspace-split,
+.workspace-tabs,
+.workspace-leaf,
+.titlebar,
+.status-bar,
+body {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* ---- EDITOR panes (main root split, incl. Excalidraw) ---- */
+.workspace-split.mod-root .workspace-leaf-content {
+  background-color: rgba(var(--mono-rgb-0), var(--alpha-editor)) !important;
+}
+
+/* ---- SIDEBAR panes (left + right docks) + left ribbon + bottom vault switcher ---- */
+.mod-left-split .workspace-leaf-content,
+.mod-right-split .workspace-leaf-content,
+.workspace-ribbon,                    /* vertical icon strip on the left */
+.side-dock-ribbon,
+.workspace-sidedock-vault-profile {   /* vault list/switcher at bottom-left */
+  background-color: rgba(var(--mono-rgb-0), var(--alpha-sidebar)) !important;
+}
+
+/* collapse inner layers (incl. the .view-header title bar with prev/next nav arrows,
+   which lives inside .workspace-leaf-content) so the single pane tint doesn't stack */
+.view-header,
+.workspace-leaf-content > .view-content,
+.markdown-source-view,
+.markdown-reading-view,
+.markdown-preview-view,
+.cm-editor,
+.cm-scroller,
+.cm-gutters,
+.view-content {
+  background: transparent !important;
+}
+
+/* Excalidraw: let the pane tint show through the drawing canvas margins.
+   (The drawing's OWN scene fill is Excalidraw's "canvas background" setting —
+   set it to transparent inside the drawing if you want the sketch area see-through too.) */
+.workspace-leaf-content[data-type="excalidraw"] .excalidraw,
+.workspace-leaf-content[data-type="excalidraw"] .excalidraw__canvas {
+  background-color: transparent !important;
+}
+
+/* ---- OPAQUE: menus, modals, popups, command palette (NO transparency) ---- */
+.menu,
+.modal,
+.modal-content,
+.mod-settings,
+.prompt,
+.suggestion-container,
+.popover,
+.tooltip,
+.notice {
+  background-color: var(--background-primary) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

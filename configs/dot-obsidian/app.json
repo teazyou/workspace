@@ -1,4 +1,5 @@
 {
+  "translucentWindow": true,
   "trashOption": "system",
   "alwaysUpdateLinks": true,
   "promptDelete": false,
