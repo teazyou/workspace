@@ -12,5 +12,5 @@
   "baseFontSize": 18,
   "showViewHeader": true,
   "showRibbon": true,
-  "translucentWindow": true
+  "translucency": true
 }
