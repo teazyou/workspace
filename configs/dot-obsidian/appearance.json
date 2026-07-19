@@ -6,11 +6,9 @@
     "salem",
     "typomagical",
     "wombat",
-    "103.obsidianite",
-    "transparency"
+    "103.obsidianite"
   ],
   "baseFontSize": 18,
   "showViewHeader": true,
-  "showRibbon": true,
-  "translucency": true
+  "showRibbon": true
 }
