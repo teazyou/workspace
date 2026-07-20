@@ -14,7 +14,7 @@ wifi=(
   padding_right=0
   click_script="$PLUGIN_DIR/wifi_click.sh"
   script="$PLUGIN_DIR/wifi.sh"
-  update_freq=5
+  update_freq=30
 )
 
 sketchybar --add item wifi right \

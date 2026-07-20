@@ -52,18 +52,8 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 0.5
 done
 
-# If performance mode is ON, it deliberately boots out the display-profile agent;
-# don't re-bootstrap it here or we'd leave it running while perf mode is nominally
-# ON. empty-watcher + AutoRaise still load unconditionally.
-PERF_STATE=""
-[[ -f /tmp/performance-mode.state ]] && PERF_STATE="$(cat /tmp/performance-mode.state 2>/dev/null)"
-
 # Reload LaunchAgents (display-profile reloads config, empty-watcher + AutoRaise daemons)
 for agent in "${AGENTS[@]}"; do
-  if [[ "$agent" == "com.aerospace.display-profile" && "$PERF_STATE" == "on" ]]; then
-    echo "    skipped $agent (performance mode ON)"
-    continue
-  fi
   launchctl bootstrap "$DOMAIN" "$AGENTS_DIR/$agent.plist" 2>/dev/null \
     && echo "    loaded $agent"
 done

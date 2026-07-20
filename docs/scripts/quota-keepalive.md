@@ -18,8 +18,8 @@ starts a brand-new full 5-hour block.
 
 [`scripts/claude/quota_keepalive.sh`](../../scripts/claude/quota_keepalive.sh)
 sends a **near-zero-cost `"hello"` to the `haiku` model** on every run. Driven
-by the LaunchAgent every **20 minutes**, a new block therefore starts at most
-~20 min after the previous one expires. Net effect: after any long absence the
+by the LaunchAgent every **hour**, a new block therefore starts at most
+~1 h after the previous one expires. Net effect: after any long absence the
 current block is already partly elapsed and resets sooner, instead of restarting
 the full 5 hours on your first real prompt.
 
@@ -50,7 +50,7 @@ the full 5 hours on your first real prompt.
 | Trust flag written | `~/.claude.json` (`.projects["~/tmp"].hasTrustDialogAccepted`) |
 
 Plist essentials: `Label` = `com.teazyou.claude-quota-keepalive`,
-`StartInterval` = **1200** (20 min), `RunAtLoad` = true. `ProgramArguments`
+`StartInterval` = **3600** (hourly), `RunAtLoad` = true. `ProgramArguments`
 runs `/bin/bash scripts/claude/quota_keepalive.sh`.
 
 Overridable via env: `QUOTA_KEEPALIVE_CLAUDE_BIN` (defaults to

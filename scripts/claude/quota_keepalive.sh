@@ -4,7 +4,7 @@
 #
 # The subscription quota works in 5-hour blocks that start on the FIRST message
 # sent. This script sends a near-zero-cost "hello" to the haiku model every run
-# (launchd fires it every 20 min), so a new block starts at most ~20 min after
+# (launchd fires it hourly), so a new block starts at most ~1 h after
 # the previous one expires. Net effect: after any long absence, the current
 # block is already partly elapsed and resets sooner instead of restarting the
 # full 5 hours on your first real prompt.

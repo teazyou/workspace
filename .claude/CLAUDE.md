@@ -17,7 +17,6 @@ The window-manager setup (aerospace + borders + sketchybar) is documented in `do
 - **Read the associated context before acting.** Before working on any request, identify its topic and read the matching guide under `docs/` (and the relevant config files) FIRST — so you already know what exists, where it is, and why, instead of self-discovering by trial and error. The full list of guides is the `## docs` section of `_index.md`; start every task from `_index.md` + this file.
 - **Keep the map and the guides current.** When you add, move, remove, rename, or change the behavior of a file or symlink target, update BOTH `_index.md` AND the affected `docs/` guide in the same change so they never drift. Any new context/guide/reference documentation you write MUST live in `docs/`, in the matching area subfolder (create one if needed) — never place prose docs next to the configs they describe.
 - **NEVER lint in this folder or plan for it.** Linting is done manually.
-- **Read `docs/vscode/transparency.md` before modifying any VS Code theme, colour, or transparency setting** (`workbench.colorTheme`, `workbench.colorCustomizations`, `vscode_vibrancy.*`). The transparency is a layered system where one value affects others (and the Claude Code panel); the guide explains the mechanics and the non-obvious fixes.
 
 ## Index
 

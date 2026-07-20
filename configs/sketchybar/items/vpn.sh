@@ -15,7 +15,7 @@ vpn=(
   padding_right=0
   click_script="open -a NordVPN"
   script="$PLUGIN_DIR/vpn.sh"
-  update_freq=5
+  update_freq=30
 )
 
 sketchybar --add item vpn right \

@@ -1,11 +1,10 @@
 #!/bin/bash
 # Toggle SketchyBar visibility on the secondary monitors.
-# Orthogonal to performance-mode: only flips the bar's display target and
-# writes the bar state, then delegates outer.top regeneration to
-# apply-display-profile.sh (the single source of truth for top gaps) so
-# windows on the non-main monitors reclaim the freed bar space (or release
-# it back). Per-item drawing state is left alone — performance mode is
-# unaffected.
+# Only flips the bar's display target and writes the bar state, then
+# delegates outer.top regeneration to apply-display-profile.sh (the single
+# source of truth for top gaps) so windows on the non-main monitors reclaim
+# the freed bar space (or release it back). Per-item drawing state is left
+# alone.
 
 set -euo pipefail
 

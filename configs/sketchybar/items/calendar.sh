@@ -15,7 +15,7 @@ time_item=(
   label.padding_right=$DIVISION_PAD
   label="$(date '+%H:%M')"
   background.drawing=off
-  update_freq=1
+  update_freq=60
   script="$PLUGIN_DIR/time.sh"
 )
 

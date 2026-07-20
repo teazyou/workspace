@@ -16,7 +16,7 @@ battery=(
   background.drawing=off
   padding_left=0
   padding_right=0
-  update_freq=5
+  update_freq=60
   script="$PLUGIN_DIR/battery.sh"
 )
 

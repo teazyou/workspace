@@ -16,7 +16,7 @@ ethernet=(
   padding_left=0
   padding_right=0
   script="$PLUGIN_DIR/ethernet.sh"
-  update_freq=5
+  update_freq=30
 )
 
 sketchybar --add item ethernet right \

@@ -3,10 +3,9 @@
 # SketchyBar visual TEMPLATE — single source of truth for "division" styling.
 #
 # A *division* is any grouped pill on the bar: spaces 1-6, spaces 7-9, space 0,
-# calendar, audio, resources, connectivity, traffic. Every division on BOTH the
-# left and right of the bar, in EVERY mode (normal + performance), pulls its
-# geometry from the tokens below — so the whole bar stays uniform and a restyle
-# is a single edit here.
+# calendar, audio, resources, connectivity. Every division on BOTH the left and
+# right of the bar pulls its geometry from the tokens below — so the whole bar
+# stays uniform and a restyle is a single edit here.
 #
 # Sourced by sketchybarrc BEFORE any item is added; items/*.sh are sourced in the
 # same shell so they inherit these without re-sourcing. (Geometry only; the colour
@@ -42,9 +41,8 @@ export DIVISION_SHADOW_DISTANCE=4          # offset in px
 
 # ── Inter-division spacing ───────────────────────────────────────────────────
 # The single gap between every adjacent division — identical on the left (spaces)
-# and right (status) clusters, and identical in normal vs performance mode. Every
-# spacer item (sketchybarrc + items/spaces.sh) uses this width; performance-mode.sh
-# only toggles which spacers draw, never their width, so the gap never changes.
+# and right (status) clusters. Every spacer item (sketchybarrc + items/spaces.sh)
+# uses this width, so the gap never changes.
 export GROUP_GAP=6
 
 # ── Intra-division padding ───────────────────────────────────────────────────
@@ -52,7 +50,7 @@ export GROUP_GAP=6
 # first/last element. ELEMENT_GAP — gap between adjacent elements inside a division
 # (icon<->label and item<->item). Applied UNIFORMLY to every status division via
 # the item paddings, so spacing is controlled here instead of per-item.
-# Kept equal so that when an edge element hides (e.g. headset disconnects, or
-# cpu/ram in performance mode) the neighbour's gap cleanly doubles as the edge pad.
+# Kept equal so that when an edge element hides (e.g. headset disconnects) the
+# neighbour's gap cleanly doubles as the edge pad.
 export DIVISION_PAD=6
 export ELEMENT_GAP=6

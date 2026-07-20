@@ -1,5 +1,7 @@
 #!/bin/bash
-# Per-monitor empty-workspace watcher. Polls every 500ms.
+# Per-monitor empty-workspace watcher. Polls every 2s (POLL_INTERVAL in
+# lib-paths.sh), 2 aerospace CLI calls per tick (combined snapshot + non-empty
+# list; was 3 calls / 500ms).
 #
 # For each monitor:
 #   - If its currently visible workspace has any windows → skip.
@@ -51,10 +53,14 @@ $2
 }
 
 while true; do
-    # --- Snapshot AeroSpace state once per tick ---
-    orig_focused_mon=$(aero list-monitors --focused --format '%{monitor-id}' 2>/dev/null)
-    visible_pairs=$(aero list-workspaces --monitor all --visible --format '%{monitor-id} %{workspace}' 2>/dev/null)
+    # --- Snapshot AeroSpace state once per tick (2 CLI calls) ---
+    # One all-workspaces listing carries visibility + focus per row; awk derives
+    # the focused monitor (row with workspace-is-focused=true) and the visible
+    # "<mon-id> <ws>" pairs from it, replacing two extra aerospace calls.
+    state=$(aero list-workspaces --monitor all --format '%{monitor-id} %{workspace} %{workspace-is-visible} %{workspace-is-focused}' 2>/dev/null)
     nonempty_pairs=$(aero list-workspaces --monitor all --empty no --format '%{monitor-id} %{workspace}' 2>/dev/null)
+    orig_focused_mon=$(printf '%s\n' "$state" | awk '$4=="true"{print $1; exit}')
+    visible_pairs=$(printf '%s\n' "$state" | awk '$3=="true"{print $1" "$2}')
 
     if [[ -z "$orig_focused_mon" || -z "$visible_pairs" ]]; then
         sleep "$POLL_INTERVAL"

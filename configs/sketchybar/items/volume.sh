@@ -17,7 +17,6 @@ volume=(
   padding_left=0
   padding_right=0
   script="$PLUGIN_DIR/volume.sh"
-  update_freq=5
 )
 
 sketchybar --add item volume right \

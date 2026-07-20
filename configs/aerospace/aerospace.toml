@@ -14,12 +14,11 @@ config-version = 2
 after-startup-command = [
     'exec-and-forget sketchybar',
     'exec-and-forget ~/.config/borders/bordersrc',
-    # Default modes at startup: performance mode ON + the bar hidden on secondary
-    # monitors. Wait for the bar items to exist, reset the /tmp state files so a
-    # (re)start re-establishes the defaults deterministically (the toggle scripts
-    # key off these states), then run each toggle from its clean state: no
-    # secondary-bar.state => OFF/hidden, no performance-mode.state => ON.
-    'exec-and-forget source ~/workspace/configs/aerospace/lib-paths.sh; for i in {1..20}; do sketchybar --query volume >/dev/null 2>&1 && break; sleep 0.3; done; rm -f "$PERFORMANCE_MODE_STATE" "$SECONDARY_BAR_STATE"; ~/workspace/configs/aerospace/secondary-bar-toggle.sh; ~/workspace/configs/aerospace/performance-mode.sh'
+    # Default mode at startup: the bar hidden on secondary monitors. Wait for the
+    # bar items to exist, reset the /tmp state file so a (re)start re-establishes
+    # the default deterministically (the toggle script keys off this state), then
+    # run the toggle from its clean state: no secondary-bar.state => OFF/hidden.
+    'exec-and-forget source ~/workspace/configs/aerospace/lib-paths.sh; for i in {1..20}; do sketchybar --query volume >/dev/null 2>&1 && break; sleep 0.3; done; rm -f "$SECONDARY_BAR_STATE"; ~/workspace/configs/aerospace/secondary-bar-toggle.sh'
 ]
 
 # Notify Sketchybar about workspace change + track workspace MRU for the
@@ -260,7 +259,6 @@ on-mode-changed = []
     # sticky is not yet supported https://github.com/nikitabobko/AeroSpace/issues/2
     #s = ['layout sticky tiling', 'mode main']
 
-    p = ['exec-and-forget ~/workspace/configs/aerospace/performance-mode.sh', 'mode main'] # Performance mode toggle
     b = ['exec-and-forget ~/workspace/configs/aerospace/secondary-bar-toggle.sh', 'mode main'] # Toggle SketchyBar on secondary monitor
     alt-shift-h = ['join-with left', 'mode main']
     alt-shift-j = ['join-with down', 'mode main']

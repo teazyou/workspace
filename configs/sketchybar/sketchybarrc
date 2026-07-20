@@ -76,7 +76,7 @@ defaults=(
 sketchybar --default "${defaults[@]}"
 
 # Shared bracket style for the right-side groups (calendar, audio, resources,
-# connectivity, traffic). One definition so a theme change is a single edit.
+# connectivity). One definition so a theme change is a single edit.
 # NOTE: the left spaces brackets use a DISTINCT spaces_bracket_style in
 # items/spaces.sh (without the background.padding_left/right=0 lines) to keep
 # the left-group spacing unchanged. Defined before the first item source so
@@ -97,11 +97,10 @@ bracket_style=(
   background.shadow.distance=$DIVISION_SHADOW_DISTANCE
 )
 
-# Shared base for the monitor pills (cpu, ram, network_up, network_down). These
-# items are SOURCED (not spawned), so they see this array in the same shell.
-# Each item appends only its per-item overrides (glyph, seed label, icon
-# paddings, label.padding_right, and update_freq/script for the active pollers —
-# network_up is passive). One definition so a restyle of the pills is one edit.
+# Shared base for the monitor pills (cpu, ram). These items are SOURCED (not
+# spawned), so they see this array in the same shell. Each item appends only
+# its per-item overrides (glyph, seed label, icon paddings, label.padding_right,
+# update_freq/script). One definition so a restyle of the pills is one edit.
 monitor_item_base=(
   icon.font="$FONT:Normal:15.0"
   icon.color=$PINK
@@ -147,30 +146,15 @@ sketchybar --add item spacer2 right --set spacer2 width=$GROUP_GAP background.dr
 
 # Network connectivity group (L->R: wifi, ethernet, vpn). Right items are added
 # right-most first, so source vpn (rightmost), then ethernet, then wifi (leftmost)
-# — this puts ethernet immediately to the right of wifi.
+# — this puts ethernet immediately to the right of wifi. Leftmost division of the
+# right-side cluster — no spacer after it.
 source "$ITEM_DIR/vpn.sh"
 source "$ITEM_DIR/ethernet.sh"
 source "$ITEM_DIR/wifi.sh"
 
-# Spacer between connectivity and the traffic divisions
-sketchybar --add item spacer3 right --set spacer3 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
-
-# Network traffic — TWO separate divisions: down (right) and up (left). Each shows
-# only when its direction has traffic (plugins/network_speed.sh). network_down
-# (rightmost) is the sole poller; spacer_ud is the gap between the two divisions.
-source "$ITEM_DIR/network_down.sh"
-sketchybar --add item spacer_ud right --set spacer_ud width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
-source "$ITEM_DIR/network_up.sh"
-
 # Bracket for audio group (volume + headset)
 sketchybar --add bracket audio volume headset \
            --set audio "${bracket_style[@]}"
-
-# Brackets — one per traffic direction, so up and down are separate divisions
-sketchybar --add bracket traffic_down network_down \
-           --set traffic_down "${bracket_style[@]}"
-sketchybar --add bracket traffic_up network_up \
-           --set traffic_up "${bracket_style[@]}"
 
 # Bracket for system resources group (battery + cpu + ram)
 sketchybar --add bracket resources ram cpu battery \

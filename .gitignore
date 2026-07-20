@@ -22,11 +22,9 @@ configs/dot-obsidian/cache/
 configs/dot-obsidian/.trash/
 configs/dot-obsidian/*.bak
 
-# sketchybar — machine-local / private artifacts. Committed instead: the helper
-# SOURCE (helpers/wifi_rssi.swift, compiled on demand by plugins/wifi.sh) and
-# wifi_home_ssids.example. The real wifi_home_ssids holds private SSID names.
+# sketchybar — machine-local artifact. Committed instead: the helper SOURCE
+# (helpers/wifi_rssi.swift, compiled on demand by plugins/wifi.sh).
 configs/sketchybar/helpers/wifi_rssi
-configs/sketchybar/wifi_home_ssids
 
 # dot-claude (private submodule at configs/dot-claude) — DEFENSIVE 3rd layer.
 # While it is a submodule these rules are INERT: git tracks it as a gitlink and

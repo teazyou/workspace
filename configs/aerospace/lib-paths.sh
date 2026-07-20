@@ -5,19 +5,17 @@
 # per-workspace grace markers, per-monitor MRU files + lockdirs) and for the
 # coupled grace/placement timing constants. Sourced by:
 #   - apply-display-profile.sh  (SECONDARY_BAR_STATE)
-#   - performance-mode.sh       (PERFORMANCE_MODE_STATE)
 #   - secondary-bar-toggle.sh   (SECONDARY_BAR_STATE)
 #   - track-workspace-mru.sh    (mru_file/mru_lock)
 #   - empty-workspace-watcher.sh(grace_file/mru_file, GRACE_SECONDS, POLL_INTERVAL)
 #   - open-dock-app.sh          (grace_file, PLACEMENT_CAP_SECONDS)
-#   - aerospace.toml startup    (PERFORMANCE_MODE_STATE, SECONDARY_BAR_STATE)
+#   - aerospace.toml startup    (SECONDARY_BAR_STATE)
 #
 # IMPORTANT: every consumer runs under `set -euo pipefail`. Every name a
 # consumer references MUST be defined here or sourcing trips on an unset var.
 # Bash 3.2 compatible (no associative arrays / mapfile).
 
 # --- State files ---------------------------------------------------------
-PERFORMANCE_MODE_STATE="/tmp/performance-mode.state"
 SECONDARY_BAR_STATE="/tmp/secondary-bar.state"
 
 # --- Timing constants ----------------------------------------------------
@@ -30,8 +28,11 @@ SECONDARY_BAR_STATE="/tmp/secondary-bar.state"
 GRACE_SECONDS=20
 PLACEMENT_CAP_SECONDS=18
 
-# Poll cadence for the empty-workspace-watcher main loop (seconds).
-POLL_INTERVAL=0.5
+# Poll cadence for the empty-workspace-watcher main loop (seconds). Coarse (2s)
+# on purpose: every tick costs AeroSpace CLI calls (energy — 0.5s/3-call ticks
+# measured ~8% sustained AeroSpace CPU), and a ~2s bounce latency for an
+# emptied workspace is imperceptible.
+POLL_INTERVAL=2
 
 # Hard wall-clock cap (seconds) for a single `aerospace` CLI call via aero().
 AERO_TIMEOUT="${AERO_TIMEOUT:-3}"

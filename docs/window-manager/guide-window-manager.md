@@ -28,7 +28,6 @@
 - ./features.aerospace.md
 - ./configs/aerospace/lib-paths.sh
 - ./configs/aerospace/open-dock-app.sh
-- ./configs/aerospace/performance-mode.sh
 - ./configs/aerospace/secondary-bar-toggle.sh
 - ./configs/aerospace/track-workspace-mru.sh
 - ./scripts/aerospace-restart.sh
@@ -40,8 +39,7 @@
 - ./configs/sketchybar/icons.sh
 - ./configs/sketchybar/theme.sh
 - ./configs/sketchybar/helpers/wifi_rssi.swift
-- ./configs/sketchybar/wifi_home_ssids.example
-- ./configs/sketchybar/items/*.sh (18 files)
+- ./configs/sketchybar/items/*.sh (16 files)
 - ./configs/sketchybar/plugins/*.sh (25 files)
 - ./configs/vscode/settings.json
 
@@ -51,9 +49,8 @@
 - Main AeroSpace tiling window manager config
 - Defines keybindings (alt+hjkl=focus, alt+shift+hjkl=move, alt+1-9=workspace)
 - Configures gaps, monitors assignment, startup commands (NOTE: `gaps.outer.left/right` = 5 must stay equal to sketchybar `BAR_SIDE_PADDING` so the bar's outer divisions align with the tiled-window area edges)
-- Launches sketchybar + borders (borders via `~/.config/borders/bordersrc`, the single source of truth) on startup, then applies the default modes (performance mode ON + the bar hidden on secondary monitors) once the bar is up — a third `after-startup-command` waits for the bar items, resets the `/tmp` state files, and runs `secondary-bar-toggle.sh` then `performance-mode.sh` from their clean state, so each (re)start re-establishes the defaults deterministically
+- Launches sketchybar + borders (borders via `~/.config/borders/bordersrc`, the single source of truth) on startup, then applies the default bar mode (hidden on secondary monitors) once the bar is up — a third `after-startup-command` waits for the bar items, resets the `/tmp` secondary-bar state file, and runs `secondary-bar-toggle.sh` from its clean state, so each (re)start re-establishes the default deterministically
 - App launchers via cmd+1-9 use open-dock-app.sh: if the app isn't running, open it on workspace N (matching the Dock position); if running, focus it (cycles through its windows on repeated presses, returns to last-focused window when coming from another app)
-- alt+shift+; then p triggers aerospace/performance-mode.sh (toggles UI overhead reduction)
 - alt+shift+; then b triggers aerospace/secondary-bar-toggle.sh (hides/shows SketchyBar on secondary monitor)
 - CrossOver auto-floated via on-window-detected rule (prevents tiling conflicts with games)
 - Stickies auto-floated via on-window-detected rule (keeps notes untiled; Stickies' own "Float on Top" handles always-on-top z-order)
@@ -69,11 +66,11 @@
 - Single source of truth for outer.top — detects the main display via `Main Display: Yes` in system_profiler and tracks its gap (main_gap)
 - Reads /tmp/secondary-bar.state — when "off" (2+ monitors, main detected), emits `[{ monitor.main = <main_gap> }, 10]` so the bar gap stays only on the main monitor (where the bar still shows) and all other monitors reclaim to 10, regardless of monitor count; otherwise keeps the per-resolution multi-entry array. The old `monitor.secondary` override is gone (it only worked for 2-monitor setups)
 - **Also auto-manages the workspace 7-9 monitor assignment** (the "laptop-companion" workspaces) in aerospace.toml's `[workspace-to-monitor-force-assignment]`, rewriting just the `7/8/9 =` lines (1-6 `main` and 0 `sidecar.*` untouched). `companion_ws_pattern`: when the MacBook built-in is SECONDARY (an external is main, e.g. home desk) → `'built-in.*'` (names the MacBook explicitly so 7-9 never grab an iPad sidecar); when the built-in is itself MAIN (e.g. travel with a portable external) → `'secondary'`, because `'built-in.*'` would then collide with workspaces 1-6 on the main display. The portable external reports an empty monitor name to AeroSpace so it can't be matched by a name regex — `'secondary'` resolves to it as the only non-main screen in the travel setup
-- Trigger model for the 7-9 flip: applied on every AeroSpace (re)start via the startup `secondary-bar-toggle.sh → apply-display-profile.sh --force` chain (runs before performance mode boots out this LaunchAgent), and on hot display swaps within ~15s **when performance mode is OFF** (performance mode unloads this agent, so a hot swap while it's ON waits for the next restart / perf-mode toggle)
+- Trigger model for the 7-9 flip: applied on every AeroSpace (re)start via the startup `secondary-bar-toggle.sh → apply-display-profile.sh --force` chain, and on hot display swaps within ~60s via the always-loaded display-profile LaunchAgent (60s StartInterval)
 - Edit for: gap values per resolution, adding new resolution mappings, the 7-9 companion-monitor logic
 
 `./configs/aerospace/com.aerospace.display-profile.plist`
-- LaunchAgent that runs apply-display-profile.sh every 15 seconds
+- LaunchAgent that runs apply-display-profile.sh every 60 seconds
 - Detects monitor connect/disconnect and auto-applies optimal gaps
 - Install to ~/Library/LaunchAgents/ and launchctl load to activate
 - Edit for: check interval timing
@@ -103,27 +100,15 @@
 - Fallback: if bundle id can't be read, plain `open` (old behavior)
 - Edit for: state file location, cycling order, fallback behavior, placement-enforcer poll cap
 
-`./configs/aerospace/performance-mode.sh`
-- Toggles performance mode on/off (alt+shift+; then p via aerospace.toml service mode)
-- SINGLE WRITER for traffic (the empty-pill fix): the traffic items (network_down/up, brackets traffic_up/traffic_down, spacer_ud, spacer3) are owned EXCLUSIVELY by plugins/network_speed.sh. performance-mode.sh must NOT also set them — when it did, the two independent writers raced during a toggle and split a division's decision (bracket shown while its member was hidden), leaving a bracket drawn around a hidden member = an EMPTY pill (frozen, because perf-on then stops the poller). network_speed.sh now reads /tmp/performance-mode.state and force-hides the whole traffic group when perf mode is on, so every concurrent writer computes the SAME result and any toggle/poll overlap converges to one consistent state
-- WRITER LOCK (C1 residual-race fix): even with both writers computing the same result, a poll tick already IN FLIGHT when perf-ON ran could read state=off, get preempted before its final `--set`, then resume AFTER perf-ON wrote `on`+stopped the poller, and re-show a division on top of the hidden state — frozen, since nothing recomputes. So network_speed.sh now takes an mkdir-based advisory lockdir (`/tmp/sketchybar_network/writer.lock`, the track-workspace-mru.sh idiom; bash 3.2 safe) around its perf-state read + visibility compute + final `--set`. Two policies: a POLL TICK waits ~250ms then SKIPS the tick if contended (so it only ever writes while holding the lock, never after a waiting perf run); the PERF-TRIGGERED run is marked authoritative via `NET_SPEED_PERF=1` and waits up to ~3.5s to be the LAST writer (it never breaks a live lock — only the self-healing 3s stale-breaker reclaims a presumed-dead holder, so mutual exclusion holds). Both orderings (tick-first / perf-first) converge to the traffic group HIDDEN after perf-ON returns and it STAYS hidden
-- ON: unloads display-profile LaunchAgent, writes the state file FIRST, hides cpu + ram (battery STAYS) and stops the traffic poller (network_down drawing=off + update_freq=0), then runs `NET_SPEED_PERF=1 network_speed.sh` once (authoritative through the lock) — which (seeing state=on) hides both traffic divisions itself, as the LAST writer even against an in-flight tick. KEEPS the volume/audio and connectivity groups visible. (JankyBorders left running.)
-- OFF: reloads the display-profile LaunchAgent, clears the state file FIRST, re-enables cpu + ram and resumes the traffic poller (network_down drawing=on + update_freq=5), drops the stale prev_bytes cache (so the first recompute reports a real near-zero delta, not a giant spike from the frozen perf-mode gap), then runs `NET_SPEED_PERF=1 network_speed.sh` once (authoritative through the lock) to recompute real traffic visibility. Does NOT touch the traffic items/brackets/spacers directly
-- Keeps workspace spaces (left), time/date, battery, connectivity (vpn/wifi/ethernet) and the volume/audio group visible in both modes
-- Hides cpu/ram via item-level `drawing` only (preserving each item's own icon/label config — ram has no icon). Spacer handling: keeps spacer0/1/2 so every gap between the always-visible groups stays one `GROUP_GAP` (theme.sh) wide; the traffic spacers (spacer3/spacer_ud) are left to network_speed.sh, which draws them only when a direction is actually visible
-- State tracked via /tmp/performance-mode.state
-- Default at startup: ON — aerospace.toml's after-startup-command clears /tmp/performance-mode.state then runs this script, and no state ⇒ the toggle lands ON
-- Edit for: which items/groups to hide/show, the kept spacers. NOTE: do NOT add the traffic items/brackets/spacers back here — they belong to network_speed.sh (single writer); gate them via the state file instead
-
 `./configs/aerospace/com.aerospace.empty-watcher.plist`
 - LaunchAgent that runs empty-workspace-watcher.sh as a long-running daemon
-- RunAtLoad + KeepAlive (no StartInterval — script has its own 500ms poll loop)
+- RunAtLoad + KeepAlive (no StartInterval — script has its own 2s poll loop)
 - ThrottleInterval=5 prevents tight restart loops if the script bombs
 - Install via symlink to ~/Library/LaunchAgents/, then launchctl load
 - Edit for: log paths, throttle interval
 
 `./configs/aerospace/empty-workspace-watcher.sh`
-- Long-running daemon, polls every 500ms — per-monitor (multi-monitor aware)
+- Long-running daemon, polls every 2s (lib-paths.sh `POLL_INTERVAL`; 2 aerospace CLI calls per tick — one combined visibility+focus snapshot + the non-empty list) — per-monitor (multi-monitor aware)
 - For each monitor: if its currently visible workspace has zero windows, bounces it to a non-empty workspace assigned to THAT monitor (so closing the last window on mon1's ws5 doesn't leave mon1 empty while focus drifts to mon2)
 - Per-monitor MRU read from `/tmp/aerospace-ws-mru-mon-<mon-id>.state` (written by track-workspace-mru.sh)
 - Fallback order per monitor: MRU newest-first (filtered to that monitor + currently non-empty) → first non-empty workspace AeroSpace lists for that monitor → if every workspace on the monitor is empty, the first workspace AeroSpace lists for that monitor (per aerospace.toml assignment order: ws1 for main, ws7 for secondary, ws0 for the Sidecar/third monitor) → stay put only when that target equals the already-visible ws
@@ -137,9 +122,9 @@
 - Edit for: poll interval, fallback logic, grace_seconds cap, `AERO_TIMEOUT`/`aero()` in lib-paths.sh
 
 `./configs/aerospace/lib-paths.sh`
-- Shared library `source`d by ALL SIX aerospace scripts (apply-display-profile, performance-mode, secondary-bar-toggle, track-workspace-mru, empty-workspace-watcher, open-dock-app) AND by aerospace.toml's startup `after-startup-command` — the single source of truth for the cross-script contract, so a path/timing change lands everywhere from one edit
-- Defines the `/tmp` STATE-FILE paths: `PERFORMANCE_MODE_STATE` (/tmp/performance-mode.state) and `SECONDARY_BAR_STATE` (/tmp/secondary-bar.state). Every consumer runs under `set -euo pipefail`, so every name a consumer references MUST be defined here or sourcing trips on an unset var
-- Defines the COUPLED timing constants: `GRACE_SECONDS=20` and `PLACEMENT_CAP_SECONDS=18` (invariant GRACE_SECONDS ≥ PLACEMENT_CAP_SECONDS so the empty-watcher grace marker never expires while open-dock-app's placement enforcer is still placing the window), `POLL_INTERVAL=0.5` (empty-watcher loop cadence), `AERO_TIMEOUT=3` (aero() wall-clock cap)
+- Shared library `source`d by ALL FIVE aerospace scripts (apply-display-profile, secondary-bar-toggle, track-workspace-mru, empty-workspace-watcher, open-dock-app) AND by aerospace.toml's startup `after-startup-command` — the single source of truth for the cross-script contract, so a path/timing change lands everywhere from one edit
+- Defines the `/tmp` STATE-FILE path: `SECONDARY_BAR_STATE` (/tmp/secondary-bar.state). Every consumer runs under `set -euo pipefail`, so every name a consumer references MUST be defined here or sourcing trips on an unset var
+- Defines the COUPLED timing constants: `GRACE_SECONDS=20` and `PLACEMENT_CAP_SECONDS=18` (invariant GRACE_SECONDS ≥ PLACEMENT_CAP_SECONDS so the empty-watcher grace marker never expires while open-dock-app's placement enforcer is still placing the window), `POLL_INTERVAL=2` (empty-watcher loop cadence), `AERO_TIMEOUT=3` (aero() wall-clock cap)
 - Houses the hang-proof `aero()` wrapper (the bash-native `aerospace` timeout watchdog described above — runs aerospace backgrounded, SIGKILLs after AERO_TIMEOUT, returns its real exit code or 137) so every script shares ONE wedge-safe call path
 - Houses the path builders `grace_file <ws>` / `mru_file <mon-id>` / `mru_lock <mon-id>` and `file_age_seconds <path>` (BSD `stat -f %m` mtime age; echoes a large number when absent so callers treat "missing" as "stale")
 - Bash 3.2 compatible (no associative arrays / mapfile)
@@ -159,7 +144,7 @@
 - OFF: `sketchybar --bar display=main` + writes `off` to the state file
 - Does NOT edit outer.top itself anymore — after writing the state (state written BEFORE the generator runs), it delegates gap regeneration to `apply-display-profile.sh --force`, the single source of truth. When off, the generator emits `[{ monitor.main = <main_gap> }, 10]` so non-main monitors reclaim the freed bar space; works for any monitor count
 - No own `aerospace reload-config` — the generator runs reload itself (avoids a double reload)
-- Orthogonal to performance mode: only flips the bar's display target and the bar state, leaves per-item drawing state alone
+- Only flips the bar's display target and the bar state, leaves per-item drawing state alone
 - State tracked via /tmp/secondary-bar.state
 - apply-display-profile.sh also reads this state file, so monitor-change events keep the bar-hidden gaps applied while the bar is hidden
 - Default at startup: hidden (OFF) — aerospace.toml's after-startup-command clears /tmp/secondary-bar.state then runs this script, and no state ⇒ the toggle lands OFF/hidden
@@ -200,30 +185,27 @@
 
 `./configs/sketchybar/sketchybarrc`
 - Main sketchybar entry point (status bar)
-- Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, volume, headset, ram, cpu, battery, vpn, wifi, ethernet, network_down, network_up
+- Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, volume, headset, ram, cpu, battery, vpn, wifi, ethernet
 - Commented out (disabled): apple.sh, settings.sh
 - Not sourced (disabled): front_app.sh, brew.sh, github.sh, spotify.sh
 - Defines bar: height=58, floating style, transparent bg
 - Edge alignment: `margin=0` + `BAR_SIDE_PADDING` place the outer divisions `BAR_SIDE_PADDING` px from each screen edge. Keep `BAR_SIDE_PADDING` = aerospace `gaps.outer.left/right` (5) so the left/right divisions line up with the tiled-window (app) area edges
 - Defines defaults + the shared `bracket_style`: division geometry (corner radius, border, blur, drop shadow) all pulled from theme.sh tokens; font=JetBrainsMono
-- Groups items into brackets: calendar_group, audio, traffic, resources, connectivity
-- Inter-group spacer items (spacer0–3) all use theme.sh's `GROUP_GAP` width
+- Groups items into brackets: calendar_group, audio, resources, connectivity
+- Inter-group spacer items (spacer0–2) all use theme.sh's `GROUP_GAP` width
 - Edit for: bar position, default item styling, enable/disable items (for the overall division look, edit theme.sh)
 
 `./configs/sketchybar/theme.sh`
-- Visual TEMPLATE — single source of truth for "division" geometry (a division = any grouped pill: spaces 1-6 / 7-9 / 0, calendar, audio, resources, connectivity, traffic)
+- Visual TEMPLATE — single source of truth for "division" geometry (a division = any grouped pill: spaces 1-6 / 7-9 / 0, calendar, audio, resources, connectivity)
 - Tokens: `DIVISION_RADIUS` / `SPACE_BUBBLE_RADIUS` / `POPUP_RADIUS` (corner rounding), `DIVISION_BORDER_WIDTH` (0 = no border), `DIVISION_BLUR` (0 — fills are opaque), `DIVISION_SHADOW_*` (hard-edged drop shadow at each division's bottom-right; SketchyBar uses SCREEN y-DOWN coords — 0=right, 90=down, 45=bottom-right — and has NO blur property, so it's softened via opacity; angle must stay positive as SketchyBar stores it unsigned), `GROUP_GAP` (the single uniform gap BETWEEN divisions), `DIVISION_PAD` (inner pad between a division edge and its first/last element) and `ELEMENT_GAP` (gap between elements inside a division)
-- DIVISION_PAD/ELEMENT_GAP are applied via item paddings (NOT bracket bg padding — that does nothing in this build); kept EQUAL so a hiding edge element's neighbour gap doubles cleanly as the edge pad. The leftmost item gets DIVISION_PAD on its left, the rightmost DIVISION_PAD on its right, internal boundaries ELEMENT_GAP. Plugins that toggle visibility (ethernet/headset/network_speed) source theme.sh and set these
+- DIVISION_PAD/ELEMENT_GAP are applied via item paddings (NOT bracket bg padding — that does nothing in this build); kept EQUAL so a hiding edge element's neighbour gap doubles cleanly as the edge pad. The leftmost item gets DIVISION_PAD on its left, the rightmost DIVISION_PAD on its right, internal boundaries ELEMENT_GAP. Plugins that toggle visibility (ethernet/headset) source theme.sh and set these
 - Sourced by sketchybarrc before any item; items/*.sh (sourced in the same shell) inherit the tokens. Colour palette stays in colors.sh (DARK_BG = opaque division fill)
-- Applied uniformly across BOTH bar sides and BOTH modes (normal + performance) — performance-mode.sh only toggles which spacers draw, never their width
+- Applied uniformly across BOTH bar sides
 - Edit for: the bar's overall pill/division look — radius, border, shadow, opacity, inter-division spacing
 
 `./configs/sketchybar/helpers/wifi_rssi.swift`
-- Tiny CoreWLAN Swift helper that prints the current Wi-Fi link RSSI (dBm). Reads the CURRENT link only — no scan, and (verified) no Location permission needed — so it's cheap and non-disruptive. plugins/wifi.sh compiles it on demand to `helpers/wifi_rssi` (gitignored binary) and maps RSSI → the strength icon + the weak-signal auto-reconnect trigger. Needed because macOS 26 removed `airport` and neither networksetup nor ipconfig expose RSSI
+- Tiny CoreWLAN Swift helper that prints the current Wi-Fi link RSSI (dBm). Reads the CURRENT link only — no scan, and (verified) no Location permission needed — so it's cheap and non-disruptive. plugins/wifi.sh compiles it on demand to `helpers/wifi_rssi` (gitignored binary) and maps RSSI → the strength icon. Needed because macOS 26 removed `airport` and neither networksetup nor ipconfig expose RSSI
 - Edit for: what the helper outputs (currently just RSSI)
-
-`./configs/sketchybar/wifi_home_ssids.example`
-- Template for the gitignored `wifi_home_ssids` (private SSID names) that arms wifi.sh's auto-reconnect: when on one of those SSIDs and signal hits 1 bar, Wi-Fi is bounced so macOS reconnects to the strongest AP. Any number of SSIDs works; empty/missing list = strength-icon-only, no auto-switch
 
 `./configs/sketchybar/colors.sh`
 - Color palette exports (CriticalElement Dotfiles base)
@@ -239,21 +221,20 @@
 `./configs/sketchybar/items/*.sh`
 - Item definitions (visual config, positioning, subscriptions)
 - Pattern: define item properties, add to bar, subscribe events
-- Active items: spaces.sh, calendar.sh, volume.sh, headset.sh, ram.sh, cpu.sh, battery.sh, vpn.sh, wifi.sh, ethernet.sh, network_down.sh, network_up.sh
+- Active items: spaces.sh, calendar.sh, volume.sh, headset.sh, ram.sh, cpu.sh, battery.sh, vpn.sh, wifi.sh, ethernet.sh
 - Disabled items: apple.sh (commented), settings.sh (commented), front_app.sh (not sourced), brew.sh, github.sh, spotify.sh
 - Edge/element paddings come from theme.sh (DIVISION_PAD / ELEMENT_GAP), not per-item magic numbers — each item marks its left/right-edge vs internal paddings with those tokens
-- State-driven items: calendar = one clock icon + "Day DD HH:MM" (date+time pair); resources = single stats icon + "cpu% ramGB" + battery last; ethernet/headset show ONLY when connected; network_up/down show ONLY the direction with traffic; volume greys + drops % when muted; vpn = NordVPN app glyph tinted by connection; wifi = RSSI strength bars
+- State-driven items: calendar = one clock icon + "Day DD HH:MM" (date+time pair); resources = single stats icon + "cpu% ramGB" + battery last; ethernet/headset show ONLY when connected; volume greys + drops % when muted; vpn = NordVPN app glyph tinted by connection; wifi = RSSI strength bars
 - Key file: spaces.sh (workspaces with aerospace integration)
 - Edit for: item appearance, positioning, which events trigger updates
 
 `./configs/sketchybar/plugins/*.sh`
 - Event handlers and data fetchers (25 files)
 - Pattern: receive events, query system, update sketchybar items
-- Key files: aerospace.sh (workspace state), wifi.sh, network_speed.sh, volume.sh, headset.sh, ethernet.sh, ram.sh
+- Key files: aerospace.sh (workspace state), wifi.sh, volume.sh, headset.sh, ethernet.sh, ram.sh
 - aerospace.sh: workspace display with multi-monitor colors. Renders app ICONS via sketchybar-app-font (__icon_map in icon_map.sh) when EVERY app in a space is mapped, else falls back to text names (shorten_app_name). Subscribes front_app_switched so it repaints on app open, not only on workspace change
-- wifi.sh: maps current-link RSSI (helpers/wifi_rssi) → strength bars, plus opt-in auto-reconnect on a weak home network (gate on wifi_home_ssids + 1-bar debounce + cooldown → toggle Wi-Fi). wifi_click.sh toggles Wi-Fi power on click
-- network_speed.sh: single-poller (network_down) and the SOLE writer of all six traffic items (network_down/up, brackets traffic_up/traffic_down, spacer_ud, spacer3). Up and down are SEPARATE divisions, each shown only when its direction's rate clears MIN_RATE (~5 KB/s, to ignore the constant background trickle so idle directions disappear; spacer_ud shows only when both do; spacer3 = gap to connectivity). **Empty-pill root cause (the definitive one, normal mode): a SketchyBar bracket paints via TWO independent layers — the fill (`background.drawing`) AND the drop shadow (`background.shadow.drawing`) — and the item-level `drawing` flag controls NEITHER. `drawing=off` does NOT stop the paint; it only FREEZES the bracket geometry at its last width, so an idle direction whose member is hidden keeps painting a ~82px-wide fill+shadow rectangle = the EMPTY PILL (the softened ~50% black shadow alone reads as a grey pill). All verified via `--query`/`bounding_rects`.** Fix: keep the bracket `drawing=on` permanently (so it TRACKS its member and collapses to ~2px when empty instead of freezing wide) and toggle BOTH paint layers together — `background.drawing=$T background.shadow.drawing=$T`. This is separate from (and was masked by) the perf-mode race below. Reads /tmp/performance-mode.state and force-hides BOTH directions when perf mode is on, so it and performance-mode.sh never disagree about visibility (a split decision drew a bracket around a hidden member = an empty pill). Serializes the two writers with an mkdir-based advisory lockdir (`/tmp/sketchybar_network/writer.lock`) held around the state read + compute + final `--set` (C1 fix): a poll tick waits ~250ms then SKIPS if contended (only writes while holding the lock); the perf-triggered run (called with `NET_SPEED_PERF=1`) waits up to ~3.5s to be the authoritative LAST writer; a 3s stale-breaker reclaims a dead holder so the 5s poller never wedges. Parses netstat byte counters FROM THE RIGHT (Ibytes=NF-4, Obytes=NF-1) so VPN/tunnel interfaces — which drop the Address column — read correctly
-- ram.sh outputs raw GB used (not %); volume.sh adds a muted state; ethernet.sh/headset.sh collapse the icon (drawing=off + zero pad) when disconnected while keeping the item drawing=on so the poller still runs
+- wifi.sh: maps current-link RSSI (helpers/wifi_rssi) → strength bars. wifi_click.sh toggles Wi-Fi power on click
+- ram.sh outputs raw GB used (not %); volume.sh adds a muted state; ethernet.sh/headset.sh collapse the icon (drawing=off + zero pad) when disconnected while keeping the item drawing=on so the poller still runs. NOTE for bracket visibility toggles: a SketchyBar bracket paints via TWO independent layers — the fill (`background.drawing`) AND the drop shadow (`background.shadow.drawing`) — and the item-level `drawing` flag controls NEITHER; `drawing=off` only FREEZES the bracket geometry at its last width while both layers keep painting (= an empty pill). To hide a bracket, keep it `drawing=on` and toggle BOTH paint layers together (verified via `--query`/`bounding_rects`; learned from the since-removed traffic divisions)
 - Edit for: logic of what's displayed, data sources, formatting
 
 `./configs/vscode/settings.json`
