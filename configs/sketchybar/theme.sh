@@ -3,7 +3,7 @@
 # SketchyBar visual TEMPLATE — single source of truth for "division" styling.
 #
 # A *division* is any grouped pill on the bar: spaces 1-6, spaces 7-9, space 0,
-# calendar, audio, resources, connectivity. Every division on BOTH the left and
+# calendar, resources, connectivity. Every division on BOTH the left and
 # right of the bar pulls its geometry from the tokens below — so the whole bar
 # stays uniform and a restyle is a single edit here.
 #
@@ -16,7 +16,7 @@
 # Lower = more square. The reference look is nearly-square pills.
 export DIVISION_RADIUS=4        # every group/bracket (the divisions themselves)
 export SPACE_BUBBLE_RADIUS=3    # inner per-space highlight bubble (a touch tighter)
-export POPUP_RADIUS=6           # dropdown popups (calendar / volume)
+export POPUP_RADIUS=6           # dropdown popups (calendar)
 
 # ── Outline ──────────────────────────────────────────────────────────────────
 # Divisions carry NO border.
@@ -50,7 +50,7 @@ export GROUP_GAP=6
 # first/last element. ELEMENT_GAP — gap between adjacent elements inside a division
 # (icon<->label and item<->item). Applied UNIFORMLY to every status division via
 # the item paddings, so spacing is controlled here instead of per-item.
-# Kept equal so that when an edge element hides (e.g. headset disconnects) the
-# neighbour's gap cleanly doubles as the edge pad.
+# Kept equal so that when an element hides (e.g. a show-only-when-connected item
+# like ethernet) the neighbour's gap cleanly doubles as the vacated pad.
 export DIVISION_PAD=6
 export ELEMENT_GAP=6

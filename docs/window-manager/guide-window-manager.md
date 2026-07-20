@@ -26,6 +26,7 @@
 - ./features.aerospace.md
 - ./configs/aerospace/lib-paths.sh
 - ./configs/aerospace/open-dock-app.sh
+- ./configs/aerospace/performance-mode.sh
 - ./configs/aerospace/secondary-bar-toggle.sh
 - ./scripts/aerospace-restart.sh
 - ./configs/autoraise/config
@@ -36,8 +37,8 @@
 - ./configs/sketchybar/icons.sh
 - ./configs/sketchybar/theme.sh
 - ./configs/sketchybar/helpers/wifi_rssi.swift
-- ./configs/sketchybar/items/*.sh (16 files)
-- ./configs/sketchybar/plugins/*.sh (25 files)
+- ./configs/sketchybar/items/*.sh (14 files)
+- ./configs/sketchybar/plugins/*.sh (23 files)
 - ./configs/vscode/settings.json
 
 ## Descriptions
@@ -46,9 +47,10 @@
 - Main AeroSpace tiling window manager config
 - Defines keybindings (alt+hjkl=focus, alt+shift+hjkl=move, alt+1-9=workspace)
 - Configures gaps, monitors assignment, startup commands (NOTE: `gaps.outer.left/right` = 5 must stay equal to sketchybar `BAR_SIDE_PADDING` so the bar's outer divisions align with the tiled-window area edges)
-- Launches sketchybar + borders (borders via `~/.config/borders/bordersrc`, the single source of truth) on startup, then applies the default bar mode (hidden on secondary monitors) once the bar is up — a third `after-startup-command` waits for the bar items, resets the `/tmp` secondary-bar state file, and runs `secondary-bar-toggle.sh` from its clean state, so each (re)start re-establishes the default deterministically
+- Launches sketchybar + borders (borders via `~/.config/borders/bordersrc`, the single source of truth) on startup, then applies the default bar modes once the bar is up — a third `after-startup-command` waits for the bar to be fully built (it queries the `connectivity` bracket, the LAST thing sketchybarrc adds, so every item/bracket both toggles touch already exists), resets BOTH `/tmp` state files, and runs each toggle from its clean state: `secondary-bar-toggle.sh` (no state ⇒ bar hidden on secondary monitors) then `performance-mode.sh` (no state ⇒ performance mode ON = minimal bar), so each (re)start re-establishes both defaults deterministically
 - App launchers via cmd+1-9 use open-dock-app.sh: if the app isn't running, open it on workspace N (matching the Dock position); if running, focus it (cycles through its windows on repeated presses, returns to last-focused window when coming from another app)
 - alt+shift+; then b triggers aerospace/secondary-bar-toggle.sh (hides/shows SketchyBar on secondary monitor)
+- alt+shift+; then p triggers aerospace/performance-mode.sh (toggles performance mode: minimal bar with only spaces + calendar, the hidden divisions' pollers stopped; ON is the startup default)
 - CrossOver auto-floated via on-window-detected rule (prevents tiling conflicts with games)
 - Stickies auto-floated via on-window-detected rule (keeps notes untiled; Stickies' own "Float on Top" handles always-on-top z-order)
 - `on-focus-changed = []` AND `on-focused-monitor-changed = []`: mouse-follows-focus is deliberately NOT global on EITHER callback. `on-focus-changed` fires on every focus change and `on-focused-monitor-changed` fires whenever the focused monitor changes — including the mouse-driven ones AutoRaise triggers when the cursor crosses a window/monitor border — so a global `move-mouse` on either recentered the cursor on plain mouse-over (e.g. passing over a picture-in-picture player on another monitor warped the cursor to the focused app's center — annoying). Instead the warp is attached explicitly to the shortcut bindings, so only deliberate keyboard/app-switch focus changes recenter the cursor; manual mouse movement never does
@@ -97,8 +99,8 @@
 - Edit for: state file location, cycling order, fallback behavior, placement-enforcer poll cap
 
 `./configs/aerospace/lib-paths.sh`
-- Shared library `source`d by the aerospace scripts (apply-display-profile, secondary-bar-toggle, open-dock-app) AND by aerospace.toml's startup `after-startup-command` — the single source of truth for the cross-script contract, so a path/timing change lands everywhere from one edit
-- Defines the `/tmp` STATE-FILE path: `SECONDARY_BAR_STATE` (/tmp/secondary-bar.state). Every consumer runs under `set -euo pipefail`, so every name a consumer references MUST be defined here or sourcing trips on an unset var
+- Shared library `source`d by the aerospace scripts (apply-display-profile, secondary-bar-toggle, performance-mode, open-dock-app) AND by aerospace.toml's startup `after-startup-command` — the single source of truth for the cross-script contract, so a path/timing change lands everywhere from one edit
+- Defines the `/tmp` STATE-FILE paths: `SECONDARY_BAR_STATE` (/tmp/secondary-bar.state) and `PERFORMANCE_MODE_STATE` (/tmp/performance-mode.state). Every consumer runs under `set -euo pipefail`, so every name a consumer references MUST be defined here or sourcing trips on an unset var
 - Defines `PLACEMENT_CAP_SECONDS=18` (how long open-dock-app.sh's placement enforcer polls for a launching app's first window)
 - Bash 3.2 compatible (no associative arrays / mapfile)
 - Edit for: state-file paths, the placement-cap constant
@@ -115,6 +117,15 @@
 - apply-display-profile.sh also reads this state file, so monitor-change events keep the bar-hidden gaps applied while the bar is hidden
 - Default at startup: hidden (OFF) — aerospace.toml's after-startup-command clears /tmp/secondary-bar.state then runs this script, and no state ⇒ the toggle lands OFF/hidden
 - Edit for: changing target monitor (display=main); gap behavior lives in apply-display-profile.sh
+
+`./configs/aerospace/performance-mode.sh`
+- Toggles "performance mode" — the minimal bar (alt+shift+; then p via aerospace.toml service mode). ON is the DEFAULT: aerospace.toml's after-startup-command clears /tmp/performance-mode.state and runs this script, so every AeroSpace (re)start lands ON
+- ON: hides the resources (cpu, ram, battery) and connectivity (vpn, wifi, ethernet) divisions AND stops their pollers — every member item gets drawing=off + update_freq=0 (the bar-wide `updates=when_shown` default gates their subscribed events off while hidden anyway). The inter-division spacers (spacer0/1) are hidden too — only spaces (left) + the calendar division (right) remain, so no inter-division gaps are needed
+- Bracket hiding (the historical empty-pill lesson): a SketchyBar bracket paints via TWO independent layers — the fill (`background.drawing`) AND the drop shadow (`background.shadow.drawing`) — and the item-level `drawing` flag controls NEITHER (bracket drawing=off just FREEZES the pill at its last geometry while both layers keep painting = a frozen empty pill). So the two division brackets stay drawing=on and BOTH paint layers are toggled together
+- OFF: restores drawing=on + the exact original freqs from items/*.sh (battery 60, vpn 30, ethernet 30, wifi 30, cpu 5, ram 5), restores both bracket paint layers (the shadow back to theme.sh's `DIVISION_SHADOW_DRAWING`, so the theme stays authoritative for whether divisions cast shadows) + the spacers, then forces `sketchybar --update` so the frozen labels repopulate immediately and the state-driven ethernet item (hide-when-disconnected) recomputes its own icon visibility
+- State: /tmp/performance-mode.state (`PERFORMANCE_MODE_STATE` in lib-paths.sh); clean-state convention mirrors secondary-bar-toggle.sh — file absent/empty ⇒ the next run lands in the startup default (here ON, writing "on"); toggling OFF removes the file
+- DIFFERENCE vs the old removed performance mode: does NOT touch the display-profile LaunchAgent (it stays always-loaded), and there is no traffic group anymore (removed with the energy cleanup); JankyBorders is untouched as well
+- Edit for: which items/divisions the mode hides, the restore freq table
 
 `./scripts/aerospace-restart.sh`
 - Full restart of the whole window-manager stack — wired to the `aerospace-restart` shell alias (`zsh/alias/osx.zsh`)
@@ -151,20 +162,20 @@
 
 `./configs/sketchybar/sketchybarrc`
 - Main sketchybar entry point (status bar)
-- Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, volume, headset, ram, cpu, battery, vpn, wifi, ethernet
+- Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, ram, cpu, battery, vpn, wifi, ethernet (the audio division — volume + headset — was removed entirely 2026-07; its item/plugin files are deleted, only the icons.sh glyph exports and the dead volume_click.sh template remain)
 - Commented out (disabled): apple.sh, settings.sh
 - Not sourced (disabled): front_app.sh, brew.sh, github.sh, spotify.sh
 - Defines bar: height=58, floating style, transparent bg
 - Edge alignment: `margin=0` + `BAR_SIDE_PADDING` place the outer divisions `BAR_SIDE_PADDING` px from each screen edge. Keep `BAR_SIDE_PADDING` = aerospace `gaps.outer.left/right` (5) so the left/right divisions line up with the tiled-window (app) area edges
 - Defines defaults + the shared `bracket_style`: division geometry (corner radius, border, blur, drop shadow) all pulled from theme.sh tokens; font=JetBrainsMono
-- Groups items into brackets: calendar_group, audio, resources, connectivity
-- Inter-group spacer items (spacer0–2) all use theme.sh's `GROUP_GAP` width
+- Groups items into brackets: calendar_group, resources, connectivity
+- Inter-group spacer items (spacer0–1: calendar↔resources, resources↔connectivity) all use theme.sh's `GROUP_GAP` width — exactly one gap per adjacent division pair
 - Edit for: bar position, default item styling, enable/disable items (for the overall division look, edit theme.sh)
 
 `./configs/sketchybar/theme.sh`
-- Visual TEMPLATE — single source of truth for "division" geometry (a division = any grouped pill: spaces 1-6 / 7-9 / 0, calendar, audio, resources, connectivity)
+- Visual TEMPLATE — single source of truth for "division" geometry (a division = any grouped pill: spaces 1-6 / 7-9 / 0, calendar, resources, connectivity)
 - Tokens: `DIVISION_RADIUS` / `SPACE_BUBBLE_RADIUS` / `POPUP_RADIUS` (corner rounding), `DIVISION_BORDER_WIDTH` (0 = no border), `DIVISION_BLUR` (0 — fills are opaque), `DIVISION_SHADOW_*` (hard-edged drop shadow at each division's bottom-right; SketchyBar uses SCREEN y-DOWN coords — 0=right, 90=down, 45=bottom-right — and has NO blur property, so it's softened via opacity; angle must stay positive as SketchyBar stores it unsigned), `GROUP_GAP` (the single uniform gap BETWEEN divisions), `DIVISION_PAD` (inner pad between a division edge and its first/last element) and `ELEMENT_GAP` (gap between elements inside a division)
-- DIVISION_PAD/ELEMENT_GAP are applied via item paddings (NOT bracket bg padding — that does nothing in this build); kept EQUAL so a hiding edge element's neighbour gap doubles cleanly as the edge pad. The leftmost item gets DIVISION_PAD on its left, the rightmost DIVISION_PAD on its right, internal boundaries ELEMENT_GAP. Plugins that toggle visibility (ethernet/headset) source theme.sh and set these
+- DIVISION_PAD/ELEMENT_GAP are applied via item paddings (NOT bracket bg padding — that does nothing in this build); kept EQUAL so a hiding edge element's neighbour gap doubles cleanly as the edge pad. The leftmost item gets DIVISION_PAD on its left, the rightmost DIVISION_PAD on its right, internal boundaries ELEMENT_GAP. Plugins that toggle visibility (ethernet) source theme.sh and set these
 - Sourced by sketchybarrc before any item; items/*.sh (sourced in the same shell) inherit the tokens. Colour palette stays in colors.sh (DARK_BG = opaque division fill)
 - Applied uniformly across BOTH bar sides
 - Edit for: the bar's overall pill/division look — radius, border, shadow, opacity, inter-division spacing
@@ -187,20 +198,21 @@
 `./configs/sketchybar/items/*.sh`
 - Item definitions (visual config, positioning, subscriptions)
 - Pattern: define item properties, add to bar, subscribe events
-- Active items: spaces.sh, calendar.sh, volume.sh, headset.sh, ram.sh, cpu.sh, battery.sh, vpn.sh, wifi.sh, ethernet.sh
+- Active items: spaces.sh, calendar.sh, ram.sh, cpu.sh, battery.sh, vpn.sh, wifi.sh, ethernet.sh (8 live; volume.sh/headset.sh deleted with the audio division)
 - Disabled items: apple.sh (commented), settings.sh (commented), front_app.sh (not sourced), brew.sh, github.sh, spotify.sh
 - Edge/element paddings come from theme.sh (DIVISION_PAD / ELEMENT_GAP), not per-item magic numbers — each item marks its left/right-edge vs internal paddings with those tokens
-- State-driven items: calendar = one clock icon + "Day DD HH:MM" (date+time pair); resources = single stats icon + "cpu% ramGB" + battery last; ethernet/headset show ONLY when connected; volume greys + drops % when muted; vpn = NordVPN app glyph tinted by connection; wifi = RSSI strength bars
+- State-driven items: calendar = one clock icon + "Day DD HH:MM" (date+time pair); resources = single stats icon + "cpu% ramGB" + battery last; ethernet shows ONLY when connected; vpn = NordVPN app glyph tinted by connection; wifi = RSSI strength bars
+- Poller freqs as defined in items/*.sh: battery 60, vpn 30, ethernet 30, wifi 30, cpu 5, ram 5. These are the exact values aerospace/performance-mode.sh restores on toggle OFF; while performance mode is ON (the startup default) the resources/connectivity members sit at drawing=off + update_freq=0 (no polling)
 - Key file: spaces.sh (workspaces with aerospace integration)
 - Edit for: item appearance, positioning, which events trigger updates
 
 `./configs/sketchybar/plugins/*.sh`
-- Event handlers and data fetchers (25 files)
+- Event handlers and data fetchers (23 files)
 - Pattern: receive events, query system, update sketchybar items
-- Key files: aerospace.sh (workspace state), wifi.sh, volume.sh, headset.sh, ethernet.sh, ram.sh
+- Key files: aerospace.sh (workspace state), wifi.sh, ethernet.sh, ram.sh
 - aerospace.sh: workspace display with multi-monitor colors. Renders app ICONS via sketchybar-app-font (__icon_map in icon_map.sh) when EVERY app in a space is mapped, else falls back to text names (shorten_app_name). Subscribes front_app_switched so it repaints on app open, not only on workspace change
 - wifi.sh: maps current-link RSSI (helpers/wifi_rssi) → strength bars. wifi_click.sh toggles Wi-Fi power on click
-- ram.sh outputs raw GB used (not %); volume.sh adds a muted state; ethernet.sh/headset.sh collapse the icon (drawing=off + zero pad) when disconnected while keeping the item drawing=on so the poller still runs. NOTE for bracket visibility toggles: a SketchyBar bracket paints via TWO independent layers — the fill (`background.drawing`) AND the drop shadow (`background.shadow.drawing`) — and the item-level `drawing` flag controls NEITHER; `drawing=off` only FREEZES the bracket geometry at its last width while both layers keep painting (= an empty pill). To hide a bracket, keep it `drawing=on` and toggle BOTH paint layers together (verified via `--query`/`bounding_rects`; learned from the since-removed traffic divisions)
+- ram.sh outputs raw GB used (not %); ethernet.sh collapses the icon (icon.drawing=off + zero pad) when disconnected while keeping the item drawing=on so the poller still runs. NOTE for bracket visibility toggles: a SketchyBar bracket paints via TWO independent layers — the fill (`background.drawing`) AND the drop shadow (`background.shadow.drawing`) — and the item-level `drawing` flag controls NEITHER; `drawing=off` only FREEZES the bracket geometry at its last width while both layers keep painting (= an empty pill). To hide a bracket, keep it `drawing=on` and toggle BOTH paint layers together (verified via `--query`/`bounding_rects`; learned from the since-removed traffic divisions, and applied today by aerospace/performance-mode.sh when it hides the resources/connectivity divisions)
 - Edit for: logic of what's displayed, data sources, formatting
 
 `./configs/vscode/settings.json`

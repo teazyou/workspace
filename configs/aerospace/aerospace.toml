@@ -14,11 +14,15 @@ config-version = 2
 after-startup-command = [
     'exec-and-forget sketchybar',
     'exec-and-forget ~/.config/borders/bordersrc',
-    # Default mode at startup: the bar hidden on secondary monitors. Wait for the
-    # bar items to exist, reset the /tmp state file so a (re)start re-establishes
-    # the default deterministically (the toggle script keys off this state), then
-    # run the toggle from its clean state: no secondary-bar.state => OFF/hidden.
-    'exec-and-forget source ~/workspace/configs/aerospace/lib-paths.sh; for i in {1..20}; do sketchybar --query volume >/dev/null 2>&1 && break; sleep 0.3; done; rm -f "$SECONDARY_BAR_STATE"; ~/workspace/configs/aerospace/secondary-bar-toggle.sh'
+    # Default modes at startup: the bar hidden on secondary monitors AND
+    # performance mode ON (minimal bar: spaces + calendar only, hidden divisions'
+    # pollers stopped). Wait for the bar to be fully built — query the
+    # connectivity bracket, the LAST one sketchybarrc adds, so every item/bracket
+    # both toggles touch exists — then reset each /tmp state file and run its
+    # toggle from the clean state, so a (re)start re-establishes both defaults
+    # deterministically: no secondary-bar.state => bar OFF/hidden on secondaries;
+    # no performance-mode.state => performance mode lands ON.
+    'exec-and-forget source ~/workspace/configs/aerospace/lib-paths.sh; for i in {1..20}; do sketchybar --query connectivity >/dev/null 2>&1 && break; sleep 0.3; done; rm -f "$SECONDARY_BAR_STATE"; ~/workspace/configs/aerospace/secondary-bar-toggle.sh; rm -f "$PERFORMANCE_MODE_STATE"; ~/workspace/configs/aerospace/performance-mode.sh'
 ]
 
 # Notify Sketchybar about workspace change (spaces item repaint).
@@ -259,6 +263,7 @@ on-mode-changed = []
     #s = ['layout sticky tiling', 'mode main']
 
     b = ['exec-and-forget ~/workspace/configs/aerospace/secondary-bar-toggle.sh', 'mode main'] # Toggle SketchyBar on secondary monitor
+    p = ['exec-and-forget ~/workspace/configs/aerospace/performance-mode.sh', 'mode main'] # Toggle performance mode (minimal bar: spaces + calendar; hidden divisions' pollers stopped)
     alt-shift-h = ['join-with left', 'mode main']
     alt-shift-j = ['join-with down', 'mode main']
     alt-shift-k = ['join-with up', 'mode main']

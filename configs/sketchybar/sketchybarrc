@@ -75,7 +75,7 @@ defaults=(
 
 sketchybar --default "${defaults[@]}"
 
-# Shared bracket style for the right-side groups (calendar, audio, resources,
+# Shared bracket style for the right-side groups (calendar, resources,
 # connectivity). One definition so a theme change is a single edit.
 # NOTE: the left spaces brackets use a DISTINCT spaces_bracket_style in
 # items/spaces.sh (without the background.padding_left/right=0 lines) to keep
@@ -125,15 +125,8 @@ source "$ITEM_DIR/calendar.sh"
 sketchybar --add bracket calendar_group time date \
            --set calendar_group "${bracket_style[@]}"
 
-# Spacer between calendar and audio
+# Spacer between calendar and resources
 sketchybar --add item spacer0 right --set spacer0 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
-
-# Audio group: volume + bluetooth headset
-source "$ITEM_DIR/volume.sh"
-source "$ITEM_DIR/headset.sh"
-
-# Spacer between audio and resources
-sketchybar --add item spacer1 right --set spacer1 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
 # System resources group (L->R: cpu, ram, battery). Right items are added
 # right-most first, so source battery (rightmost/last), then ram, then cpu.
@@ -142,7 +135,7 @@ source "$ITEM_DIR/ram.sh"
 source "$ITEM_DIR/cpu.sh"
 
 # Spacer between resources and connectivity
-sketchybar --add item spacer2 right --set spacer2 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
+sketchybar --add item spacer1 right --set spacer1 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
 # Network connectivity group (L->R: wifi, ethernet, vpn). Right items are added
 # right-most first, so source vpn (rightmost), then ethernet, then wifi (leftmost)
@@ -151,10 +144,6 @@ sketchybar --add item spacer2 right --set spacer2 width=$GROUP_GAP background.dr
 source "$ITEM_DIR/vpn.sh"
 source "$ITEM_DIR/ethernet.sh"
 source "$ITEM_DIR/wifi.sh"
-
-# Bracket for audio group (volume + headset)
-sketchybar --add bracket audio volume headset \
-           --set audio "${bracket_style[@]}"
 
 # Bracket for system resources group (battery + cpu + ram)
 sketchybar --add bracket resources ram cpu battery \
