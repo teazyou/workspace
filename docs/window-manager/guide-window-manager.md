@@ -22,14 +22,11 @@
 - ./configs/aerospace/aerospace.toml
 - ./configs/aerospace/apply-display-profile.sh
 - ./configs/aerospace/com.aerospace.display-profile.plist
-- ./configs/aerospace/com.aerospace.empty-watcher.plist
 - ./doc.aerospace.md
-- ./configs/aerospace/empty-workspace-watcher.sh
 - ./features.aerospace.md
 - ./configs/aerospace/lib-paths.sh
 - ./configs/aerospace/open-dock-app.sh
 - ./configs/aerospace/secondary-bar-toggle.sh
-- ./configs/aerospace/track-workspace-mru.sh
 - ./scripts/aerospace-restart.sh
 - ./configs/autoraise/config
 - ./configs/autoraise/com.autoraise.daemon.plist
@@ -89,9 +86,8 @@
 - Opens / focuses macOS Dock apps by position index (0-indexed)
 - Called by aerospace.toml cmd+1-9 keybindings
 - Reads persistent-apps from Dock plist, decodes URL to get .app path, extracts CFBundleIdentifier
-- If app has no windows (per `aerospace list-windows --app-bundle-id`): touches a per-workspace grace marker `/tmp/aerospace-empty-watcher-grace-<ws>`, switches to workspace (position+1), then `open`s the app, so the new window lands on the matching workspace
-- The grace marker tells empty-workspace-watcher.sh to skip bouncing that specific workspace while its mtime is fresh (<20s), giving the app time to spawn its first window
-- After launching, spawns a backgrounded silent placement enforcer: polls `aerospace list-windows --app-bundle-id` every 200ms (cap ~18s); when the first window appears, if it landed on a non-target workspace (user navigated away mid-launch), silently relocates it with `aerospace move-node-to-workspace --window-id` (no focus follow, no workspace switch). Removes the grace marker on completion
+- If app has no windows (per `aerospace list-windows --app-bundle-id`): switches to workspace (position+1), then `open`s the app, so the new window lands on the matching workspace
+- After launching, spawns a backgrounded silent placement enforcer: polls `aerospace list-windows --app-bundle-id` every 200ms (cap ~18s, `PLACEMENT_CAP_SECONDS` in lib-paths.sh); when the first window appears, if it landed on a non-target workspace (user navigated away mid-launch), silently relocates it with `aerospace move-node-to-workspace --window-id` (no focus follow, no workspace switch)
 - If app has windows and is already focused: cycles to next window in AeroSpace's window list (wraps)
 - If app has windows but another app is focused: returns to last window focused via this script (per-app state at `/tmp/dock-cycle-<bundle_id>.state`); falls back to first window if state is missing/stale
 - After focusing (both the running-app focus path and the cold-launch path once the window lands on the target workspace), warps the cursor onto the focused window via `aerospace move-mouse window-lazy-center` — mouse-follows-focus is no longer a global on-focus-changed callback (that also recentered on manual mouse-over), so shortcut-driven app switches recenter the cursor here instead
@@ -100,43 +96,13 @@
 - Fallback: if bundle id can't be read, plain `open` (old behavior)
 - Edit for: state file location, cycling order, fallback behavior, placement-enforcer poll cap
 
-`./configs/aerospace/com.aerospace.empty-watcher.plist`
-- LaunchAgent that runs empty-workspace-watcher.sh as a long-running daemon
-- RunAtLoad + KeepAlive (no StartInterval — script has its own 2s poll loop)
-- ThrottleInterval=5 prevents tight restart loops if the script bombs
-- Install via symlink to ~/Library/LaunchAgents/, then launchctl load
-- Edit for: log paths, throttle interval
-
-`./configs/aerospace/empty-workspace-watcher.sh`
-- Long-running daemon, polls every 2s (lib-paths.sh `POLL_INTERVAL`; 2 aerospace CLI calls per tick — one combined visibility+focus snapshot + the non-empty list) — per-monitor (multi-monitor aware)
-- For each monitor: if its currently visible workspace has zero windows, bounces it to a non-empty workspace assigned to THAT monitor (so closing the last window on mon1's ws5 doesn't leave mon1 empty while focus drifts to mon2)
-- Per-monitor MRU read from `/tmp/aerospace-ws-mru-mon-<mon-id>.state` (written by track-workspace-mru.sh)
-- Fallback order per monitor: MRU newest-first (filtered to that monitor + currently non-empty) → first non-empty workspace AeroSpace lists for that monitor → if every workspace on the monitor is empty, the first workspace AeroSpace lists for that monitor (per aerospace.toml assignment order: ws1 for main, ws7 for secondary, ws0 for the Sidecar/third monitor) → stay put only when that target equals the already-visible ws
-- Focused-monitor bounce uses `aerospace workspace --fail-if-noop <target>` (focus stays put because target is on the same monitor)
-- Non-focused-monitor bounce uses `aerospace workspace <target>` then `aerospace focus-monitor <orig-mon-id>` to return focus to the originally focused monitor — the workspace switch steals focus to the target's monitor as a side effect, so we restore it. The ~100ms borders/sketchybar flicker is accepted
-- `focus-monitor` is called by numeric monitor-id (not name) — monitor names can contain glob metacharacters like `(` `)` (e.g. "Sidecar Display (AirPlay)") which break the name-pattern matching AeroSpace uses
-- Per-workspace grace: if `/tmp/aerospace-empty-watcher-grace-<visible_ws>` exists with fresh mtime (<20s), that one monitor's bounce is skipped (other monitors still bounce). Touched by open-dock-app.sh during app launches
-- The 20s grace cap is intentionally slightly longer than open-dock-app.sh's ~18s placement-enforcer cap so slow Electron cold-starts don't get bounced mid-launch
-- Every `aerospace` call goes through the `aero()` timeout wrapper (defined in `lib-paths.sh`), NOT bare `aerospace`. The `aerospace` CLI is a client that talks to the AeroSpace.app server over a socket; when the server restarts/wedges (seen after a display change) an in-flight client call can block on that socket forever, and a bare `$(aerospace …)` then hangs this whole daemon — bash blocks on the command substitution and launchd KeepAlive can't help because the process is alive, just stuck (this silently killed the watcher for >1 day). `aero` runs `aerospace` in the background with a hard `AERO_TIMEOUT` (3s) watchdog that SIGKILLs a hung call, so a wedged server degrades to an empty result the loop skips and retries next tick instead of a permanent hang. Bash-native (no GNU `timeout` on macOS)
-- Bash 3.2 compatible: no `declare -A`, no `mapfile` — uses parallel arrays and grep-based set membership
-- Edit for: poll interval, fallback logic, grace_seconds cap, `AERO_TIMEOUT`/`aero()` in lib-paths.sh
-
 `./configs/aerospace/lib-paths.sh`
-- Shared library `source`d by ALL FIVE aerospace scripts (apply-display-profile, secondary-bar-toggle, track-workspace-mru, empty-workspace-watcher, open-dock-app) AND by aerospace.toml's startup `after-startup-command` — the single source of truth for the cross-script contract, so a path/timing change lands everywhere from one edit
+- Shared library `source`d by the aerospace scripts (apply-display-profile, secondary-bar-toggle, open-dock-app) AND by aerospace.toml's startup `after-startup-command` — the single source of truth for the cross-script contract, so a path/timing change lands everywhere from one edit
 - Defines the `/tmp` STATE-FILE path: `SECONDARY_BAR_STATE` (/tmp/secondary-bar.state). Every consumer runs under `set -euo pipefail`, so every name a consumer references MUST be defined here or sourcing trips on an unset var
-- Defines the COUPLED timing constants: `GRACE_SECONDS=20` and `PLACEMENT_CAP_SECONDS=18` (invariant GRACE_SECONDS ≥ PLACEMENT_CAP_SECONDS so the empty-watcher grace marker never expires while open-dock-app's placement enforcer is still placing the window), `POLL_INTERVAL=2` (empty-watcher loop cadence), `AERO_TIMEOUT=3` (aero() wall-clock cap)
-- Houses the hang-proof `aero()` wrapper (the bash-native `aerospace` timeout watchdog described above — runs aerospace backgrounded, SIGKILLs after AERO_TIMEOUT, returns its real exit code or 137) so every script shares ONE wedge-safe call path
-- Houses the path builders `grace_file <ws>` / `mru_file <mon-id>` / `mru_lock <mon-id>` and `file_age_seconds <path>` (BSD `stat -f %m` mtime age; echoes a large number when absent so callers treat "missing" as "stale")
+- Defines `PLACEMENT_CAP_SECONDS=18` (how long open-dock-app.sh's placement enforcer polls for a launching app's first window)
 - Bash 3.2 compatible (no associative arrays / mapfile)
-- Edit for: state-file paths, the grace/placement/poll/timeout constants, the `aero()` watchdog, the path-builder helpers
-
-`./configs/aerospace/track-workspace-mru.sh`
-- Called from aerospace.toml exec-on-workspace-change with $AEROSPACE_FOCUSED_WORKSPACE
-- Derives the workspace's monitor-id via `aerospace list-workspaces --all --format '%{monitor-id} %{workspace}'` + awk lookup (workspaces are statically assigned to monitors via aerospace.toml `[workspace-to-monitor-force-assignment]`)
-- Appends focused workspace to per-monitor file `/tmp/aerospace-ws-mru-mon-<mon-id>.state`, dedups, caps at 10 entries (newest last)
-- Uses per-monitor mkdir-based lockdir `/tmp/aerospace-ws-mru-mon-<mon-id>.lock` to serialise concurrent writers; bails after ~250ms to never block aerospace
-- Silently exits if monitor lookup fails (workspace unknown, monitor disconnected mid-call) — avoids writing to a state file with empty monitor-id
-- Edit for: MRU cap size, lock timeout
+- Edit for: state-file paths, the placement-cap constant
+- NOTE: the empty-workspace-watcher daemon, its plist, track-workspace-mru.sh, the grace-marker contract and the `aero()` timeout wrapper were REMOVED (2026-07): closing the last focused window is handled natively by AeroSpace (macOS refocuses another window and AeroSpace reveals its workspace); the watcher only covered rare cases (focus falling to a windowless app, background self-closes on a non-focused monitor) judged not worth its constant polling cost. If a long-running aerospace-polling loop is ever reintroduced, resurrect `aero()` from git history — a bare `$(aerospace …)` can hang forever on a wedged server socket
 
 `./configs/aerospace/secondary-bar-toggle.sh`
 - Toggles SketchyBar visibility on the secondary monitors (alt+shift+; then b via aerospace.toml service mode)
@@ -152,8 +118,8 @@
 
 `./scripts/aerospace-restart.sh`
 - Full restart of the whole window-manager stack — wired to the `aerospace-restart` shell alias (`zsh/alias/osx.zsh`)
-- Stop phase: `launchctl bootout` the three LaunchAgents (display-profile, empty-watcher, autoraise — they're KeepAlive so a plain kill respawns them) then `killall` AeroSpace, sketchybar, borders, AutoRaise
-- Start phase: `open -a AeroSpace` (its after-startup-command relaunches sketchybar + borders), waits for AeroSpace to be up, then `launchctl bootstrap` the three LaunchAgents again
+- Stop phase: `launchctl bootout` the two LaunchAgents (display-profile, autoraise — AutoRaise is KeepAlive so a plain kill respawns it) then `killall` AeroSpace, sketchybar, borders, AutoRaise
+- Start phase: `open -a AeroSpace` (its after-startup-command relaunches sketchybar + borders), waits for AeroSpace to be up, then `launchctl bootstrap` the two LaunchAgents again
 - Edit for: which agents/processes are cycled, start/stop ordering
 
 `./configs/autoraise/config`

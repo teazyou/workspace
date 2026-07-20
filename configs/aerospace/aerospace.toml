@@ -21,10 +21,9 @@ after-startup-command = [
     'exec-and-forget source ~/workspace/configs/aerospace/lib-paths.sh; for i in {1..20}; do sketchybar --query volume >/dev/null 2>&1 && break; sleep 0.3; done; rm -f "$SECONDARY_BAR_STATE"; ~/workspace/configs/aerospace/secondary-bar-toggle.sh'
 ]
 
-# Notify Sketchybar about workspace change + track workspace MRU for the
-# empty-workspace-watcher daemon (see com.aerospace.empty-watcher.plist).
+# Notify Sketchybar about workspace change (spaces item repaint).
 exec-on-workspace-change = ['/bin/bash', '-c',
-    'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE; ~/workspace/configs/aerospace/track-workspace-mru.sh "$AEROSPACE_FOCUSED_WORKSPACE"'
+    'sketchybar --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE'
 ]
 
 # Start AeroSpace at login

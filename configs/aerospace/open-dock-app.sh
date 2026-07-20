@@ -41,19 +41,10 @@ done < <(aerospace list-windows --monitor all --app-bundle-id "$bundle_id" --for
 
 # App not running → workspace-target then launch.
 #
-# Two-layer protection against empty-workspace-watcher.sh bouncing us off
-# the target while the app is still launching:
-#
-# 1. Per-workspace grace marker /tmp/aerospace-empty-watcher-grace-<ws>:
-#    daemon skips ticks while this file's mtime is fresh (<20s).
-#
-# 2. Silent placement enforcer (backgrounded): polls for the app's first
-#    window. When it appears, if it's not on the target workspace (because
-#    the user navigated away mid-launch), silently move it. Then clear
-#    the grace marker. Hard cap ~18s.
+# Silent placement enforcer (backgrounded): polls for the app's first
+# window. When it appears, if it's not on the target workspace (because
+# the user navigated away mid-launch), silently move it. Hard cap ~18s.
 if [[ ${#windows[@]} -eq 0 ]]; then
-    grace_marker="$(grace_file "$workspace")"
-    touch "$grace_marker"
     aerospace workspace "$workspace"
     open "$app_path"
 
@@ -82,7 +73,6 @@ if [[ ${#windows[@]} -eq 0 ]]; then
             fi
             i=$((i + 1))
         done
-        rm -f "$grace_marker"
         exit 0
     ) </dev/null >/dev/null 2>&1 &
 

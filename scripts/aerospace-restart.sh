@@ -7,7 +7,6 @@
 #   - sketchybar              (status bar)
 #   - borders / JankyBorders  (window borders)
 #   - com.aerospace.display-profile   LaunchAgent (auto gap profile)
-#   - com.aerospace.empty-watcher     LaunchAgent (empty-workspace daemon)
 #   - com.autoraise.daemon            LaunchAgent (focus-follows-mouse / AutoRaise)
 #
 # Wired to the `aerospace-restart` alias (see zsh/alias/osx.zsh).
@@ -18,15 +17,14 @@ DOMAIN="gui/$(id -u)"
 AGENTS_DIR="$HOME/Library/LaunchAgents"
 AGENTS=(
   com.aerospace.display-profile
-  com.aerospace.empty-watcher
   com.autoraise.daemon
 )
 
 echo "==> Stopping window-manager stack"
 
 # Unload LaunchAgents. display-profile is RunAtLoad + StartInterval (no KeepAlive);
-# empty-watcher + AutoRaise are KeepAlive. All three are booted out (not just
-# killed) so launchd doesn't immediately respawn the KeepAlive ones.
+# AutoRaise is KeepAlive. Both are booted out (not just killed) so launchd
+# doesn't immediately respawn the KeepAlive one.
 for agent in "${AGENTS[@]}"; do
   launchctl bootout "$DOMAIN/$agent" 2>/dev/null && echo "    unloaded $agent"
 done
@@ -52,7 +50,7 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
   sleep 0.5
 done
 
-# Reload LaunchAgents (display-profile reloads config, empty-watcher + AutoRaise daemons)
+# Reload LaunchAgents (display-profile gap generator + AutoRaise daemon)
 for agent in "${AGENTS[@]}"; do
   launchctl bootstrap "$DOMAIN" "$AGENTS_DIR/$agent.plist" 2>/dev/null \
     && echo "    loaded $agent"

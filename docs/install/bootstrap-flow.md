@@ -125,7 +125,7 @@ Plus a 7th, whole-folder link made later by [`setup_dot_claude.sh`](../../script
 |---|---|
 | `~/.claude` | `configs/dot-claude` (the private submodule) |
 
-> **`setup_symlinks.sh` and `_index.md` currently OVERCLAIM this as "the canonical map."** It covers only **6 of the 9** documented symlinks in `_index.md`. The three missing from the script are the AutoRaise config, the AutoRaise daemon plist, and the aerospace empty-watcher plist (see next section). Treat the "canonical map" label as aspirational until the code is fixed — `setup_symlinks.sh` is *a* map, not *the* map.
+> **`setup_symlinks.sh` and `_index.md` currently OVERCLAIM this as "the canonical map."** It covers only **6 of the 8** documented symlinks in `_index.md`. The two missing from the script are the AutoRaise config and the AutoRaise daemon plist (see next section). Treat the "canonical map" label as aspirational until the code is fixed — `setup_symlinks.sh` is *a* map, not *the* map.
 
 ---
 
@@ -143,15 +143,11 @@ Three independent omissions stack up:
 
 **Net effect:** after a clean bootstrap, focus-follows-mouse does **not** work at all. AutoRaise must be installed (e.g. `brew install --cask autoraise` / from its GitHub) **and** wired (config symlinked, daemon bootstrapped) out-of-band.
 
-### 2. The aerospace empty-watcher LaunchAgent is never wired
+### Contrast: `aerospace-restart.sh` *does* manage both
 
-`configs/aerospace/com.aerospace.empty-watcher.plist` exists in the repo but is **neither symlinked by `setup_symlinks.sh` nor loaded by `install_window_manager.sh`**. (Only the *display-profile* plist is.) The empty-workspace daemon won't run after bootstrap until loaded manually.
+[`scripts/aerospace-restart.sh`](../../scripts/aerospace-restart.sh) — the **runtime** restart helper, not part of the install — boots out and re-bootstraps **both** LaunchAgents (`com.aerospace.display-profile`, `com.autoraise.daemon`) and kills/relaunches `AeroSpace`, `sketchybar`, `borders`, `AutoRaise`. So the runtime story is complete; the *install* story is not. If you ever fix the install gap, mirror what `aerospace-restart.sh` already does.
 
-### Contrast: `aerospace-restart.sh` *does* manage all three
-
-[`scripts/aerospace-restart.sh`](../../scripts/aerospace-restart.sh) — the **runtime** restart helper, not part of the install — boots out and re-bootstraps **all three** LaunchAgents (`com.aerospace.display-profile`, `com.aerospace.empty-watcher`, `com.autoraise.daemon`) and kills/relaunches `AeroSpace`, `sketchybar`, `borders`, `AutoRaise`. So the runtime story is complete; the *install* story is not. If you ever fix the install gap, mirror what `aerospace-restart.sh` already does.
-
-### 3. Case-sensitivity fragility (latent)
+### 2. Case-sensitivity fragility (latent)
 
 The repo dir is **lowercase** `configs/autoraise`, but the intended symlink target is `~/.config/AutoRaise/config` (**capital** A). This works on the default case-*insensitive* APFS and would silently break on a case-*sensitive* volume. Worth knowing before anyone "fixes" the casing or clones onto a case-sensitive disk.
 
