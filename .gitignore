@@ -38,6 +38,7 @@ configs/dot-claude/*
 !configs/dot-claude/settings.json
 !configs/dot-claude/CLAUDE.md
 !configs/dot-claude/keybindings.json
+!configs/dot-claude/statusline.sh
 !configs/dot-claude/agents/
 !configs/dot-claude/agents/**
 !configs/dot-claude/commands/
