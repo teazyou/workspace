@@ -100,7 +100,7 @@ This is the **complete** list — do not trust partial audits.
 
 **Formulae:** `python`, `nvm`, `mysql`, `sketchybar`, `borders`, `ripgrep`, `ollama`, `gemini-cli`, `opencode`, `mas`, `gh`, plus **`postgresql@N`** — resolved at runtime to the highest installed/available `postgresql@N` (via `brew list --formula`, then `brew search`), falling back to `postgresql@17` if detection fails. All others are pinned to *latest* (no `@version`) on purpose, so the script keeps working for years.
 
-**Casks:** `iterm2`, `visual-studio-code`, `brave-browser`, `spotify`, `dbeaver-community`, `keepingyouawake`, `transmission`, `vlc`, `nordvpn`, `bitwarden`, `onyx`, `nikitabobko/tap/aerospace`, `font-hack-nerd-font`, `font-sketchybar-app-font`, `cleanmymac`, `discord`, `obsidian`, `google-drive`.
+**Casks:** `iterm2`, `visual-studio-code`, `brave-browser`, `spotify`, `dbeaver-community`, `keepingyouawake`, `transmission`, `vlc`, `nordvpn`, `bitwarden`, `onyx`, `nikitabobko/tap/aerospace`, `font-hack-nerd-font`, `font-sketchybar-app-font`, `cleanmymac`, `discord`, `obsidian`.
 
 > Note: `aerospace` lives in its own tap (`nikitabobko/tap/aerospace`); the two `font-*` casks are required by sketchybar (nerd-font glyphs + the app-icon font used by `plugins/icon_map.sh`).
 

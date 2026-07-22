@@ -90,7 +90,6 @@ caskInstall "FONT-SKETCHYBAR"   "font-sketchybar-app-font"  # app icons in the s
 caskInstall "CLEANMYMAC"        "cleanmymac"
 caskInstall "DISCORD"           "discord"
 caskInstall "OBSIDIAN"          "obsidian"             # used by ~/secondbrain workflow
-caskInstall "GOOGLE-DRIVE"      "google-drive"
 
 # --- CLEANUP ---------------------------------------------------------------
 # These three commands are nice-to-have, not critical. A single broken

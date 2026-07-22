@@ -33,7 +33,6 @@ source $ZSH_ALIAS/obsidian.zsh
 source $ZSH_ALIAS/git.zsh
 source $ZSH_ALIAS/installations.zsh
 source $ZSH_ALIAS/checkpoint.zsh
-source $ZSH_ALIAS/wallpapers.zsh
 source $ZSH_ALIAS/claude.zsh
 
 echo Workspace Loaded!
