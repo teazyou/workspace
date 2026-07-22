@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- NordVPN native IKEv2 — event-driven reconnect agent (NO resident process, NO polling):
+	     RunAtLoad fires once at login; WatchPaths fires on every network change (resolv.conf
+	     rewrite). Both run the same idempotent one-shot which exits within seconds.
+	     Symlinked from ~/workspace/configs/nordvpn/ into ~/Library/LaunchAgents/.
+	     See docs/vpn/guide-nordvpn-native.md. -->
+	<key>Label</key>
+	<string>com.teazyou.nordvpn-native</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/bash</string>
+		<string>/Users/teazyou/workspace/scripts/vpn/nord-connect.sh</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>WatchPaths</key>
+	<array>
+		<string>/var/run/resolv.conf</string>
+		<string>/etc/resolv.conf</string>
+	</array>
+	<key>ThrottleInterval</key>
+	<integer>15</integer>
+	<key>StandardOutPath</key>
+	<string>/Users/teazyou/workspace/logs/nordvpn-native.log</string>
+	<key>StandardErrorPath</key>
+	<string>/Users/teazyou/workspace/logs/nordvpn-native.log</string>
+</dict>
+</plist>

@@ -34,5 +34,6 @@ source $ZSH_ALIAS/git.zsh
 source $ZSH_ALIAS/installations.zsh
 source $ZSH_ALIAS/checkpoint.zsh
 source $ZSH_ALIAS/claude.zsh
+source $ZSH_ALIAS/vpn.zsh
 
 echo Workspace Loaded!

@@ -147,7 +147,11 @@ Three independent omissions stack up:
 
 [`scripts/aerospace-restart.sh`](../../scripts/aerospace-restart.sh) — the **runtime** restart helper, not part of the install — boots out and re-bootstraps **both** LaunchAgents (`com.aerospace.display-profile`, `com.autoraise.daemon`) and kills/relaunches `AeroSpace`, `sketchybar`, `borders`, `AutoRaise`. So the runtime story is complete; the *install* story is not. If you ever fix the install gap, mirror what `aerospace-restart.sh` already does.
 
-### 2. Case-sensitivity fragility (latent)
+### 2. Native NordVPN IKEv2 (deliberately not wired)
+
+The VPN stack (`scripts/vpn/`, `configs/nordvpn/`, guide: [`docs/vpn/guide-nordvpn-native.md`](../vpn/guide-nordvpn-native.md)) is **intentionally absent** from `installation.sh`/`setup_symlinks.sh` — same policy as the quota-keepalive agent. It cannot be unattended anyway: it needs `brew trust timac/vpnstatus` + `vpnutil`, service credentials fetched from the Nord dashboard (email-code gated) into `~/.config/nordvpn-native/`, one manual `.mobileconfig` approval in System Settings, and the LaunchAgent symlink + `launchctl bootstrap`. Full fresh-Mac steps are in the guide's Ops section.
+
+### 3. Case-sensitivity fragility (latent)
 
 The repo dir is **lowercase** `configs/autoraise`, but the intended symlink target is `~/.config/AutoRaise/config` (**capital** A). This works on the default case-*insensitive* APFS and would silently break on a case-*sensitive* volume. Worth knowing before anyone "fixes" the casing or clones onto a case-sensitive disk.
 
