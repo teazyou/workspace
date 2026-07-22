@@ -28,7 +28,7 @@ User contract:
 2. **ONE 6-payload profile, approved once.** macOS 26 removed headless profile installs (`profiles install` refuses; spike-verified). So all 6 countries + the Root CA payload ship in one `.mobileconfig`; after a single System Settings approval, `vpnutil` can start any of them headlessly. Consequence: server hostnames are **frozen at approval time** (see Refresh).
 3. **NO VPN On-Demand.** Tested live: an On-Demand-enabled payload fights manual control of the *other* payloads for macOS's **single personal-VPN slot** — observed both configs stuck "Connecting" forever with **all traffic blackholed** (no internet at all until one was toggled off by hand). Auto-reconnect is instead event-driven via launchd (next point). Do not re-add `OnDemandEnabled/OnDemandRules` to any payload.
 4. **Reconnect = launchd one-shot, not a daemon.** `RunAtLoad` (login) + `WatchPaths` on `/var/run/resolv.conf` + `/etc/resolv.conf` (fires on every network change: wake, Wi-Fi join, tunnel up/down). The script runs for seconds and exits; `ThrottleInterval 15` caps event bursts. **No StartInterval, no KeepAlive, no polling — keep it that way.**
-5. **Reboot → Singapore.** Boot detection compares `sysctl -n kern.boottime` against the stored `boot-id`. (A `/tmp` marker was rejected: macOS purges `/tmp` files after ~3 days of uptime → false "boot" mid-session.)
+5. **Reboot → Singapore.** Boot detection compares `sysctl -n kern.bootsessionuuid` against the stored `boot-id`. Two rejected alternatives, both field-tested wrong: a `/tmp` marker (macOS purges `/tmp` files after ~3 days of uptime → false "boot" mid-session) and `kern.boottime` (recalculated after every sleep/wake → each wake looked like a reboot and force-re-enabled a VPN the user had turned off — the 2026-07-22 home-Wi-Fi incident).
 6. **Control tool = `vpnutil`** (Homebrew `timac/vpnstatus/vpnutil`, tap trusted via `brew trust timac/vpnstatus`). It is the only CLI that can start/stop profile-installed IKEv2 configs — `scutil --nc` cannot even see them. `networksetup` can't either.
 7. **Secrets stay out of the repo**: credentials + rendered mobileconfig live only in `~/.config/nordvpn-native/`, 0600. Repo scripts contain no secrets.
 
@@ -40,6 +40,8 @@ User contract:
 - **`nord off` writes `enabled=0` BEFORE stopping** so a mid-flight watcher aborts instead of redialing.
 - **Success detection:** `vpnutil`'s status can lag the tunnel by minutes (observed on slow servers). Success = target reaches `Connected` within 45 s, **or** still `Connecting` but the public exit IP moved off the pre-start baseline. Country-based checks are wrong twice over: the user may physically be in the target country, and some pins are virtual locations (see VN caveat).
 - The watcher respects an already-Connected config (a human choice via System Settings is never overridden).
+- **Failure cooldown:** after a failed reconnect, the watcher arms a 10-min cooldown keyed to the network fingerprint (default-route interface+gateway, `fail-stamp` file) and stays quiet on that network. Without it, a network where the tunnel can't establish gets a connect→blackhole→fail→retry storm that makes the whole machine's internet unusable (2026-07-22 home-Wi-Fi incident). A new network, a successful connect, or any `nord` command clears/expires it.
+- The watcher's net-probe includes an IP-literal fallback (`http://1.1.1.1`) so a dead tunnel's leftover scoped DNS resolver can't blind it. **`nord rescue`** is the user escape hatch: durable off + stop all + Wi-Fi flap (rebuilds routes/DNS) + connectivity report.
 
 ## Flows
 
@@ -52,6 +54,7 @@ User contract:
 
 ```sh
 nord status      # target, enabled, tunnels, exit IP, pinned-server DNS health
+nord rescue      # internet broken? durable off + Wi-Fi flap + connectivity report
 nord list        # countries, pins, live states
 tail -f ~/workspace/logs/nordvpn-native.log
 launchctl kickstart gui/$(id -u)/com.teazyou.nordvpn-native   # force a watcher run

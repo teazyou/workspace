@@ -4,6 +4,7 @@
 #   nord on          reconnect the saved country (default singapore)
 #   nord off         durable off (survives network changes; reboot re-enables by design)
 #   nord toggle      on/off flip (used by the sketchybar vpn item click)
+#   nord rescue      emergency: durable off + Wi-Fi flap to rebuild network state
 #   nord status      state + tunnels + exit IP + pinned-server health
 #   nord list        countries, pinned servers, live statuses
 #   nord refresh     regenerate the bundle with today's best servers (1 approval click)
@@ -94,7 +95,7 @@ start_cc() { # $1=cc — start target, wait 45s for Connected, else accept routi
 }
 
 case "${1:-status}" in
-  on|off|toggle|status|list|refresh) cmd="$1" ;;
+  on|off|toggle|status|list|refresh|rescue) cmd="$1" ;;
   *) cc=$(cc_of "$1") || { echo "unknown country: $1 (belgium france singapore vietnam usa malaysia)" >&2; exit 1; }
      cmd=switch ;;
 esac
@@ -121,6 +122,18 @@ case "$cmd" in
     ;;
   toggle)
     if [ -n "$(in_state Connected; in_state Connecting)" ]; then exec "$0" off; else exec "$0" on; fi
+    ;;
+  rescue)
+    # "internet is broken, save me": durable off + stop everything + flap Wi-Fi so
+    # macOS rebuilds routes/DNS (a dead tunnel can leave a broken scoped resolver).
+    echo 0 > "$CFG_DIR/enabled"
+    lock_acquire || exit 1
+    stop_all
+    networksetup -setairportpower en0 off 2>/dev/null; sleep 3; networksetup -setairportpower en0 on 2>/dev/null
+    for _ in $(seq 1 20); do sleep 3; curl -Is --max-time 3 http://captive.apple.com >/dev/null 2>&1 && break; done
+    bar_refresh
+    echo "VPN off, Wi-Fi restarted. Internet check: $(curl -Is --max-time 5 http://captive.apple.com >/dev/null 2>&1 && echo OK || echo STILL BROKEN — try another network)"
+    echo "exit: $(exit_ip)"
     ;;
   status)
     echo "target country : $(cat "$CFG_DIR/country" 2>/dev/null || echo '(none — defaults to sg)')"
