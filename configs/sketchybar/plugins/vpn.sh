@@ -26,6 +26,8 @@ else
   COLOR=$GREY LABEL=""
 fi
 [ -f "$CFG_DIR/refresh-needed" ] && COLOR=$ORANGE
+# a click action is in flight (plugins/vpn_click.sh holds the lock): busy look wins
+[ -d /tmp/nordvpn-native.click ] && COLOR=$YELLOW LABEL="…"
 
 if [ -n "$LABEL" ]; then
   sketchybar --set "$NAME" icon.color="$COLOR" label="$LABEL" label.drawing=on \

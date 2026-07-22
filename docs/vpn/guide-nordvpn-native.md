@@ -7,7 +7,7 @@ User contract:
 - Always reconnects by itself (login, wake, network change) — event-driven, never polled.
 - `nord off` (or the sketchybar VPN icon click, or the System Settings VPN toggle) = durable off.
 - **Every reboot resets to Singapore + enabled** (deliberate: chosen over "remember last country").
-- The NordVPN GUI app is left completely alone (user manages it).
+- The NordVPN GUI app is **fully uninstalled** (2026-07-22: `brew uninstall --zap --cask nordvpn` + manual purge of the container/prefs leftovers zap's globs missed — its root helper daemon had still been running on demand). Only this native stack remains; service credentials are account-level and unaffected.
 
 ## Components
 
@@ -16,7 +16,7 @@ User contract:
 | CLI | `scripts/vpn/nord.sh` (alias `nord` via `zsh/alias/vpn.zsh`) | switch/on/off/toggle/status/list/refresh |
 | Reconnect agent | `scripts/vpn/nord-connect.sh` + `configs/nordvpn/com.teazyou.nordvpn-native.plist` (symlink in `~/Library/LaunchAgents/`) | event-driven one-shot: `RunAtLoad` + `WatchPaths` on resolv.conf |
 | Bundle generator | `scripts/vpn/nord-gen-bundle.sh` | renders the 6-country `.mobileconfig` from live "best server" API data |
-| Bar item | `configs/sketchybar/items/vpn.sh` + `plugins/vpn.sh` | red+CC label=connected, yellow=connecting, grey=off, **orange=refresh needed**; click = `nord toggle` |
+| Bar item | `configs/sketchybar/items/vpn.sh` + `plugins/vpn.sh` + `plugins/vpn_click.sh` | red+CC label=connected, yellow=connecting, grey=off, **orange=refresh needed**. Click = `vpn_click.sh`: paints busy (yellow "…") instantly, ignores re-clicks until the toggle ends (200 s stale-steal), then runs `nord toggle`; `plugins/vpn.sh` keeps the busy look while the click lock `/tmp/nordvpn-native.click` exists |
 | State dir | `~/.config/nordvpn-native/` (0700, **outside the repo**) | see below |
 | Log | `logs/nordvpn-native.log` | agent activity (gitignored) |
 
