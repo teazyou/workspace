@@ -27,7 +27,6 @@
 - ./configs/aerospace/lib-paths.sh
 - ./configs/aerospace/open-dock-app.sh
 - ./configs/aerospace/performance-mode.sh
-- ./configs/aerospace/secondary-bar-toggle.sh
 - ./scripts/aerospace-restart.sh
 - ./configs/autoraise/config
 - ./configs/autoraise/com.autoraise.daemon.plist
@@ -47,9 +46,8 @@
 - Main AeroSpace tiling window manager config
 - Defines keybindings (alt+hjkl=focus, alt+shift+hjkl=move, alt+1-9=workspace)
 - Configures gaps, monitors assignment, startup commands (NOTE: `gaps.outer.left/right` = 5 must stay equal to sketchybar `BAR_SIDE_PADDING` so the bar's outer divisions align with the tiled-window area edges)
-- Launches sketchybar + borders (borders via `~/.config/borders/bordersrc`, the single source of truth) on startup, then applies the default bar modes once the bar is up — a third `after-startup-command` waits for the bar to be fully built (it queries the `connectivity` bracket, the LAST thing sketchybarrc adds, so every item/bracket both toggles touch already exists), resets BOTH `/tmp` state files, and runs each toggle from its clean state: `secondary-bar-toggle.sh` (no state ⇒ bar hidden on secondary monitors) then `performance-mode.sh` (no state ⇒ performance mode ON = minimal bar), so each (re)start re-establishes both defaults deterministically
+- Launches sketchybar + borders (borders via `~/.config/borders/bordersrc`, the single source of truth) on startup, then applies the default bar mode once the bar is up — a third `after-startup-command` waits for the bar to be fully built (it queries the `connectivity` bracket, the LAST thing sketchybarrc adds, so every item/bracket the toggle touches already exists), runs `apply-display-profile.sh --force` (regenerates the per-monitor top gaps + the workspace 7-9 assignment), then resets the performance-mode `/tmp` state file and runs `performance-mode.sh` from clean state (no state ⇒ performance mode ON = minimal bar), so each (re)start re-establishes the default deterministically. The bar itself draws on the MAIN monitor only — sketchybarrc sets `display=main`; secondary monitors never show a bar
 - App launchers via cmd+1-9 use open-dock-app.sh: if the app isn't running, open it on workspace N (matching the Dock position); if running, focus it (cycles through its windows on repeated presses, returns to last-focused window when coming from another app)
-- alt+shift+; then b triggers aerospace/secondary-bar-toggle.sh (hides/shows SketchyBar on secondary monitor)
 - alt+shift+; then p triggers aerospace/performance-mode.sh (toggles performance mode: minimal bar with only spaces + calendar, the hidden divisions' pollers stopped; ON is the startup default)
 - CrossOver auto-floated via on-window-detected rule (prevents tiling conflicts with games)
 - Stickies auto-floated via on-window-detected rule (keeps notes untiled; Stickies' own "Float on Top" handles always-on-top z-order)
@@ -63,9 +61,9 @@
 - Detects display changes via fingerprint, updates aerospace.toml, reloads config
 - The fingerprint folds in **which display is main** (`builtin_is_main`) on top of the sorted resolutions, so swapping the main display on the same physical monitors still re-triggers a rebuild
 - Single source of truth for outer.top — detects the main display via `Main Display: Yes` in system_profiler and tracks its gap (main_gap)
-- Reads /tmp/secondary-bar.state — when "off" (2+ monitors, main detected), emits `[{ monitor.main = <main_gap> }, 10]` so the bar gap stays only on the main monitor (where the bar still shows) and all other monitors reclaim to 10, regardless of monitor count; otherwise keeps the per-resolution multi-entry array. The old `monitor.secondary` override is gone (it only worked for 2-monitor setups)
+- The bar draws on the MAIN monitor only (sketchybarrc `display=main`), so with 2+ monitors (main detected) it always emits the main-only gap array — the bar gap stays on the main monitor and all other monitors reclaim the top space, regardless of monitor count; the per-resolution multi-entry array remains only as the no-main-detected fallback. The old `monitor.secondary` override is gone (it only worked for 2-monitor setups)
 - **Also auto-manages the workspace 7-9 monitor assignment** (the "laptop-companion" workspaces) in aerospace.toml's `[workspace-to-monitor-force-assignment]`, rewriting just the `7/8/9 =` lines (1-6 `main` and 0 `sidecar.*` untouched). `companion_ws_pattern`: when the MacBook built-in is SECONDARY (an external is main, e.g. home desk) → `'built-in.*'` (names the MacBook explicitly so 7-9 never grab an iPad sidecar); when the built-in is itself MAIN (e.g. travel with a portable external) → `'secondary'`, because `'built-in.*'` would then collide with workspaces 1-6 on the main display. The portable external reports an empty monitor name to AeroSpace so it can't be matched by a name regex — `'secondary'` resolves to it as the only non-main screen in the travel setup
-- Trigger model for the 7-9 flip: applied on every AeroSpace (re)start via the startup `secondary-bar-toggle.sh → apply-display-profile.sh --force` chain, and on hot display swaps within ~60s via the always-loaded display-profile LaunchAgent (60s StartInterval)
+- Trigger model for the 7-9 flip: applied on every AeroSpace (re)start via the startup `apply-display-profile.sh --force` call, and on hot display swaps within ~60s via the always-loaded display-profile LaunchAgent (60s StartInterval)
 - Edit for: gap values per resolution, adding new resolution mappings, the 7-9 companion-monitor logic
 
 `./configs/aerospace/com.aerospace.display-profile.plist`
@@ -99,31 +97,19 @@
 - Edit for: state file location, cycling order, fallback behavior, placement-enforcer poll cap
 
 `./configs/aerospace/lib-paths.sh`
-- Shared library `source`d by the aerospace scripts (apply-display-profile, secondary-bar-toggle, performance-mode, open-dock-app) AND by aerospace.toml's startup `after-startup-command` — the single source of truth for the cross-script contract, so a path/timing change lands everywhere from one edit
-- Defines the `/tmp` STATE-FILE paths: `SECONDARY_BAR_STATE` (/tmp/secondary-bar.state) and `PERFORMANCE_MODE_STATE` (/tmp/performance-mode.state). Every consumer runs under `set -euo pipefail`, so every name a consumer references MUST be defined here or sourcing trips on an unset var
+- Shared library `source`d by the aerospace scripts (apply-display-profile, performance-mode, open-dock-app) AND by aerospace.toml's startup `after-startup-command` — the single source of truth for the cross-script contract, so a path/timing change lands everywhere from one edit
+- Defines the `/tmp` STATE-FILE path: `PERFORMANCE_MODE_STATE` (/tmp/performance-mode.state). Every consumer runs under `set -euo pipefail`, so every name a consumer references MUST be defined here or sourcing trips on an unset var
 - Defines `PLACEMENT_CAP_SECONDS=18` (how long open-dock-app.sh's placement enforcer polls for a launching app's first window)
 - Bash 3.2 compatible (no associative arrays / mapfile)
 - Edit for: state-file paths, the placement-cap constant
 - NOTE: the empty-workspace-watcher daemon, its plist, track-workspace-mru.sh, the grace-marker contract and the `aero()` timeout wrapper were REMOVED (2026-07): closing the last focused window is handled natively by AeroSpace (macOS refocuses another window and AeroSpace reveals its workspace); the watcher only covered rare cases (focus falling to a windowless app, background self-closes on a non-focused monitor) judged not worth its constant polling cost. If a long-running aerospace-polling loop is ever reintroduced, resurrect `aero()` from git history — a bare `$(aerospace …)` can hang forever on a wedged server socket
-
-`./configs/aerospace/secondary-bar-toggle.sh`
-- Toggles SketchyBar visibility on the secondary monitors (alt+shift+; then b via aerospace.toml service mode)
-- ON: `sketchybar --bar display=all` + `rm -f` the state file
-- OFF: `sketchybar --bar display=main` + writes `off` to the state file
-- Does NOT edit outer.top itself anymore — after writing the state (state written BEFORE the generator runs), it delegates gap regeneration to `apply-display-profile.sh --force`, the single source of truth. When off, the generator emits `[{ monitor.main = <main_gap> }, 10]` so non-main monitors reclaim the freed bar space; works for any monitor count
-- No own `aerospace reload-config` — the generator runs reload itself (avoids a double reload)
-- Only flips the bar's display target and the bar state, leaves per-item drawing state alone
-- State tracked via /tmp/secondary-bar.state
-- apply-display-profile.sh also reads this state file, so monitor-change events keep the bar-hidden gaps applied while the bar is hidden
-- Default at startup: hidden (OFF) — aerospace.toml's after-startup-command clears /tmp/secondary-bar.state then runs this script, and no state ⇒ the toggle lands OFF/hidden
-- Edit for: changing target monitor (display=main); gap behavior lives in apply-display-profile.sh
 
 `./configs/aerospace/performance-mode.sh`
 - Toggles "performance mode" — the minimal bar (alt+shift+; then p via aerospace.toml service mode). ON is the DEFAULT: aerospace.toml's after-startup-command clears /tmp/performance-mode.state and runs this script, so every AeroSpace (re)start lands ON
 - ON: hides the resources (cpu, ram, battery) and connectivity (vpn, wifi, ethernet) divisions AND stops their pollers — every member item gets drawing=off + update_freq=0 (the bar-wide `updates=when_shown` default gates their subscribed events off while hidden anyway). The inter-division spacers (spacer0/1) are hidden too — only spaces (left) + the calendar division (right) remain, so no inter-division gaps are needed
 - Bracket hiding (the historical empty-pill lesson): a SketchyBar bracket paints via TWO independent layers — the fill (`background.drawing`) AND the drop shadow (`background.shadow.drawing`) — and the item-level `drawing` flag controls NEITHER (bracket drawing=off just FREEZES the pill at its last geometry while both layers keep painting = a frozen empty pill). So the two division brackets stay drawing=on and BOTH paint layers are toggled together
 - OFF: restores drawing=on + the exact original freqs from items/*.sh (battery 60, vpn 30, ethernet 30, wifi 30, cpu 5, ram 5), restores both bracket paint layers (the shadow back to theme.sh's `DIVISION_SHADOW_DRAWING`, so the theme stays authoritative for whether divisions cast shadows) + the spacers, then forces `sketchybar --update` so the frozen labels repopulate immediately and the state-driven ethernet item (hide-when-disconnected) recomputes its own icon visibility
-- State: /tmp/performance-mode.state (`PERFORMANCE_MODE_STATE` in lib-paths.sh); clean-state convention mirrors secondary-bar-toggle.sh — file absent/empty ⇒ the next run lands in the startup default (here ON, writing "on"); toggling OFF removes the file
+- State: /tmp/performance-mode.state (`PERFORMANCE_MODE_STATE` in lib-paths.sh); clean-state convention — file absent/empty ⇒ the next run lands in the startup default (here ON, writing "on"); toggling OFF removes the file
 - DIFFERENCE vs the old removed performance mode: does NOT touch the display-profile LaunchAgent (it stays always-loaded), and there is no traffic group anymore (removed with the energy cleanup); JankyBorders is untouched as well
 - Edit for: which items/divisions the mode hides, the restore freq table
 
@@ -165,7 +151,7 @@
 - Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, ram, cpu, battery, vpn, wifi, ethernet (the audio division — volume + headset — was removed entirely 2026-07; its item/plugin files are deleted, only the icons.sh glyph exports and the dead volume_click.sh template remain)
 - Commented out (disabled): apple.sh, settings.sh
 - Not sourced (disabled): front_app.sh, brew.sh, github.sh, spotify.sh
-- Defines bar: height=58, floating style, transparent bg
+- Defines bar: height=58, floating style, transparent bg, `display=main` (bar on the main monitor ONLY — secondary monitors never draw it; apply-display-profile.sh emits the matching per-monitor top gaps)
 - Edge alignment: `margin=0` + `BAR_SIDE_PADDING` place the outer divisions `BAR_SIDE_PADDING` px from each screen edge. Keep `BAR_SIDE_PADDING` = aerospace `gaps.outer.left/right` (5) so the left/right divisions line up with the tiled-window (app) area edges
 - Defines defaults + the shared `bracket_style`: division geometry (corner radius, border, blur, drop shadow) all pulled from theme.sh tokens; font=JetBrainsMono
 - Groups items into brackets: calendar_group, resources, connectivity

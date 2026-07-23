@@ -14,16 +14,15 @@ LOG_FILE="/tmp/aerospace-display-profile.log"
 # Reference gap for a standard 1440p external monitor
 REFERENCE_GAP=42
 
-# Extra top spacing between the SketchyBar and the app window.
-# BAR_GAP_PAD:        added to every monitor's bar gap in ALL scenarios.
-# MAIN_ONLY_BAR_EXTRA: added on top when the bar is shown ONLY on the main
-#                      screen (secondary bar hidden) — applied to whichever
-#                      display still draws the bar.
+# Extra top spacing between the SketchyBar and the app window. The bar draws
+# on the MAIN monitor only (sketchybarrc sets display=main).
+# BAR_GAP_PAD:        added to every monitor's bar gap.
+# MAIN_ONLY_BAR_EXTRA: added on top on the display that draws the bar (main).
 # BUILTIN_MAIN_BAR_EXTRA: extra breathing room below the bar on the MacBook
 #                      built-in ONLY when it is itself the MAIN (primary)
-#                      display drawing the lone bar (secondary bar hidden).
-#                      Scoped to that one case, so external-main and
-#                      built-in-secondary setups are untouched.
+#                      display drawing the bar. Scoped to that one case, so
+#                      external-main and built-in-secondary setups are
+#                      untouched.
 BAR_GAP_PAD=2
 MAIN_ONLY_BAR_EXTRA=2
 BUILTIN_MAIN_BAR_EXTRA=5
@@ -216,18 +215,18 @@ build_top_gap_config() {
             pattern="${pattern}.*"
         fi
 
-        # MacBook built-in only: halve its top gap (round up) when the bar IS
-        # shown on it (Case B). Gated on the built-in pattern so an external
-        # retina monitor is never affected. Done before main_gap is set so a
-        # built-in main display feeds the halved value into the bar-off branch.
+        # MacBook built-in only: halve its top gap (round up). Gated on the
+        # built-in pattern so an external retina monitor is never affected.
+        # Done before main_gap is set so a built-in main display feeds the
+        # halved value into the main-only branch.
         if [[ "$pattern" == "built-in.*" ]]; then
             gap=$(( (gap + 1) / 2 ))
         fi
 
-        # +BAR_GAP_PAD base spacing between the SketchyBar and the app, applied
-        # in every scenario where the bar is shown (added AFTER the built-in
-        # halving so the pad itself isn't halved). The bar-off branch below adds
-        # a further MAIN_ONLY_BAR_EXTRA on the screen that still draws the bar.
+        # +BAR_GAP_PAD base spacing between the SketchyBar and the app (added
+        # AFTER the built-in halving so the pad itself isn't halved). The
+        # main-only branch below adds a further MAIN_ONLY_BAR_EXTRA on the
+        # screen that draws the bar.
         gap=$(( gap + BAR_GAP_PAD ))
 
         # Remember the gap of the main display (the one with the menu bar)
@@ -236,8 +235,8 @@ build_top_gap_config() {
         fi
 
         # Track whether the MacBook built-in is itself the main display. The
-        # bar-off branch uses this to give the built-in less top space when it's
-        # main (bar shown on it) than when it's a bar-less secondary.
+        # main-only branch uses this to give the built-in less top space when
+        # it's main (bar shown on it) than when it's a bar-less secondary.
         if [[ "$pattern" == "built-in.*" && "$is_main" == "true" ]]; then
             builtin_is_main=true
         fi
@@ -251,50 +250,43 @@ build_top_gap_config() {
         fi
     done < <(get_monitors_config "$sp_displays")
 
-    # When SketchyBar is hidden on the secondary monitors, keep the bar gap
-    # only on the main monitor (where the bar still shows) and reclaim the
-    # freed top space on every other monitor — regardless of monitor count.
+    # Build final config string. The bar draws on the MAIN monitor only
+    # (sketchybarrc display=main): the bar gap lives on the main monitor and
+    # every other monitor reclaims the top space — regardless of monitor count.
     # The old `monitor.secondary` keyword only works for 2-monitor setups,
     # so use `monitor.main` + a small default instead.
-    local bar_state_file="$SECONDARY_BAR_STATE"
-    local bar_off=false
-    if [[ -f "$bar_state_file" ]] && [[ "$(cat "$bar_state_file" 2>/dev/null)" == "off" ]]; then
-        bar_off=true
-    fi
-
-    # Build final config string
     if (( ${#gap_entries[@]} == 0 )); then
         echo "$default_gap"
     elif (( ${#gap_entries[@]} == 1 )); then
-        # Single monitor - always main; bar-off doesn't apply.
+        # Single monitor - always main, always draws the bar.
         local single_gap="${gap_entries[0]}"
         single_gap="${single_gap#*= }"
         single_gap="${single_gap% \}}"
         echo "$single_gap"
-    elif [[ "$bar_off" == "true" && -n "$main_gap" ]]; then
-        # Bar hidden on secondaries (those screens show no bar), so reclaim top.
-        # The screen that still draws the bar (the main one) gets the padded gap
-        # PLUS MAIN_ONLY_BAR_EXTRA, since the bar is now only on the main screen:
-        #   built-in MAIN (only bar drawn)     -> 2 + main-only extra + builtin-main extra
+    elif [[ -n "$main_gap" ]]; then
+        # Multi-monitor: only the main screen shows the bar, secondaries reclaim.
+        # The screen drawing the bar (the main one) gets the padded gap PLUS
+        # MAIN_ONLY_BAR_EXTRA:
+        #   built-in MAIN (bar drawn)          -> 2 + main-only extra + builtin-main extra
         #   built-in SECONDARY (no bar there)  -> 4  (reclaim, no bar)
-        #   main external (only bar drawn)     -> padded $main_gap + main-only extra
+        #   main external (bar drawn)          -> padded $main_gap + main-only extra
         #   other external secondaries         -> $bottom_gap (match the bottom gap)
         # First match wins: built-in (FIRST) takes $builtin_top regardless of its
         # slot; a non-built-in main then matches monitor.main; remaining external
         # secondaries fall through to the bottom-matching default.
         local builtin_top=4
         [[ "$builtin_is_main" == "true" ]] && builtin_top=$(( 2 + MAIN_ONLY_BAR_EXTRA + BUILTIN_MAIN_BAR_EXTRA ))
-        # Main screen still draws the bar, so add the main-only extra on top of
-        # its already-padded gap.
+        # Main screen draws the bar, so add the main-only extra on top of its
+        # already-padded gap.
         local main_only_gap=$(( main_gap + MAIN_ONLY_BAR_EXTRA ))
         # Mirror outer.bottom so a bar-less external secondary's top == its bottom.
         local bottom_gap
         bottom_gap=$(grep -E '^[[:space:]]*outer\.bottom' "$AEROSPACE_CONFIG" 2>/dev/null | grep -oE '[0-9]+' | head -1 || true)
         [[ -z "$bottom_gap" ]] && bottom_gap=5
-        log "Secondary bar hidden — built-in $builtin_top (main 2+extra+builtin-main extra / secondary 4), main external keeps $main_only_gap, external secondaries -> bottom gap $bottom_gap"
+        log "Main-only bar — built-in $builtin_top (main 2+extra+builtin-main extra / secondary 4), main external keeps $main_only_gap, external secondaries -> bottom gap $bottom_gap"
         echo "[{ monitor.\"built-in.*\" = $builtin_top }, { monitor.main = $main_only_gap }, $bottom_gap]"
     else
-        # Multiple monitors - use array format (per-resolution entries).
+        # Multiple monitors but no main detected - per-resolution entries.
         local result="["
         for entry in "${gap_entries[@]}"; do
             result+="$entry, "

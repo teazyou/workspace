@@ -32,6 +32,7 @@ BAR_SIDE_PADDING=5
 # right pill clusters are tinted and the wallpaper shows through everywhere else.
 bar=(
   height=58
+  display=main      # bar on the main monitor ONLY — secondary monitors never draw it (apply-display-profile.sh emits the matching per-monitor top gaps)
   color=$TRANSPARENT
   shadow=off
   position=top

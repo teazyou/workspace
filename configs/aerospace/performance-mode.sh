@@ -33,9 +33,8 @@
 # so it is no longer part of the managed set.)
 #
 # State: /tmp/performance-mode.state (PERFORMANCE_MODE_STATE in lib-paths.sh).
-# Clean-state convention mirrors secondary-bar-toggle.sh: file absent/empty =>
-# the next run lands in the startup default (here: ON, which writes "on";
-# toggling OFF removes the file).
+# Clean-state convention: file absent/empty => the next run lands in the
+# startup default (here: ON, which writes "on"; toggling OFF removes the file).
 
 set -euo pipefail
 
