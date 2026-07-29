@@ -16,11 +16,11 @@ User contract:
 | CLI | `scripts/vpn/nord.sh` (alias `nord` via `zsh/alias/vpn.zsh`) | switch/on/off/toggle/status/list/refresh |
 | Reconnect agent | `scripts/vpn/nord-connect.sh` + `configs/nordvpn/com.teazyou.nordvpn-native.plist` (symlink in `~/Library/LaunchAgents/`) | event-driven one-shot: `RunAtLoad` + `WatchPaths` on resolv.conf |
 | Bundle generator | `scripts/vpn/nord-gen-bundle.sh` | renders the 6-country `.mobileconfig` from live "best server" API data |
-| Bar item | `configs/sketchybar/items/vpn.sh` + `plugins/vpn.sh` + `plugins/vpn_click.sh` | red+CC label=connected, yellow=connecting, grey=off, **orange=refresh needed**. Click = `vpn_click.sh`: paints busy (yellow "…") instantly, ignores re-clicks until the toggle ends (200 s stale-steal), then runs `nord toggle`; `plugins/vpn.sh` keeps the busy look while the click lock `/tmp/nordvpn-native.click` exists |
+| Bar item | `configs/sketchybar/items/vpn.sh` + `plugins/vpn.sh` + `plugins/vpn_click.sh` | two text items — **BE** (Belgium) and **SN** (Singapore, code `sg`). Per icon: **grey** = not the selected country, **red** = selected + connected, **yellow** = selected + connecting, **orange** = selected + not connected (off/failed), **magenta = refresh needed**. Click = `vpn_click.sh`: grey icon → `nord <cc>` (switch + on), selected icon → `nord toggle`; paints that icon busy (yellow "…") instantly and ignores re-clicks on EITHER icon until the action ends (200 s stale-steal). ONE shared click lock `/tmp/nordvpn-native.click`, whose `owner` file names the clicked item so `plugins/vpn.sh` keeps the busy look on the right icon while the other keeps rendering its real state. |
 | State dir | `~/.config/nordvpn-native/` (0700, **outside the repo**) | see below |
 | Log | `logs/nordvpn-native.log` | agent activity (gitignored) |
 
-`~/.config/nordvpn-native/` contents: `credentials` (NORD_USER/NORD_PASS service credentials, 0600, **never committed/logged**), `nord-root.der` (NordVPN Root CA), `nord-bundle.mobileconfig` (rendered profile, 0600 — embeds the credentials), `servers` (cc=hostname pins manifest), `country` (target cc), `enabled` (1/0), `boot-id` (kern.boottime of last seen boot), `refresh-needed` (flag file → bar turns orange).
+`~/.config/nordvpn-native/` contents: `credentials` (NORD_USER/NORD_PASS service credentials, 0600, **never committed/logged**), `nord-root.der` (NordVPN Root CA), `nord-bundle.mobileconfig` (rendered profile, 0600 — embeds the credentials), `servers` (cc=hostname pins manifest), `country` (target cc), `enabled` (1/0), `boot-id` (kern.boottime of last seen boot), `refresh-needed` (flag file → the selected country's bar icon turns magenta).
 
 ## Design decisions (do not silently reverse)
 
@@ -62,7 +62,7 @@ launchctl bootout  gui/$(id -u)/com.teazyou.nordvpn-native    # disable the agen
 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.teazyou.nordvpn-native.plist  # re-enable
 ```
 
-**Stale pins / dead server:** connect failures and `nord status` DNS checks set `~/.config/nordvpn-native/refresh-needed` → the bar's VPN icon turns **orange** → run `nord refresh` (one approval click). The flag clears on the next successful connect or healthy `status`.
+**Stale pins / dead server:** connect failures and `nord status` DNS checks set `~/.config/nordvpn-native/refresh-needed` → the selected country's bar icon turns **magenta** → run `nord refresh` (one approval click). The flag clears on the next successful connect or healthy `status`.
 
 **Fresh-Mac note:** deliberately **NOT** wired into `installation.sh`/`setup_symlinks.sh` (same policy as the quota-keepalive agent) — it needs interactive pieces regardless: service credentials from the Nord dashboard (email-code gated), one profile approval, `brew trust timac/vpnstatus`, and the LaunchAgent symlink + `launchctl bootstrap` above.
 
@@ -72,7 +72,9 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.teazyou.nordvpn-nati
 - vpnutil `status` lag: `Connecting` shown while already routing (see success detection above).
 - The IKEv2 password sits in the installed profile; the profile file itself is 0600 and the account password is never involved (service credentials only, rotatable from the Nord dashboard).
 - `configs/dot-claude-preset/` note: the sketchybar plugin needs `/opt/homebrew/bin` prepended to PATH (sketchybar's env has no Homebrew) — already handled inside `plugins/vpn.sh`.
+- **Only BE/SN are represented on the bar**; the CLI still supports all 6 countries. If the selected country is fr/my/us/vn (or a config is started by hand outside `nord`), **both** bar icons render grey and the real exit is unrepresented — a known 2-icon limitation, not a bug.
+- **Every reboot resets the target to Singapore** (design decision 5) — so **SN is always the selected icon right after a reboot**.
 
 ## Verified test matrix (2026-07-22, macOS 26.5.2)
 
-All six countries connect via `nord <cc>`; off durable across a forced watcher run; toggle cycle; boot simulation (garbage boot-id + kickstart → reset to sg/enabled + auto-connect in ~7 s); Wi-Fi flap self-heal; bar states red/orange/grey + CC label; single approval covers all 6 payloads.
+All six countries connect via `nord <cc>`; off durable across a forced watcher run; toggle cycle; boot simulation (garbage boot-id + kickstart → reset to sg/enabled + auto-connect in ~7 s); Wi-Fi flap self-heal; bar states red/orange/grey + CC label (**superseded 2026-07-30 by the two-icon BE/SN bar — see the Bar item row; re-verify per that table**); single approval covers all 6 payloads.

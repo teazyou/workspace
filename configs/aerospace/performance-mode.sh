@@ -5,8 +5,8 @@
 #
 # ON — the DEFAULT: aerospace.toml's after-startup-command clears the state
 # file and runs this script, so every AeroSpace (re)start lands here.
-#   - The resources (cpu, ram, battery) and connectivity (vpn, wifi, ethernet)
-#     divisions are hidden.
+#   - The resources (cpu, ram, battery) and connectivity (vpn_be, vpn_sn, wifi,
+#     ethernet) divisions are hidden.
 #   - Their pollers are stopped: every member gets update_freq=0 (and the
 #     bar-wide default updates=when_shown gates their subscribed events off
 #     while hidden anyway).
@@ -14,7 +14,7 @@
 #     calendar division remains on the right, so no inter-division gaps exist.
 # OFF — toggle via service mode: alt+shift+; then p (aerospace.toml).
 #   - Everything restored: drawing=on + the exact original freqs from
-#     items/*.sh (battery 60, vpn 30, ethernet 30, wifi 30, cpu 5, ram 5),
+#     items/*.sh (battery 60, vpn_be 30, vpn_sn 30, ethernet 30, wifi 30, cpu 5, ram 5),
 #     then a forced update so the frozen labels repopulate NOW and the
 #     state-driven ethernet item (hide-when-disconnected) recomputes its own
 #     icon visibility.
@@ -51,7 +51,8 @@ if [[ -f "$STATE_FILE" ]] && [[ "$(cat "$STATE_FILE")" == "on" ]]; then
   sketchybar --set cpu      drawing=on update_freq=5 \
              --set ram      drawing=on update_freq=5 \
              --set battery  drawing=on update_freq=60 \
-             --set vpn      drawing=on update_freq=30 \
+             --set vpn_be   drawing=on update_freq=30 \
+             --set vpn_sn   drawing=on update_freq=30 \
              --set wifi     drawing=on update_freq=30 \
              --set ethernet drawing=on update_freq=30 \
              --set resources    background.drawing=on background.shadow.drawing=$DIVISION_SHADOW_DRAWING \
@@ -69,7 +70,8 @@ else
   sketchybar --set cpu      drawing=off update_freq=0 \
              --set ram      drawing=off update_freq=0 \
              --set battery  drawing=off update_freq=0 \
-             --set vpn      drawing=off update_freq=0 \
+             --set vpn_be   drawing=off update_freq=0 \
+             --set vpn_sn   drawing=off update_freq=0 \
              --set wifi     drawing=off update_freq=0 \
              --set ethernet drawing=off update_freq=0 \
              --set resources    background.drawing=off background.shadow.drawing=off \

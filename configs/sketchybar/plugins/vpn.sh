@@ -1,15 +1,28 @@
 #!/bin/bash
 
 source "$HOME/.config/sketchybar/colors.sh"
-source "$HOME/.config/sketchybar/theme.sh"   # DIVISION_PAD / ELEMENT_GAP tokens
 PATH="/opt/homebrew/bin:$PATH"               # jq (sketchybar's env has no homebrew PATH)
 
-# Native NordVPN IKEv2 state (see docs/vpn/guide-nordvpn-native.md).
-# Colour: red = connected, yellow = connecting, grey = off.
-# ORANGE overrides everything = a pinned server is dead -> run `nord refresh`
-# (flag file written by scripts/vpn/nord.sh / nord-connect.sh).
+# Repaints BOTH vpn items (vpn_be, vpn_sn) from ONE vpnutil snapshot, whichever of
+# them invoked this script (30s tick, or vpn_change / wifi_change / system_woke) —
+# so an event delivered to only one item can never leave the other one stale, and
+# both always render from the same snapshot. Deliberately name-agnostic: $NAME is
+# NOT read here (only plugins/vpn_click.sh needs it).
+#
+# Native NordVPN IKEv2 state; see docs/vpn/guide-nordvpn-native.md.
+#   grey    = not the selected target country (CFG_DIR/country)
+#   red     = selected + connected
+#   yellow  = selected + connecting, or this icon owns the in-flight click
+#   orange  = selected + not connected (off / failed / reconnecting)
+#   magenta = selected + a pinned server is dead -> run `nord refresh` (flag file)
+# NEVER call `nord status` from here: its DNS sweep re-touches/clears the
+# refresh-needed flag — a side effect a 30s poller must not have.
 CFG_DIR="$HOME/.config/nordvpn-native"
 VPNUTIL="/opt/homebrew/bin/vpnutil"
+CLICK_LOCK="/tmp/nordvpn-native.click"
+CLICK_STALE=200                              # keep in sync with plugins/vpn_click.sh
+
+COUNTRY=$(cat "$CFG_DIR/country" 2>/dev/null); COUNTRY=${COUNTRY:-sg}
 
 CONN=""; CONNECTING=""
 if [ -x "$VPNUTIL" ]; then
@@ -17,22 +30,34 @@ if [ -x "$VPNUTIL" ]; then
   CONN=$(echo "$JSON" | jq -r 'first(.VPNs[]|select(.status=="Connected").name)//""' 2>/dev/null)
   CONNECTING=$(echo "$JSON" | jq -r 'first(.VPNs[]|select(.status=="Connecting").name)//""' 2>/dev/null)
 fi
+CONN_CC=$(echo "${CONN#Nord-}"       | tr '[:upper:]' '[:lower:]')
+CONNECTING_CC=$(echo "${CONNECTING#Nord-}" | tr '[:upper:]' '[:lower:]')
 
-if [ -n "$CONN" ]; then
-  COLOR=$PINK LABEL="${CONN#Nord-}"
-elif [ -n "$CONNECTING" ]; then
-  COLOR=$YELLOW LABEL="${CONNECTING#Nord-}"
-else
-  COLOR=$GREY LABEL=""
+# Busy: plugins/vpn_click.sh holds the SHARED click lock and named the clicked item
+# inside it. A lock older than the steal window is treated as dead (a crashed run —
+# sketchybar SIGKILLs any script at 60s, which bypasses the click script's EXIT
+# trap), so a stale "…" can never stick forever.
+BUSY=""
+if [ -d "$CLICK_LOCK" ]; then
+  now=$(date +%s)
+  age=$(( now - $(stat -f %m "$CLICK_LOCK" 2>/dev/null || echo "$now") ))
+  [ "$age" -lt "$CLICK_STALE" ] && BUSY=$(cat "$CLICK_LOCK/owner" 2>/dev/null)
 fi
-[ -f "$CFG_DIR/refresh-needed" ] && COLOR=$ORANGE
-# a click action is in flight (plugins/vpn_click.sh holds the lock): busy look wins
-[ -d /tmp/nordvpn-native.click ] && COLOR=$YELLOW LABEL="…"
 
-if [ -n "$LABEL" ]; then
-  sketchybar --set "$NAME" icon.color="$COLOR" label="$LABEL" label.drawing=on \
-             label.color="$COLOR" label.padding_right="$DIVISION_PAD" icon.padding_right="$ELEMENT_GAP"
-else
-  sketchybar --set "$NAME" icon.color="$COLOR" label.drawing=off \
-             label.padding_right=0 icon.padding_right="$DIVISION_PAD"
-fi
+ARGS=()
+paint() {  # $1=item name  $2=country code  $3=idle text
+  local color label="$3"
+  if   [ "$BUSY" = "$1" ];                    then color=$YELLOW; label="…"
+  elif [ "$2" != "$COUNTRY" ];                then color=$GREY
+  elif [ -f "$CFG_DIR/refresh-needed" ];      then color=$MAGENTA
+  elif [ "$2" = "$CONN_CC" ];                 then color=$PINK
+  elif [ "$2" = "$CONNECTING_CC" ];           then color=$YELLOW
+  else                                             color=$ORANGE
+  fi
+  ARGS+=(--set "$1" label="$label" label.color="$color")
+}
+
+paint vpn_be be BE
+paint vpn_sn sg SN
+
+sketchybar "${ARGS[@]}"

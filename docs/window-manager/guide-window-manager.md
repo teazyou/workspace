@@ -106,9 +106,9 @@
 
 `./configs/aerospace/performance-mode.sh`
 - Toggles "performance mode" — the minimal bar (alt+shift+; then p via aerospace.toml service mode). ON is the DEFAULT: aerospace.toml's after-startup-command clears /tmp/performance-mode.state and runs this script, so every AeroSpace (re)start lands ON
-- ON: hides the resources (cpu, ram, battery) and connectivity (vpn, wifi, ethernet) divisions AND stops their pollers — every member item gets drawing=off + update_freq=0 (the bar-wide `updates=when_shown` default gates their subscribed events off while hidden anyway). The inter-division spacers (spacer0/1) are hidden too — only spaces (left) + the calendar division (right) remain, so no inter-division gaps are needed
+- ON: hides the resources (cpu, ram, battery) and connectivity (vpn_be, vpn_sn, wifi, ethernet) divisions AND stops their pollers — every member item gets drawing=off + update_freq=0 (the bar-wide `updates=when_shown` default gates their subscribed events off while hidden anyway). The inter-division spacers (spacer0/1) are hidden too — only spaces (left) + the calendar division (right) remain, so no inter-division gaps are needed
 - Bracket hiding (the historical empty-pill lesson): a SketchyBar bracket paints via TWO independent layers — the fill (`background.drawing`) AND the drop shadow (`background.shadow.drawing`) — and the item-level `drawing` flag controls NEITHER (bracket drawing=off just FREEZES the pill at its last geometry while both layers keep painting = a frozen empty pill). So the two division brackets stay drawing=on and BOTH paint layers are toggled together
-- OFF: restores drawing=on + the exact original freqs from items/*.sh (battery 60, vpn 30, ethernet 30, wifi 30, cpu 5, ram 5), restores both bracket paint layers (the shadow back to theme.sh's `DIVISION_SHADOW_DRAWING`, so the theme stays authoritative for whether divisions cast shadows) + the spacers, then forces `sketchybar --update` so the frozen labels repopulate immediately and the state-driven ethernet item (hide-when-disconnected) recomputes its own icon visibility
+- OFF: restores drawing=on + the exact original freqs from items/*.sh (battery 60, vpn_be 30, vpn_sn 30, ethernet 30, wifi 30, cpu 5, ram 5), restores both bracket paint layers (the shadow back to theme.sh's `DIVISION_SHADOW_DRAWING`, so the theme stays authoritative for whether divisions cast shadows) + the spacers, then forces `sketchybar --update` so the frozen labels repopulate immediately and the state-driven ethernet item (hide-when-disconnected) recomputes its own icon visibility
 - State: /tmp/performance-mode.state (`PERFORMANCE_MODE_STATE` in lib-paths.sh); clean-state convention — file absent/empty ⇒ the next run lands in the startup default (here ON, writing "on"); toggling OFF removes the file
 - DIFFERENCE vs the old removed performance mode: does NOT touch the display-profile LaunchAgent (it stays always-loaded), and there is no traffic group anymore (removed with the energy cleanup); JankyBorders is untouched as well
 - Edit for: which items/divisions the mode hides, the restore freq table
@@ -148,7 +148,7 @@
 
 `./configs/sketchybar/sketchybarrc`
 - Main sketchybar entry point (status bar)
-- Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, ram, cpu, battery, vpn, wifi, ethernet (the audio division — volume + headset — was removed entirely 2026-07; its item/plugin files are deleted, only the icons.sh glyph exports and the dead volume_click.sh template remain)
+- Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, ram, cpu, battery, vpn_be + vpn_sn (both from items/vpn.sh), wifi, ethernet (the audio division — volume + headset — was removed entirely 2026-07; its item/plugin files are deleted, only the icons.sh glyph exports and the dead volume_click.sh template remain)
 - Commented out (disabled): apple.sh, settings.sh
 - Not sourced (disabled): front_app.sh, brew.sh, github.sh, spotify.sh
 - Defines bar: height=58, floating style, transparent bg, `display=main` (bar on the main monitor ONLY — secondary monitors never draw it; apply-display-profile.sh emits the matching per-monitor top gaps)
@@ -184,11 +184,11 @@
 `./configs/sketchybar/items/*.sh`
 - Item definitions (visual config, positioning, subscriptions)
 - Pattern: define item properties, add to bar, subscribe events
-- Active items: spaces.sh, calendar.sh, ram.sh, cpu.sh, battery.sh, vpn.sh, wifi.sh, ethernet.sh (8 live; volume.sh/headset.sh deleted with the audio division)
+- Active items: spaces.sh, calendar.sh, ram.sh, cpu.sh, battery.sh, vpn.sh (defines TWO items: vpn_be + vpn_sn), wifi.sh, ethernet.sh (9 live items from 8 files; volume.sh/headset.sh deleted with the audio division)
 - Disabled items: apple.sh (commented), settings.sh (commented), front_app.sh (not sourced), brew.sh, github.sh, spotify.sh
 - Edge/element paddings come from theme.sh (DIVISION_PAD / ELEMENT_GAP), not per-item magic numbers — each item marks its left/right-edge vs internal paddings with those tokens
-- State-driven items: calendar = one clock icon + "Day DD HH:MM" (date+time pair); resources = single stats icon + "cpu% ramGB" + battery last; ethernet shows ONLY when connected; vpn = NordVPN app glyph tinted by connection; wifi = RSSI strength bars
-- Poller freqs as defined in items/*.sh: battery 60, vpn 30, ethernet 30, wifi 30, cpu 5, ram 5. These are the exact values aerospace/performance-mode.sh restores on toggle OFF; while performance mode is ON (the startup default) the resources/connectivity members sit at drawing=off + update_freq=0 (no polling)
+- State-driven items: calendar = one clock icon + "Day DD HH:MM" (date+time pair); resources = single stats icon + "cpu% ramGB" + battery last; ethernet shows ONLY when connected; vpn_be/vpn_sn = two text icons "BE"/"SN"; grey = not the selected country, red = selected+connected, yellow = selected+connecting, orange = selected+not connected, magenta = `nord refresh` needed; wifi = RSSI strength bars
+- Poller freqs as defined in items/*.sh: battery 60, vpn_be 30, vpn_sn 30, ethernet 30, wifi 30, cpu 5, ram 5. These are the exact values aerospace/performance-mode.sh restores on toggle OFF; while performance mode is ON (the startup default) the resources/connectivity members sit at drawing=off + update_freq=0 (no polling)
 - Key file: spaces.sh (workspaces with aerospace integration)
 - Edit for: item appearance, positioning, which events trigger updates
 

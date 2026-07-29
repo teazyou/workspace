@@ -138,10 +138,11 @@ source "$ITEM_DIR/cpu.sh"
 # Spacer between resources and connectivity
 sketchybar --add item spacer1 right --set spacer1 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
-# Network connectivity group (L->R: wifi, ethernet, vpn). Right items are added
-# right-most first, so source vpn (rightmost), then ethernet, then wifi (leftmost)
-# — this puts ethernet immediately to the right of wifi. Leftmost division of the
-# right-side cluster — no spacer after it.
+# Network connectivity group (L->R: wifi, ethernet, vpn_be, vpn_sn). Right items are
+# added right-most first, so source vpn.sh first (it adds vpn_sn then vpn_be
+# internally — see its header), then ethernet, then wifi (leftmost) — this puts
+# ethernet immediately to the right of wifi. Leftmost division of the right-side
+# cluster — no spacer after it.
 source "$ITEM_DIR/vpn.sh"
 source "$ITEM_DIR/ethernet.sh"
 source "$ITEM_DIR/wifi.sh"
@@ -150,8 +151,8 @@ source "$ITEM_DIR/wifi.sh"
 sketchybar --add bracket resources ram cpu battery \
            --set resources "${bracket_style[@]}"
 
-# Bracket for network connectivity group (ethernet + wifi + vpn)
-sketchybar --add bracket connectivity vpn wifi ethernet \
+# Bracket for network connectivity group (wifi + ethernet + vpn_be + vpn_sn)
+sketchybar --add bracket connectivity vpn_be vpn_sn wifi ethernet \
            --set connectivity "${bracket_style[@]}"
 
 # Paint the spaces strip once at startup. Run the coordinator plugin DIRECTLY
