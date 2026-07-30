@@ -1,10 +1,12 @@
 #!/bin/bash
 
 # Click handler SHARED by both vpn items (vpn_be, vpn_sn); $NAME says which one.
-# 1. DECIDE: clicking the UNDERLINED icon (the currently SELECTED country,
-#    ~/.config/nordvpn-native/country) toggles it on/off (`nord toggle`); clicking
-#    the other (un-underlined) icon switches to that country and turns it on (`nord <cc>` —
-#    which writes country + enabled and clears refresh-needed itself).
+# 1. DECIDE: clicking the icon of the currently SELECTED country
+#    (~/.config/nordvpn-native/country) toggles it on/off (`nord toggle`); clicking
+#    the other icon switches to that country and turns it on (`nord <cc>` —
+#    which writes country + enabled and clears refresh-needed itself). Both branches
+#    read the same way off the VISIBLE colour, which is why the bar needs no selection
+#    marker: clicking a GREY icon connects that country, clicking the RED one goes off.
 # 2. INSTANT feedback: paints the clicked icon busy (yellow "…") before acting.
 # 3. CLICK LOCK: ONE lock shared by BOTH icons (/tmp/nordvpn-native.click) — a second
 #    click on EITHER icon while an action is in flight is ignored (mkdir-atomic lock
@@ -44,12 +46,8 @@ fi
 echo "$NAME" > "$CLICK_LOCK/owner"
 trap 'release; sketchybar --trigger vpn_change 2>/dev/null' EXIT
 
-# Instant busy feedback. The underline only ever sits under the SELECTED icon, so
-# recolour it with the busy colour on the toggle branch and leave it hidden otherwise:
-# a switch click must NOT grow an underline on the icon it is switching TO — the
-# selection moves only once nord.sh has written `country` (and plugins/vpn.sh repaints).
-if [ "$ACTION" = toggle ]; then RULE=$YELLOW; else RULE=$TRANSPARENT; fi
-sketchybar --set "$NAME" label="…" label.color="$YELLOW" icon.color="$RULE"
+# Instant busy feedback (colour is the only channel — the item has no icon).
+sketchybar --set "$NAME" label="…" label.color="$YELLOW"
 
 bash "$NORD" "$ACTION" >/dev/null 2>&1
 

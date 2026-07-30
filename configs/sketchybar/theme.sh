@@ -55,30 +55,9 @@ export GROUP_GAP=6
 export DIVISION_PAD=6
 export ELEMENT_GAP=6
 
-# ── Selection underline ──────────────────────────────────────────────────────
-# The "this is the selected one" marker: a thin horizontal rule drawn UNDER an
-# element's label (only user today: the active VPN country — items/vpn.sh +
-# plugins/vpn.sh). SketchyBar has no sub-label slot, so the element's own ICON
-# slot is re-purposed. The icon normally sits BESIDE the label, so it is pulled
-# back UNDER it with a NEGATIVE icon.padding_right, chosen so that
-#     icon.padding_left + SEL_UNDERLINE_ADVANCE + icon.padding_right == 0
-# i.e. the underline costs ZERO layout width — the element and its whole
-# division measure the same whether it shows or not. Presence is therefore a
-# COLOUR, never `icon.drawing`: hidden = icon.color=$TRANSPARENT (drawing=off
-# would remove the glyph's advance and shift the label).
-# WHY A GLYPH AND NOT A BACKGROUND: the item background CAN be a 1 px
-# full-width underline, but it always spans the whole element (30 px, wider
-# than the 18 px label) — `background.padding_*` does not inset it, it ADDS
-# outward layout width (measured: connectivity 85 -> 97 px). A box-drawing
-# glyph is both narrower and thinner.
-# THINNESS FLOOR: this display is 2560x1440 @1:1, so 1 pt == 1 physical px —
-# a 0.5 px rule is not expressible. U+2500 at :Regular: is the thinnest the
-# font stack offers (a hairline stroke, antialiased); Bold or ▁ (U+2581, 1/8 em)
-# both render visibly thicker. Smaller size = thinner stroke AND shorter rule.
-# Verified live (--query, pads 0/0 width delta): at :Regular:13.0 the glyph
-# advances 14 px; on a 30 px element that centres exactly (pad 8 / -22), giving
-# a 14 px rule under an 18 px label, at the same rows the old ● dot inked.
-export SEL_UNDERLINE_GLYPH="─"   # U+2500 BOX DRAWINGS LIGHT HORIZONTAL (tiles edge-to-edge)
-export SEL_UNDERLINE_SIZE=13.0   # font size — calibrated PAIR with _ADVANCE, change both
-export SEL_UNDERLINE_ADVANCE=14  # px the glyph advances at _SIZE (measured; centring needs it)
-export SEL_UNDERLINE_Y_OFFSET=-9 # NEGATIVE = DOWN (verified): under the label, inside the pill
+# NOTE (2026-07-30): there used to be a SEL_DOT_* / SEL_UNDERLINE_* block here —
+# a sub-label "this is the selected one" marker for the VPN items. Removed with
+# its only consumer: colour alone carries the VPN state, and when both country
+# icons read grey the VPN is simply off. The mechanism (and why a background
+# cannot do it) is kept as a lesson in docs/window-manager/guide-window-manager.md
+# in case a sub-label marker is ever wanted again.
