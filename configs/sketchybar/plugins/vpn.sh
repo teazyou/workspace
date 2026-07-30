@@ -9,12 +9,17 @@ PATH="/opt/homebrew/bin:$PATH"               # jq (sketchybar's env has no homeb
 # both always render from the same snapshot. Deliberately name-agnostic: $NAME is
 # NOT read here (only plugins/vpn_click.sh needs it).
 #
-# Native NordVPN IKEv2 state; see docs/vpn/guide-nordvpn-native.md.
-#   grey    = not the selected target country (CFG_DIR/country)
-#   red     = selected + connected
-#   yellow  = selected + connecting, or this icon owns the in-flight click
-#   orange  = selected + not connected (off / failed / reconnecting)
-#   magenta = selected + a pinned server is dead -> run `nord refresh` (flag file)
+# Native NordVPN IKEv2 state; see docs/vpn/guide-nordvpn-native.md. TWO channels:
+#   colour = the tunnel state, per icon:
+#     grey    = not connected (off / failed / or simply not the selected country)
+#     red     = connected
+#     yellow  = connecting, or this icon owns the in-flight click
+#     magenta = selected + a pinned server is dead -> run `nord refresh` (flag file)
+#   underline (the icon slot, theme.sh SEL_UNDERLINE_*) = a thin rule drawn under the
+#     SELECTED country only (CFG_DIR/country), always in the SAME colour as its label;
+#     hidden with icon.color=$TRANSPARENT so the layout never shifts.
+# A non-selected country is ALWAYS grey (nothing dials it) — "selected but off" vs
+# "not selected" are both grey and are told apart by the UNDERLINE. There is no orange.
 # NEVER call `nord status` from here: its DNS sweep re-touches/clears the
 # refresh-needed flag — a side effect a 30s poller must not have.
 CFG_DIR="$HOME/.config/nordvpn-native"
@@ -46,15 +51,17 @@ fi
 
 ARGS=()
 paint() {  # $1=item name  $2=country code  $3=idle text
-  local color label="$3"
+  local color rule=$TRANSPARENT label="$3"
   if   [ "$BUSY" = "$1" ];                    then color=$YELLOW; label="…"
   elif [ "$2" != "$COUNTRY" ];                then color=$GREY
   elif [ -f "$CFG_DIR/refresh-needed" ];      then color=$MAGENTA
   elif [ "$2" = "$CONN_CC" ];                 then color=$PINK
   elif [ "$2" = "$CONNECTING_CC" ];           then color=$YELLOW
-  else                                             color=$ORANGE
+  else                                             color=$GREY
   fi
-  ARGS+=(--set "$1" label="$label" label.color="$color")
+  # The underline marks the SELECTED country and always matches the colour above it.
+  if [ "$2" = "$COUNTRY" ]; then rule=$color; fi
+  ARGS+=(--set "$1" label="$label" label.color="$color" icon.color="$rule")
 }
 
 paint vpn_be be BE
