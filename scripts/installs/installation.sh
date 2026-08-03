@@ -71,7 +71,7 @@ bash "$INSTALLS/setup_macos.sh"
 next_step "Wallpaper (solid black)"
 bash "$INSTALLS/setup_wallpaper.sh"
 
-next_step "Window manager services (sketchybar, borders, aerospace LaunchAgent)"
+next_step "Window manager services (aerospace -> sketchybar, borders)"
 bash "$INSTALLS/install_window_manager.sh"
 
 next_step "Node LTS via NVM"
@@ -89,7 +89,7 @@ bash "$INSTALLS/clone_repos.sh"
 next_step "dot-claude submodule + ~/.claude symlink"
 bash "$INSTALLS/setup_dot_claude.sh"
 
-next_step "Hourly checkpoint LaunchAgent"
+next_step "6-hourly checkpoint LaunchAgent"
 bash "$INSTALLS/install_checkpoint_launchd.sh"
 
 next_step "Docling CLI (uv tool + ML models)"

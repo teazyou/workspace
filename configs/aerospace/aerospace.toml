@@ -22,7 +22,7 @@ after-startup-command = [
     # regenerate the per-monitor top gaps and run the toggle from clean state,
     # so a (re)start re-establishes the default deterministically:
     # no performance-mode.state => performance mode lands ON.
-    'exec-and-forget source ~/workspace/configs/aerospace/lib-paths.sh; for i in {1..20}; do sketchybar --query connectivity >/dev/null 2>&1 && break; sleep 0.3; done; ~/workspace/configs/aerospace/apply-display-profile.sh --force; rm -f "$PERFORMANCE_MODE_STATE"; ~/workspace/configs/aerospace/performance-mode.sh'
+    'exec-and-forget source ~/workspace/configs/aerospace/lib-paths.sh; for i in {1..20}; do sketchybar --query connectivity >/dev/null 2>&1 && break; sleep 0.3; done; ~/workspace/configs/aerospace/apply-display-profile.sh; rm -f "$PERFORMANCE_MODE_STATE"; ~/workspace/configs/aerospace/performance-mode.sh'
 ]
 
 # Notify Sketchybar about workspace change (spaces item repaint).
@@ -80,16 +80,18 @@ persistent-workspaces = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
 # Assign workspaces to specific monitors
 # Workspaces 1-6 -> Main monitor (the menu-bar display)
 # Workspaces 7-9 -> The "laptop-companion" secondary screen — AUTO-MANAGED.
-#   These three lines are rewritten by apply-display-profile.sh on every monitor
-#   change (see companion_ws_pattern there), so a single config works in both
-#   places:
+#   These three lines are rewritten by apply-display-profile.sh at every
+#   AeroSpace startup (see companion_ws_pattern there), so a single config works
+#   in both places:
 #     - built-in is SECONDARY (home: an external is main) -> 'built-in.*' (MacBook)
 #     - built-in is MAIN       (travel: portable is secondary) -> 'secondary'
 #   Naming the MacBook explicitly at home keeps 7-9 off an iPad sidecar; falling
 #   back to 'secondary' when the MacBook is main moves them onto the portable
 #   external (which reports an empty name and can't be matched by a regex).
-#   Whatever value is committed here is just the last state written; the watcher
-#   corrects it within ~5s of a display change.
+#   Whatever value is committed here is just the last state written. Nothing
+#   watches for display changes in the background: after plugging/unplugging a
+#   monitor, run `aerospace-restart` to re-run apply-display-profile.sh and
+#   correct these lines + the top gaps.
 # Workspace  0   -> Third monitor (Sidecar / AirPlay), only when connected.
 #   0 uses a name regex (not 'secondary'): with 3 monitors 'secondary' is
 #   ambiguous and leaked it onto the main display.

@@ -26,11 +26,9 @@
 # geometry while both layers keep painting (= a frozen empty pill). So each
 # division bracket stays drawing=on and BOTH paint layers toggle together.
 #
-# Unlike the old (removed) performance mode, this one does NOT touch the
-# display-profile LaunchAgent (it stays always-loaded), and there is no
-# traffic group anymore. JankyBorders is untouched as well. (The audio
-# division — volume + headset — was removed from the bar entirely, 2026-07,
-# so it is no longer part of the managed set.)
+# Scope: sketchybar items only. No LaunchAgent and no other process is touched —
+# JankyBorders keeps running as-is. The managed set is exactly the resources and
+# connectivity divisions plus spacer0/1.
 #
 # State: /tmp/performance-mode.state (PERFORMANCE_MODE_STATE in lib-paths.sh).
 # Clean-state convention: file absent/empty => the next run lands in the

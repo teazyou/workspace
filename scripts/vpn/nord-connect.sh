@@ -3,14 +3,15 @@
 # (RunAtLoad at login + WatchPaths on resolv.conf = every network change, including the
 # ones our own tunnels cause). NO polling, NO resident process: runs for seconds and exits.
 #
-# Duties:
-#   - first run after a REBOOT (detected via kern.boottime stored in boot-id — NOT a /tmp
-#     marker, which macOS deletes after 3 days of uptime): reset state to
-#     country=singapore + enabled=1 — "on restart the VPN always comes back, on Singapore".
+# Duty (single):
 #   - if enabled and NOTHING is connected: reconnect the saved country (wake, coffee-shop
 #     Wi-Fi, tunnel drop). If ANY Nord config is already Connected -> leave it alone. If
 #     one is Connecting -> exit (a second start would deadlock the single personal-VPN
 #     slot — observed on macOS 26).
+#
+# State is PERSISTENT across reboots: whatever `country`/`enabled` held at shutdown is what
+# comes back up. Nothing here overrides the saved state, so `nord off` is durable across
+# reboots too.
 #
 # Coordination: shares /tmp/nordvpn-native.lock with nord.sh. The lock is taken ONLY
 # around the mutating phase (after the network wait) and non-blocking: if the CLI holds
@@ -25,17 +26,6 @@ log() { echo "$(date '+%F %T') $*"; }
 
 [ -x "$VPNUTIL" ] || exit 0
 mkdir -p "$CFG_DIR"
-
-# --- boot detection: kern.bootsessionuuid is stable across sleep/wake and unique per
-# boot. (kern.boottime is NOT: it gets recalculated after wake — observed 2026-07-22:
-# every wake looked like a reboot, force-re-enabling the VPN the user had turned off.)
-BOOT_ID=$(sysctl -n kern.bootsessionuuid 2>/dev/null || echo unknown)
-if [ "$BOOT_ID" != "$(cat "$CFG_DIR/boot-id" 2>/dev/null)" ]; then
-  echo sg > "$CFG_DIR/country"
-  echo 1  > "$CFG_DIR/enabled"
-  echo "$BOOT_ID" > "$CFG_DIR/boot-id"
-  log "boot: state reset to singapore/enabled"
-fi
 
 # --- cheap pre-filters (no lock) ---
 [ "$(cat "$CFG_DIR/enabled" 2>/dev/null || echo 1)" = "1" ] || exit 0

@@ -6,7 +6,6 @@
 #   - performance-mode.sh       (PERFORMANCE_MODE_STATE)
 #   - open-dock-app.sh          (PLACEMENT_CAP_SECONDS)
 #   - aerospace.toml startup    (PERFORMANCE_MODE_STATE)
-#   - apply-display-profile.sh  (path contract only)
 #
 # IMPORTANT: every consumer runs under `set -euo pipefail`. Every name a
 # consumer references MUST be defined here or sourcing trips on an unset var.

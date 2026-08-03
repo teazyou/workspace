@@ -71,7 +71,7 @@ Pipeline on every push:
 4. On success: `run_repo_specific_cleanup` (a per-repo extension point matched on the
    `<owner>/<name>` parsed from `remote.origin.url`; currently every block is commented, so
    it's a no-op template — the `secondbrain` aggressive-gc block is intentionally disabled
-   because the hourly checkpoint would otherwise gc the vault every idle hour) and
+   because the checkpoint job would otherwise gc the vault on every idle run) and
    `run_local_post_push_hook` (runs an executable `.git/hooks/post-push` if one exists).
 5. On failure: prints "Push failed." and exits 1 (so the checkpoint loop treats it as
    unpushed and retries next run).
@@ -126,7 +126,7 @@ the hash. The per-repo previous fingerprint is cached in
 | Condition | Action |
 |---|---|
 | signature unavailable (`sig` empty) | `skip … (signature unavailable)` |
-| `sig != prev` (changed in the last interval) | `skip … (modified in the last hour)` — still typing |
+| `sig != prev` (changed in the last interval) | `skip … (modified since the previous run)` — still typing |
 | `sig == prev` (idle) | `checkpoint <folder>` → `checkpoint_folder` |
 
 There is deliberately **no "skip if clean" shortcut**: an idle-but-clean repo is still run
@@ -135,7 +135,7 @@ failure) gets its push retried. The log is at `logs/checkpoint_cron.log` and sel
 the last 1000 lines.
 
 > **Net behaviour contrast:** `checkpoint_all.sh` = "commit/push everything *right now*".
-> `checkpoint_cronjob.sh` = "commit/push only the repos that went *quiet* since last hour."
+> `checkpoint_cronjob.sh` = "commit/push only the repos that went *quiet* since the previous run."
 > Both ultimately funnel through `gcommit.sh` + `gpush.sh`.
 
 ### The schedule (LaunchAgent, not cron)
@@ -144,10 +144,19 @@ the last 1000 lines.
 16 of the install — see [bootstrap-flow.md](../install/bootstrap-flow.md)) writes
 `~/Library/LaunchAgents/com.teazyou.checkpoint.plist` with:
 
-- `StartCalendarInterval` → **Minute 0**: fires at **minute 0 of every hour** (this is where
-  the hourly cadence is actually defined — the scripts themselves are schedule-agnostic).
+- `StartCalendarInterval` → an **array of four `{Hour, Minute 0}` dicts**: fires at
+  **00:00, 06:00, 12:00 and 18:00**, i.e. every 6 hours. This is where the cadence is
+  defined — the scripts themselves are schedule-agnostic. launchd has no "every N hours"
+  primitive, so the firing times are listed explicitly; a run missed while the machine was
+  asleep/off fires once shortly after wake (launchd coalesces misses, it never replays each
+  one).
 - `RunAtLoad` → **false**: it does *not* fire on login/bootstrap.
 - Logs to `logs/checkpoint_launchd.{out,err}.log`.
+
+> **Consequence of the 6 h cadence:** the idle gate compares a repo against its state
+> *6 hours ago*, so a repo only auto-commits after a full quiet 6-hour window. Use the manual
+> `checkpoint` alias ([`checkpoint_all.sh`](../../scripts/checkpoint_all.sh)) when you want an
+> immediate unconditional commit/push.
 
 **Why a LaunchAgent and not cron:** the checkpoint `git push` uses an HTTPS remote whose
 credentials live in the macOS **login keychain**. cron runs outside the GUI login session and
@@ -156,7 +165,7 @@ would fail; a LaunchAgent runs inside the user's GUI session and can. The instal
 **migrates away** any leftover `checkpoint_cronjob.sh` crontab entry, and re-bootstraps the
 agent on every install so the latest plist wins.
 
-> **Fresh-machine note:** the first hourly push can still fail until the GitHub credential is
+> **Fresh-machine note:** the first scheduled push can still fail until the GitHub credential is
 > cached in the login keychain (which happens the first time you run an interactive
 > `git push`/`git clone` over HTTPS). `git add`/`commit` succeed regardless and the job
 > self-heals on the next run.

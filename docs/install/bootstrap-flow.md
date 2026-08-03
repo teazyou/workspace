@@ -42,13 +42,13 @@ Bootstrap hard-fails early if the user isn't in the `admin` group (`dseditgroup 
 | 7 | Touch ID for sudo | [`install_touch_id_sudo.sh`](../../scripts/installs/install_touch_id_sudo.sh) |
 | 8 | macOS defaults | [`setup_macos.sh`](../../scripts/installs/setup_macos.sh) |
 | 9 | Wallpaper (solid black) | [`setup_wallpaper.sh`](../../scripts/installs/setup_wallpaper.sh) |
-| 10 | Window manager services (sketchybar, borders, aerospace LaunchAgent) | [`install_window_manager.sh`](../../scripts/installs/install_window_manager.sh) |
+| 10 | Window manager services (aerospace → sketchybar, borders) | [`install_window_manager.sh`](../../scripts/installs/install_window_manager.sh) |
 | 11 | Node LTS via NVM | [`install_node.sh`](../../scripts/installs/install_node.sh) |
 | 12 | MySQL + PostgreSQL initial setup | [`install_database.sh`](../../scripts/installs/install_database.sh) |
 | 13 | Xcode via mas | [`install_xcode_mas.sh`](../../scripts/installs/install_xcode_mas.sh) |
 | 14 | Clone secondbrain + create ~/dev | [`clone_repos.sh`](../../scripts/installs/clone_repos.sh) |
 | 15 | dot-claude submodule + ~/.claude symlink | [`setup_dot_claude.sh`](../../scripts/installs/setup_dot_claude.sh) |
-| 16 | Hourly checkpoint LaunchAgent | [`install_checkpoint_launchd.sh`](../../scripts/installs/install_checkpoint_launchd.sh) |
+| 16 | 6-hourly checkpoint LaunchAgent | [`install_checkpoint_launchd.sh`](../../scripts/installs/install_checkpoint_launchd.sh) |
 | 17 | Docling CLI (uv tool + ML models) | [`install_docling.sh`](../../scripts/installs/install_docling.sh) |
 
 All sub-scripts source [`helper_prompt.sh`](../../scripts/installs/helper_prompt.sh) for the `log_ok` / `log_err` / `log_wait` / `log_info` / `log_step` output helpers and the `prompt_continue` / `prompt_command` manual-pause helpers. `helper_prompt.sh` defaults the path vars (`: "${INSTALLS:=…}"`) so each sub-script can also be run standalone, and it normalises the `\033[…m` color strings from `zsh/configs/colors.zsh` into real escapes via `printf %b` (zsh's `echo` interprets them, bash's doesn't).
@@ -57,12 +57,11 @@ All sub-scripts source [`helper_prompt.sh`](../../scripts/installs/helper_prompt
 
 ## Ordering / dependency graph (the load-bearing constraints)
 
-The step order is **not** arbitrary. These four constraints are the reason it is what it is, and none of them is documented anywhere else in prose:
+The step order is **not** arbitrary. These three constraints are the reason it is what it is, and none of them is documented anywhere else in prose:
 
 1. **`install_brew` runs first** because it provides the tools every later step consumes: `nvm` (→ step 11), `mas` (→ step 13), `gh` (→ steps 14/15), `mysql` + `postgresql@N` (→ step 12), plus `sketchybar`/`borders`/`aerospace` casks (→ step 10). A later step that can't find its tool fails loudly with "did install_brew.sh run?" (e.g. `install_node.sh`, `install_xcode_mas.sh`, `clone_repos.sh`, `install_database.sh`).
-2. **`setup_symlinks` (step 3) MUST precede `install_window_manager` (step 10).** `install_window_manager.sh` loads the display-profile LaunchAgent with `launchctl bootstrap "gui/$UID_" "$PLIST"` where `$PLIST=~/Library/LaunchAgents/com.aerospace.display-profile.plist` — and that path is a **symlink created by `setup_symlinks.sh`**. The window-manager script **hard-exits** (`exit 1`) if the symlink is missing: `"LaunchAgent symlink missing: $PLIST (setup_symlinks.sh should have created it)"`.
-3. **`clone_repos`'s `gh auth login` (step 14) is the auth GATE for the private dot-claude submodule (step 15).** The `configs/dot-claude` submodule is a *private* repo, uncloneable until `gh` holds a token. `setup_dot_claude.sh` checks `gh auth status` and **hard-exits** if not authenticated (`"gh CLI is not authenticated. Run clone_repos.sh first…"`). It then runs `gh auth setup-git` to wire git's HTTPS to the gh token before `git submodule update --init configs/dot-claude`. This is also why bootstrap clones the repo non-recursively — the submodule simply can't come down that early.
-4. **`install_touch_id_sudo` (step 7) runs before `install_xcode_mas` (step 13).** The Xcode step needs `sudo` for `xcodebuild -license accept` and `-runFirstLaunch`; with Touch-ID-for-sudo already wired, those prompts are a fingerprint instead of a typed password. (Functional even without it — sudo just falls back to a password — but the ordering is intentional.)
+2. **`clone_repos`'s `gh auth login` (step 14) is the auth GATE for the private dot-claude submodule (step 15).** The `configs/dot-claude` submodule is a *private* repo, uncloneable until `gh` holds a token. `setup_dot_claude.sh` checks `gh auth status` and **hard-exits** if not authenticated (`"gh CLI is not authenticated. Run clone_repos.sh first…"`). It then runs `gh auth setup-git` to wire git's HTTPS to the gh token before `git submodule update --init configs/dot-claude`. This is also why bootstrap clones the repo non-recursively — the submodule simply can't come down that early.
+3. **`install_touch_id_sudo` (step 7) runs before `install_xcode_mas` (step 13).** The Xcode step needs `sudo` for `xcodebuild -license accept` and `-runFirstLaunch`; with Touch-ID-for-sudo already wired, those prompts are a fingerprint instead of a typed password. (Functional even without it — sudo just falls back to a password — but the ordering is intentional.)
 
 Note also: `setup_dot_claude` (15) runs **after** `clone_repos` (14), and `oh_my_zsh` (2) runs **before** `setup_symlinks` (3) on purpose — the OMZ installer is told `KEEP_ZSHRC=yes RUNZSH=no CHSH=no` so it never writes its own `~/.zshrc`, leaving the slot clean for step 3 to symlink our real one into place. And `install_docling` (17) is deliberately **last and self-contained**: uv is *not* in `install_brew.sh`'s formula list — the docling installer idempotently installs uv itself (`brew install uv`), so its only ordering requirement is Homebrew on PATH (true from bootstrap onward); sitting last also puts its ~1.2 GB model prefetch after every interactive pause point, so the tail of the run is unattended.
 
@@ -83,13 +82,13 @@ Each value below is read from the sub-script's actual source. The "idempotency c
 | 7 install_touch_id_sudo | uncommented `auth sufficient pam_tid.so` already present in `/etc/pam.d/sudo_local` | copies Apple's `sudo_local.template` (needs Sonoma+), `sed`-uncomments the `pam_tid.so` line, and **appends** it directly if the template format isn't recognised. **requires sudo once.** |
 | 8 setup_macos | none — `defaults write` is naturally idempotent | Finder (path/status bar, hidden files), keyboard (`KeyRepeat=2`, `InitialKeyRepeat=15`, press-and-hold off), screenshots (`~/Pictures/Screenshots`, png), Dock (autohide, `tilesize=36`), dark mode, expanded save panels, `.DS_Store` off on network/USB. `killall Finder Dock` to apply. |
 | 9 setup_wallpaper | none — re-applies each run | uses `/System/Library/Desktop Pictures/Solid Colors/Black.png`, falls back to a generated 1×1 black PNG. Sets via `osascript … every desktop`, then deletes `~/Library/Application Support/Dock/desktoppicture.db` to bust the Sonoma+ cache. |
-| 10 install_window_manager | `pgrep -xq AeroSpace`; LaunchAgent: `launchctl print "gui/$UID_/com.aerospace.display-profile"` | launches `AeroSpace.app` once (its `after-startup-command` brings up sketchybar + borders — the script only *sanity-checks* those with `pgrep`, deliberately **not** `brew services start`, to avoid racing AeroSpace). **Hard-exits if the display-profile symlink is missing** (see constraint 2). |
+| 10 install_window_manager | `pgrep -xq AeroSpace` | launches `AeroSpace.app` once (its `after-startup-command` brings up sketchybar + borders, then generates the per-monitor gaps via `apply-display-profile.sh --force` — the script only *sanity-checks* sketchybar/borders with `pgrep`, deliberately **not** `brew services start`, to avoid racing AeroSpace). No LaunchAgent involved — the WM stack has none. |
 | 11 install_node | `nvm install --lts` is a no-op when LTS present | sources `nvm.sh` from `$(brew --prefix)/opt/nvm/nvm.sh`; `nvm alias default 'lts/*'`. |
 | 12 install_database | MySQL: `brew services list` shows `mysql started`; secure step: marker file **`~/.workspace_mysql_secured`**; Postgres: service `started` + `createdb` ignores "exists" | uses `brew services run` (**not** `start`) so neither DB registers a login auto-start. **interactive:** `mysql_secure_installation` (you set the root password — no creds in this public repo). To re-run the secure step: `rm ~/.workspace_mysql_secured`. Creates a default DB named after `$(whoami)` so bare `psql` works. |
 | 13 install_xcode_mas | `[[ -d /Applications/Xcode.app ]]` (install step only) | App Store ID `497799835` via `mas install`. **interactive:** must be signed into the App Store first (`mas account` check; Apple removed `mas signin`). Always runs `sudo xcodebuild -license accept` + `-runFirstLaunch` even on re-runs. |
 | 14 clone_repos | `~/dev`: `[[ -d ]]`; gh: `gh auth status`; secondbrain: `[[ -d ~/secondbrain/.git ]]` | **interactive:** `gh auth login` (browser/device-code flow) — the auth gate for step 15. `mkdir -p ~/dev` (empty; the `dev` zsh function cd's here). `gh repo clone teazyou/secondbrain`. |
 | 15 setup_dot_claude | submodule: populated (`$SRC/settings.json` or non-empty + `.git`); symlink: `~/.claude` already `-L` → `$SRC` | `gh auth setup-git` → `git -C "$WORKSPACE" submodule update --init configs/dot-claude` → symlink `~/.claude → configs/dot-claude`. A pre-existing real `~/.claude` dir is **moved** to `~/.claude.bak.$(date +%s)`, never deleted (OAuth token lives in Keychain, so the move doesn't log you out). Verifies `~/.claude/settings.json` resolves. **Treats the submodule as a black box** — only this wiring matters. |
-| 16 install_checkpoint_launchd | already-loaded label → `bootout` then `bootstrap` (always reload) | writes `~/Library/LaunchAgents/com.teazyou.checkpoint.plist` (`StartCalendarInterval` minute 0, `RunAtLoad=false`). First migrates away any old `checkpoint_cronjob.sh` crontab entry. LaunchAgent (not cron) because cron can't reach the login-keychain GitHub credential for `git push`. |
+| 16 install_checkpoint_launchd | already-loaded label → `bootout` then `bootstrap` (always reload) | writes `~/Library/LaunchAgents/com.teazyou.checkpoint.plist` (`StartCalendarInterval` array → 00:00/06:00/12:00/18:00, `RunAtLoad=false`). First migrates away any old `checkpoint_cronjob.sh` crontab entry. LaunchAgent (not cron) because cron can't reach the login-keychain GitHub credential for `git push`. |
 | 17 install_docling | uv: `command -v uv` or `~/.local/bin/uv` present; docling: `[[ -x ~/.local/bin/docling ]]`; models: `~/.cache/docling/models` exists non-empty | isolated uv tool env with **uv-managed Python 3.12** (system python3 is 3.9, docling needs ≥3.10; uv auto-downloads the interpreter). Installs uv via `brew install uv` if absent — uv is NOT in `install_brew.sh`. Binary-path checks (not `command -v`) for the same no-`~/.zshrc` reason as step 5. Model prefetch (`docling-tools models download`, ~1.2 GB → enables offline `--artifacts-path` use) tolerates failure: the partial dir is removed and the run **continues** (docling fetches models on first use). Force redo: `uv tool uninstall docling` / `rm -rf ~/.cache/docling/models`. |
 
 ### Full `install_brew.sh` formula + cask lists (read from source)
@@ -108,13 +107,12 @@ This is the **complete** list — do not trust partial audits.
 
 ## Symlink targets created
 
-[`setup_symlinks.sh`](../../scripts/installs/setup_symlinks.sh) (step 3) creates exactly **6** links. Its `make_link` helper: already-correct link → no-op; wrong link → `rm`; real file/folder → moved to `<name>.bak.$(date +%s)` (never deleted).
+[`setup_symlinks.sh`](../../scripts/installs/setup_symlinks.sh) (step 3) creates exactly **5** links. Its `make_link` helper: already-correct link → no-op; wrong link → `rm`; real file/folder → moved to `<name>.bak.$(date +%s)` (never deleted).
 
 | System path (link) | → repo source |
 |---|---|
 | `~/.zshrc` | `zsh/zshrc.zsh` |
 | `~/.aerospace.toml` | `configs/aerospace/aerospace.toml` |
-| `~/Library/LaunchAgents/com.aerospace.display-profile.plist` | `configs/aerospace/com.aerospace.display-profile.plist` |
 | `~/.config/borders` | `configs/borders` (whole dir) |
 | `~/.config/sketchybar` | `configs/sketchybar` (whole dir) |
 | `~/Library/Application Support/Code/User/settings.json` | `configs/vscode/settings.json` |
@@ -125,7 +123,7 @@ Plus a 7th, whole-folder link made later by [`setup_dot_claude.sh`](../../script
 |---|---|
 | `~/.claude` | `configs/dot-claude` (the private submodule) |
 
-> **`setup_symlinks.sh` and `_index.md` currently OVERCLAIM this as "the canonical map."** It covers only **6 of the 8** documented symlinks in `_index.md`. The two missing from the script are the AutoRaise config and the AutoRaise daemon plist (see next section). Treat the "canonical map" label as aspirational until the code is fixed — `setup_symlinks.sh` is *a* map, not *the* map.
+> **`setup_symlinks.sh` and `_index.md` currently OVERCLAIM this as "the canonical map."** It covers only **5 of the 7** documented symlinks in `_index.md`. The two missing from the script are the AutoRaise config and the AutoRaise daemon plist (see next section). Treat the "canonical map" label as aspirational until the code is fixed — `setup_symlinks.sh` is *a* map, not *the* map.
 
 ---
 
@@ -143,9 +141,9 @@ Three independent omissions stack up:
 
 **Net effect:** after a clean bootstrap, focus-follows-mouse does **not** work at all. AutoRaise must be installed (e.g. `brew install --cask autoraise` / from its GitHub) **and** wired (config symlinked, daemon bootstrapped) out-of-band.
 
-### Contrast: `aerospace-restart.sh` *does* manage both
+### Contrast: `aerospace-restart.sh` *does* manage it
 
-[`scripts/aerospace-restart.sh`](../../scripts/aerospace-restart.sh) — the **runtime** restart helper, not part of the install — boots out and re-bootstraps **both** LaunchAgents (`com.aerospace.display-profile`, `com.autoraise.daemon`) and kills/relaunches `AeroSpace`, `sketchybar`, `borders`, `AutoRaise`. So the runtime story is complete; the *install* story is not. If you ever fix the install gap, mirror what `aerospace-restart.sh` already does.
+[`scripts/aerospace-restart.sh`](../../scripts/aerospace-restart.sh) — the **runtime** restart helper, not part of the install — boots out and re-bootstraps the `com.autoraise.daemon` LaunchAgent (the only one the WM stack still has) and kills/relaunches `AeroSpace`, `sketchybar`, `borders`, `AutoRaise`. So the runtime story is complete; the *install* story is not. If you ever fix the install gap, mirror what `aerospace-restart.sh` already does.
 
 ### 2. Native NordVPN IKEv2 (deliberately not wired)
 

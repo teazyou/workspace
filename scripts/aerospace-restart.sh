@@ -6,28 +6,25 @@
 #   - AeroSpace               (tiling WM; launches sketchybar + borders on startup)
 #   - sketchybar              (status bar)
 #   - borders / JankyBorders  (window borders)
-#   - com.aerospace.display-profile   LaunchAgent (auto gap profile)
-#   - com.autoraise.daemon            LaunchAgent (focus-follows-mouse / AutoRaise)
+#   - com.autoraise.daemon    LaunchAgent (focus-follows-mouse / AutoRaise)
+#
+# Also the way to re-apply the per-monitor gaps + the workspace 7-9 assignment
+# after a monitor change: AeroSpace's after-startup-command re-runs
+# apply-display-profile.sh.
 #
 # Wired to the `aerospace-restart` alias (see zsh/alias/osx.zsh).
 
 set -u
 
 DOMAIN="gui/$(id -u)"
-AGENTS_DIR="$HOME/Library/LaunchAgents"
-AGENTS=(
-  com.aerospace.display-profile
-  com.autoraise.daemon
-)
+AGENT="com.autoraise.daemon"
+AGENT_PLIST="$HOME/Library/LaunchAgents/$AGENT.plist"
 
 echo "==> Stopping window-manager stack"
 
-# Unload LaunchAgents. display-profile is RunAtLoad + StartInterval (no KeepAlive);
-# AutoRaise is KeepAlive. Both are booted out (not just killed) so launchd
-# doesn't immediately respawn the KeepAlive one.
-for agent in "${AGENTS[@]}"; do
-  launchctl bootout "$DOMAIN/$agent" 2>/dev/null && echo "    unloaded $agent"
-done
+# AutoRaise is KeepAlive, so its agent is booted out (not just killed) —
+# otherwise launchd respawns it immediately.
+launchctl bootout "$DOMAIN/$AGENT" 2>/dev/null && echo "    unloaded $AGENT"
 
 # Kill the rest (sketchybar/borders are spawned by AeroSpace, AutoRaise by its agent)
 for proc in AeroSpace sketchybar borders AutoRaise; do
@@ -39,21 +36,18 @@ sleep 1
 
 echo "==> Starting window-manager stack"
 
-# AeroSpace first — its after-startup-command relaunches sketchybar + borders
+# AeroSpace first — its after-startup-command relaunches sketchybar + borders and
+# regenerates the per-monitor gaps
 open -a AeroSpace && echo "    started AeroSpace (+ sketchybar + borders)"
 
-# Wait for AeroSpace to be ready before the agents that depend on it. Break on a
-# readiness query (the socket the agents talk to is up), not mere process
+# Wait for AeroSpace to be ready before bringing AutoRaise back, so the two don't
+# fight over focus mid-startup. Break on a readiness query, not mere process
 # existence — pgrep can succeed while the socket is still initializing.
 for _ in 1 2 3 4 5 6 7 8 9 10; do
   aerospace list-workspaces --focused >/dev/null 2>&1 && break
   sleep 0.5
 done
 
-# Reload LaunchAgents (display-profile gap generator + AutoRaise daemon)
-for agent in "${AGENTS[@]}"; do
-  launchctl bootstrap "$DOMAIN" "$AGENTS_DIR/$agent.plist" 2>/dev/null \
-    && echo "    loaded $agent"
-done
+launchctl bootstrap "$DOMAIN" "$AGENT_PLIST" 2>/dev/null && echo "    loaded $AGENT"
 
 echo "==> Done."

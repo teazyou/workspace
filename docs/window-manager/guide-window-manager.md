@@ -21,7 +21,6 @@
 
 - ./configs/aerospace/aerospace.toml
 - ./configs/aerospace/apply-display-profile.sh
-- ./configs/aerospace/com.aerospace.display-profile.plist
 - ./doc.aerospace.md
 - ./features.aerospace.md
 - ./configs/aerospace/lib-paths.sh
@@ -58,19 +57,14 @@
 `./configs/aerospace/apply-display-profile.sh`
 - Auto-adjusts AeroSpace outer.top gap based on connected monitor resolutions
 - Uses lookup table for common resolutions (4K, 1440p, 1080p, MacBook Retina)
-- Detects display changes via fingerprint, updates aerospace.toml, reloads config
-- The fingerprint folds in **which display is main** (`builtin_is_main`) on top of the sorted resolutions, so swapping the main display on the same physical monitors still re-triggers a rebuild
+- Reads the connected displays from `system_profiler SPDisplaysDataType` (one capture per run, passed to every helper), rewrites aerospace.toml, reloads config. Runs unconditionally — no change detection, because it only runs once per AeroSpace start
+- Bails without touching the config if no display is detected (`system_profiler` returns empty in some non-GUI contexts), so a blind rewrite can't clobber a working profile with the no-monitor fallback gap
 - Single source of truth for outer.top — detects the main display via `Main Display: Yes` in system_profiler and tracks its gap (main_gap)
 - The bar draws on the MAIN monitor only (sketchybarrc `display=main`), so with 2+ monitors (main detected) it always emits the main-only gap array — the bar gap stays on the main monitor and all other monitors reclaim the top space, regardless of monitor count; the per-resolution multi-entry array remains only as the no-main-detected fallback. The old `monitor.secondary` override is gone (it only worked for 2-monitor setups)
 - **Also auto-manages the workspace 7-9 monitor assignment** (the "laptop-companion" workspaces) in aerospace.toml's `[workspace-to-monitor-force-assignment]`, rewriting just the `7/8/9 =` lines (1-6 `main` and 0 `sidecar.*` untouched). `companion_ws_pattern`: when the MacBook built-in is SECONDARY (an external is main, e.g. home desk) → `'built-in.*'` (names the MacBook explicitly so 7-9 never grab an iPad sidecar); when the built-in is itself MAIN (e.g. travel with a portable external) → `'secondary'`, because `'built-in.*'` would then collide with workspaces 1-6 on the main display. The portable external reports an empty monitor name to AeroSpace so it can't be matched by a name regex — `'secondary'` resolves to it as the only non-main screen in the travel setup
-- Trigger model for the 7-9 flip: applied on every AeroSpace (re)start via the startup `apply-display-profile.sh --force` call, and on hot display swaps within ~60s via the always-loaded display-profile LaunchAgent (60s StartInterval)
+- **Trigger model — start-only, no poller:** the gaps + the 7-9 flip are applied on every AeroSpace (re)start via the startup `apply-display-profile.sh` call, and nowhere else. The WM stack has no LaunchAgent of its own. **So after plugging/unplugging a monitor, run `aerospace-restart` to re-fit the gaps and move workspaces 7-9.**
+- If a background poller is ever added back, its plist `EnvironmentVariables.PATH` MUST include `/usr/sbin`: the script's first call is `system_profiler` (`/usr/sbin/system_profiler`), and under `set -euo pipefail` a missing PATH entry aborts the whole run with exit 127 and an empty log
 - Edit for: gap values per resolution, adding new resolution mappings, the 7-9 companion-monitor logic
-
-`./configs/aerospace/com.aerospace.display-profile.plist`
-- LaunchAgent that runs apply-display-profile.sh every 60 seconds
-- Detects monitor connect/disconnect and auto-applies optimal gaps
-- Install to ~/Library/LaunchAgents/ and launchctl load to activate
-- Edit for: check interval timing
 
 `./doc.aerospace.md`
 - GENERIC upstream AeroSpace + SketchyBar + JankyBorders install/setup tutorial — step-by-step instructions for configuring the full stack from scratch
@@ -110,13 +104,14 @@
 - Bracket hiding (the historical empty-pill lesson): a SketchyBar bracket paints via TWO independent layers — the fill (`background.drawing`) AND the drop shadow (`background.shadow.drawing`) — and the item-level `drawing` flag controls NEITHER (bracket drawing=off just FREEZES the pill at its last geometry while both layers keep painting = a frozen empty pill). So the two division brackets stay drawing=on and BOTH paint layers are toggled together
 - OFF: restores drawing=on + the exact original freqs from items/*.sh (battery 60, vpn_be 30, vpn_sn 30, ethernet 30, wifi 30, cpu 5, ram 5), restores both bracket paint layers (the shadow back to theme.sh's `DIVISION_SHADOW_DRAWING`, so the theme stays authoritative for whether divisions cast shadows) + the spacers, then forces `sketchybar --update` so the frozen labels repopulate immediately and the state-driven ethernet item (hide-when-disconnected) recomputes its own icon visibility
 - State: /tmp/performance-mode.state (`PERFORMANCE_MODE_STATE` in lib-paths.sh); clean-state convention — file absent/empty ⇒ the next run lands in the startup default (here ON, writing "on"); toggling OFF removes the file
-- DIFFERENCE vs the old removed performance mode: does NOT touch the display-profile LaunchAgent (it stays always-loaded), and there is no traffic group anymore (removed with the energy cleanup); JankyBorders is untouched as well
+- Scope: sketchybar items only — no LaunchAgent and no other process is touched, JankyBorders keeps running as-is
 - Edit for: which items/divisions the mode hides, the restore freq table
 
 `./scripts/aerospace-restart.sh`
 - Full restart of the whole window-manager stack — wired to the `aerospace-restart` shell alias (`zsh/alias/osx.zsh`)
-- Stop phase: `launchctl bootout` the two LaunchAgents (display-profile, autoraise — AutoRaise is KeepAlive so a plain kill respawns it) then `killall` AeroSpace, sketchybar, borders, AutoRaise
-- Start phase: `open -a AeroSpace` (its after-startup-command relaunches sketchybar + borders), waits for AeroSpace to be up, then `launchctl bootstrap` the two LaunchAgents again
+- Stop phase: `launchctl bootout` the `com.autoraise.daemon` agent (the stack's only LaunchAgent; AutoRaise is KeepAlive so a plain kill respawns it) then `killall` AeroSpace, sketchybar, borders, AutoRaise
+- Start phase: `open -a AeroSpace` (its after-startup-command relaunches sketchybar + borders **and regenerates the per-monitor gaps**), waits for AeroSpace to be ready, then `launchctl bootstrap` the AutoRaise agent again
+- **Also the way to re-profile gaps + the workspace 7-9 assignment after a monitor change** — nothing else re-runs `apply-display-profile.sh`
 - Edit for: which agents/processes are cycled, start/stop ordering
 
 `./configs/autoraise/config`

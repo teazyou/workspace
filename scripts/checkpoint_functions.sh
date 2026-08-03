@@ -11,7 +11,7 @@ CHECKPOINT_FOLDERS=(
 # Content fingerprint of a repo's entire working tree -- every tracked
 # change plus every untracked file -- computed with git alone.
 #
-# The checkpoint loop compares this fingerprint between hourly runs: an
+# The checkpoint loop compares this fingerprint between scheduled runs: an
 # identical fingerprint means nothing was touched in the last interval,
 # so the repo is safe to commit; a different one means work is still in
 # progress and the repo is skipped.

@@ -2,7 +2,7 @@
 # scripts/installs/install_checkpoint_launchd.sh
 #
 # Purpose:
-#   Installs the hourly checkpoint job as a launchd LaunchAgent.
+#   Installs the 6-hourly checkpoint job as a launchd LaunchAgent.
 #
 #   Why a LaunchAgent and not cron:
 #     `git push` from the checkpoint job uses an HTTPS remote whose
@@ -14,13 +14,17 @@
 #     A LaunchAgent runs inside the user's GUI session and can.
 #
 # Behaviour:
-#   - Runs /Users/<user>/workspace/scripts/checkpoint_cronjob.sh at
-#     minute 0 of every hour (StartCalendarInterval).
+#   - Runs /Users/<user>/workspace/scripts/checkpoint_cronjob.sh every
+#     6 hours, at 00:00 / 06:00 / 12:00 / 18:00 (StartCalendarInterval
+#     array — launchd has no "every N hours" primitive, so the four
+#     firing times are listed explicitly).
 #   - RunAtLoad is false: the job does NOT fire on login/bootstrap,
 #     keeping behaviour identical to the old cron entry.
+#   - Missed runs (machine asleep/off at a firing time) fire once shortly
+#     after wake — launchd coalesces them, it never replays each miss.
 #
 # Note (fresh machine):
-#   The first hourly push can still fail until the GitHub credential is
+#   The first checkpoint push can still fail until the GitHub credential is
 #   cached in the login keychain — that happens the first time you run
 #   an interactive `git push`/`git clone` over HTTPS. `git add`/`commit`
 #   succeed regardless, and the job self-heals on the next run.
@@ -79,10 +83,32 @@ cat > "$PLIST" <<EOF
         <string>$CHECKPOINT_SCRIPT</string>
     </array>
     <key>StartCalendarInterval</key>
-    <dict>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
+    <array>
+        <dict>
+            <key>Hour</key>
+            <integer>0</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>6</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>12</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+        <dict>
+            <key>Hour</key>
+            <integer>18</integer>
+            <key>Minute</key>
+            <integer>0</integer>
+        </dict>
+    </array>
     <key>RunAtLoad</key>
     <false/>
     <key>EnvironmentVariables</key>
@@ -109,4 +135,4 @@ if launchctl print "$SERVICE_TARGET" &>/dev/null; then
 fi
 launchctl bootstrap "$DOMAIN" "$PLIST"
 log_ok "LaunchAgent loaded: $SERVICE_TARGET"
-log_ok "Hourly checkpoint LaunchAgent installed"
+log_ok "6-hourly checkpoint LaunchAgent installed (00/06/12/18)"

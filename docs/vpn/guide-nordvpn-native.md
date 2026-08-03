@@ -6,7 +6,7 @@ User contract:
 - `nord <country>` — one command to switch (belgium, france, singapore, vietnam, usa, malaysia).
 - Always reconnects by itself (login, wake, network change) — event-driven, never polled.
 - `nord off` (or the sketchybar VPN icon click, or the System Settings VPN toggle) = durable off.
-- **Every reboot resets to Singapore + enabled** (deliberate: chosen over "remember last country").
+- **State persists across reboots** — the machine comes back on whatever country/on-off state it had at shutdown. Nothing forces a default country.
 - The NordVPN GUI app is **fully uninstalled** (2026-07-22: `brew uninstall --zap --cask nordvpn` + manual purge of the container/prefs leftovers zap's globs missed — its root helper daemon had still been running on demand). Only this native stack remains; service credentials are account-level and unaffected.
 
 ## Components
@@ -20,7 +20,7 @@ User contract:
 | State dir | `~/.config/nordvpn-native/` (0700, **outside the repo**) | see below |
 | Log | `logs/nordvpn-native.log` | agent activity (gitignored) |
 
-`~/.config/nordvpn-native/` contents: `credentials` (NORD_USER/NORD_PASS service credentials, 0600, **never committed/logged**), `nord-root.der` (NordVPN Root CA), `nord-bundle.mobileconfig` (rendered profile, 0600 — embeds the credentials), `servers` (cc=hostname pins manifest), `country` (target cc), `enabled` (1/0), `boot-id` (kern.boottime of last seen boot), `refresh-needed` (flag file → the selected country's bar icon turns magenta).
+`~/.config/nordvpn-native/` contents: `credentials` (NORD_USER/NORD_PASS service credentials, 0600, **never committed/logged**), `nord-root.der` (NordVPN Root CA), `nord-bundle.mobileconfig` (rendered profile, 0600 — embeds the credentials), `servers` (cc=hostname pins manifest), `country` (target cc), `enabled` (1/0), `refresh-needed` (flag file → the selected country's bar icon turns magenta), `fail-stamp` (10-min same-network failure cooldown).
 
 ## Design decisions (do not silently reverse)
 
@@ -28,7 +28,7 @@ User contract:
 2. **ONE 6-payload profile, approved once.** macOS 26 removed headless profile installs (`profiles install` refuses; spike-verified). So all 6 countries + the Root CA payload ship in one `.mobileconfig`; after a single System Settings approval, `vpnutil` can start any of them headlessly. Consequence: server hostnames are **frozen at approval time** (see Refresh).
 3. **NO VPN On-Demand.** Tested live: an On-Demand-enabled payload fights manual control of the *other* payloads for macOS's **single personal-VPN slot** — observed both configs stuck "Connecting" forever with **all traffic blackholed** (no internet at all until one was toggled off by hand). Auto-reconnect is instead event-driven via launchd (next point). Do not re-add `OnDemandEnabled/OnDemandRules` to any payload.
 4. **Reconnect = launchd one-shot, not a daemon.** `RunAtLoad` (login) + `WatchPaths` on `/var/run/resolv.conf` + `/etc/resolv.conf` (fires on every network change: wake, Wi-Fi join, tunnel up/down). The script runs for seconds and exits; `ThrottleInterval 15` caps event bursts. **No StartInterval, no KeepAlive, no polling — keep it that way.**
-5. **Reboot → Singapore.** Boot detection compares `sysctl -n kern.bootsessionuuid` against the stored `boot-id`. Two rejected alternatives, both field-tested wrong: a `/tmp` marker (macOS purges `/tmp` files after ~3 days of uptime → false "boot" mid-session) and `kern.boottime` (recalculated after every sleep/wake → each wake looked like a reboot and force-re-enabled a VPN the user had turned off — the 2026-07-22 home-Wi-Fi incident).
+5. **Reboot keeps the last state — no boot reset.** `country`/`enabled` are read from disk as-is, so the VPN comes back exactly as you left it and `nord off` survives a reboot. If a "reset to country X on boot" rule is ever wanted, detect the boot with `sysctl -n kern.bootsessionuuid` against a stored id — the two obvious alternatives are field-tested WRONG: a `/tmp` marker (macOS purges `/tmp` after ~3 days of uptime → false "boot" mid-session) and `kern.boottime` (recalculated after every sleep/wake → every wake looks like a reboot and force-re-enables a VPN the user turned off).
 6. **Control tool = `vpnutil`** (Homebrew `timac/vpnstatus/vpnutil`, tap trusted via `brew trust timac/vpnstatus`). It is the only CLI that can start/stop profile-installed IKEv2 configs — `scutil --nc` cannot even see them. `networksetup` can't either.
 7. **Secrets stay out of the repo**: credentials + rendered mobileconfig live only in `~/.config/nordvpn-native/`, 0600. Repo scripts contain no secrets.
 
@@ -46,8 +46,8 @@ User contract:
 ## Flows
 
 - **`nord france`** → lock → stop all → start Nord-FR → write `country=fr`, `enabled=1` → `sketchybar --trigger vpn_change`.
-- **Login / wake / network change** → launchd fires `nord-connect.sh` → boot-id check (reboot? reset sg/enabled) → if enabled && nothing connected/connecting → wait for real network (≤120 s, one-shot, then exits) → lock → re-check → start saved country.
-- **`nord off`** → `enabled=0` → stop all. Durable across network events; only a reboot (or `nord on`/switch/toggle) re-enables.
+- **Login / wake / network change** → launchd fires `nord-connect.sh` → if enabled && nothing connected/connecting → wait for real network (≤120 s, one-shot, then exits) → lock → re-check → start saved country.
+- **`nord off`** → `enabled=0` → stop all. Durable across network events **and reboots**; only `nord on`/switch/toggle re-enables.
 - **`nord refresh`** → regenerate bundle from current API "best" per country → `open` it → **one manual approval** in System Settings (General → Device Management → NordVPN Native IKEv2 → Install). The profile's top-level `PayloadUUID` is content-derived — unchanged pins produce the identical profile (macOS ignores it), changed pins register as an update. Payload UUIDs are stable (uuid5) so the install **replaces** rather than duplicates.
 
 ## Ops
@@ -73,8 +73,8 @@ launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.teazyou.nordvpn-nati
 - The IKEv2 password sits in the installed profile; the profile file itself is 0600 and the account password is never involved (service credentials only, rotatable from the Nord dashboard).
 - `configs/dot-claude-preset/` note: the sketchybar plugin needs `/opt/homebrew/bin` prepended to PATH (sketchybar's env has no Homebrew) — already handled inside `plugins/vpn.sh`.
 - **Only BE/SN are represented on the bar**; the CLI still supports all 6 countries. If the selected country is fr/my/us/vn (or a config is started by hand outside `nord`), **both** bar icons render grey — indistinguishable from "VPN off", since nothing marks the selected country — and the real exit stays unrepresented: a known 2-icon limitation, not a bug.
-- **Every reboot resets the target to Singapore** (design decision 5) — so **SN is always the selected icon right after a reboot**.
+- **A reboot does not change the target** (design decision 5) — the selected country and the on/off state are whatever they were at shutdown, so the bar comes back showing the state you left.
 
 ## Verified test matrix (2026-07-22, macOS 26.5.2)
 
-All six countries connect via `nord <cc>`; off durable across a forced watcher run; toggle cycle; boot simulation (garbage boot-id + kickstart → reset to sg/enabled + auto-connect in ~7 s); Wi-Fi flap self-heal; bar states red/orange/grey + CC label (**superseded 2026-07-30: two-icon BE/SN bar, colour-only — orange, then a selection dot, then a selection underline were all tried and dropped; see the Bar item row and re-verify per that table**); single approval covers all 6 payloads.
+All six countries connect via `nord <cc>`; off durable across a forced watcher run; toggle cycle; reboot preserves `country`/`enabled`; Wi-Fi flap self-heal; bar states red/orange/grey + CC label (**superseded 2026-07-30: two-icon BE/SN bar, colour-only — orange, then a selection dot, then a selection underline were all tried and dropped; see the Bar item row and re-verify per that table**); single approval covers all 6 payloads.

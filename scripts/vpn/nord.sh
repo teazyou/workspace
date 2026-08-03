@@ -2,7 +2,8 @@
 # nord — NordVPN native IKEv2 CLI (zero-background design; see docs/vpn/guide-nordvpn-native.md).
 #   nord <country>   switch: belgium|be france|fr singapore|sg vietnam|vn usa|us malaysia|my
 #   nord on          reconnect the saved country (default singapore)
-#   nord off         durable off (survives network changes; reboot re-enables by design)
+#   nord off         durable off (survives network changes AND reboots — only `nord on`/
+#                    switch/toggle re-enables)
 #   nord toggle      on/off flip (used by the sketchybar vpn item click)
 #   nord rescue      emergency: durable off + Wi-Fi flap to rebuild network state
 #   nord status      state + tunnels + exit IP + pinned-server health
@@ -118,7 +119,7 @@ case "$cmd" in
     lock_acquire || exit 1
     stop_all || exit 1
     bar_refresh
-    echo "VPN off (durable — reboot re-enables and reverts to singapore)"
+    echo "VPN off (durable — survives reboots; re-enable with 'nord on' or a country switch)"
     ;;
   toggle)
     if [ -n "$(in_state Connected; in_state Connecting)" ]; then exec "$0" off; else exec "$0" on; fi

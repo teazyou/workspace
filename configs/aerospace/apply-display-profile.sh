@@ -1,13 +1,18 @@
 #!/bin/bash
 # AeroSpace Display Profile Auto-Switcher
-# Calculates optimal gaps based on each monitor's resolution
+#
+# Rewrites two things in ~/.aerospace.toml from the currently connected displays,
+# then reloads AeroSpace:
+#   - gaps.outer.top          per-monitor top gap (bar-sized on main, reclaimed elsewhere)
+#   - workspaces 7/8/9        the "laptop-companion" monitor assignment
+#
+# Sole caller: aerospace.toml's after-startup-command, i.e. once per AeroSpace
+# (re)start. Runs unconditionally — re-profile after a monitor change with
+# `aerospace-restart`.
 
 set -euo pipefail
 
-source ~/workspace/configs/aerospace/lib-paths.sh
-
 AEROSPACE_CONFIG="$HOME/.aerospace.toml"
-STATE_FILE="/tmp/aerospace-display-profile.state"
 LOG_FILE="/tmp/aerospace-display-profile.log"
 
 # Gap calculation settings - TUNE THESE VALUES
@@ -296,21 +301,6 @@ build_top_gap_config() {
     fi
 }
 
-# Get current fingerprint (for change detection)
-get_fingerprint() {
-    local sp_displays="${1:-$(system_profiler SPDisplaysDataType 2>/dev/null)}"
-    local resolutions
-    resolutions=$(printf '%s\n' "$sp_displays" | grep -E "Resolution:" | sort)
-    # Bail if no displays detected (system_profiler returns empty in some non-GUI contexts)
-    [[ -z "$resolutions" ]] && return 1
-    # Fold in which display is main so swapping the main display on the SAME
-    # physical monitors (e.g. via System Settings) still re-triggers a rebuild and
-    # lets the 7-9 assignment follow — resolutions alone wouldn't change then.
-    local bim="sec"
-    builtin_is_main "$sp_displays" && bim="main"
-    printf '%s|builtin=%s' "$resolutions" "$bim" | /sbin/md5 | cut -c1-8
-}
-
 # Update aerospace.toml with new gap values
 update_aerospace_config() {
     local outer_top="$1"
@@ -360,30 +350,22 @@ update_aerospace_config() {
 
 # Main
 main() {
-    local force="${1:-}"
-
-    # Capture the SPDisplaysDataType blob ONCE per tick and feed it to every
-    # consumer (get_fingerprint, build_top_gap_config -> get_monitors_config,
-    # companion_ws_pattern) instead of each spawning its own system_profiler.
-    # All those functions still default-arg to a fresh capture when called
-    # standalone, so they remain independently runnable.
+    # Capture the SPDisplaysDataType blob ONCE and feed it to every consumer
+    # (build_top_gap_config -> get_monitors_config, companion_ws_pattern) instead
+    # of each spawning its own system_profiler. All those functions still
+    # default-arg to a fresh capture when called standalone, so they remain
+    # independently runnable.
     local sp_displays
     sp_displays="$(system_profiler SPDisplaysDataType 2>/dev/null)"
 
-    # Check for changes
-    local fingerprint
-    fingerprint=$(get_fingerprint "$sp_displays") || { log "No displays detected, skipping"; exit 0; }
-
-    if [[ -f "$STATE_FILE" && "$force" != "--force" ]]; then
-        local last_fp
-        last_fp=$(cat "$STATE_FILE")
-        if [[ "$fingerprint" == "$last_fp" ]]; then
-            exit 0
-        fi
+    # Bail before touching the config if no display was detected (system_profiler
+    # returns empty in some non-GUI contexts) — a blind rewrite would emit the
+    # no-monitor fallback gap and clobber a working profile.
+    if ! printf '%s\n' "$sp_displays" | grep -q "Resolution:"; then
+        log "No displays detected, skipping"
+        exit 0
     fi
-
-    echo "$fingerprint" > "$STATE_FILE"
-    log "Display change detected (fingerprint: $fingerprint)"
+    log "Applying display profile"
 
     # Calculate and apply new config
     local top_gap_config
@@ -405,4 +387,4 @@ main() {
     fi
 }
 
-main "$@"
+main

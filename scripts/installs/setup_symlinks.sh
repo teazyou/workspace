@@ -9,8 +9,6 @@
 # Symlink map:
 #   ~/.zshrc                                       → workspace/zsh/zshrc.zsh
 #   ~/.aerospace.toml                              → workspace/configs/aerospace/aerospace.toml
-#   ~/Library/LaunchAgents/com.aerospace.display-profile.plist
-#                                                  → workspace/configs/aerospace/com.aerospace.display-profile.plist
 #   ~/.config/borders                              → workspace/configs/borders
 #   ~/.config/sketchybar                           → workspace/configs/sketchybar
 #   ~/Library/Application Support/Code/User/settings.json
@@ -70,10 +68,6 @@ make_link "$WORKSPACE/zsh/zshrc.zsh" \
 make_link "$APP_CONFIGS/aerospace/aerospace.toml" \
           "$HOME/.aerospace.toml" \
           "AEROSPACE-CONFIG"
-
-make_link "$APP_CONFIGS/aerospace/com.aerospace.display-profile.plist" \
-          "$HOME/Library/LaunchAgents/com.aerospace.display-profile.plist" \
-          "AEROSPACE-LAUNCHAGENT"
 
 # --- borders / sketchybar ---
 make_link "$APP_CONFIGS/borders" \

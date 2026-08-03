@@ -37,7 +37,7 @@ for folder in "${CHECKPOINT_FOLDERS[@]}"; do
     continue
   fi
   if [ "$sig" != "$prev" ]; then
-    echo "skip $folder (modified in the last hour)"
+    echo "skip $folder (modified since the previous run)"
     continue
   fi
   echo "checkpointing $folder"
