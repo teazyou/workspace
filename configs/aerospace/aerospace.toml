@@ -131,7 +131,7 @@ on-mode-changed = []
     outer.left =       5
     outer.bottom =     5
     # Top gap for SketchyBar on all monitors
-    outer.top =        [{ monitor."built-in.*" = 4 }, { monitor.main = 46 }, 5]
+    outer.top =        [{ monitor."built-in.*" = 4 }, { monitor.main = 39 }, 5]
     outer.right =      5
 
 # 'main' binding mode declaration
@@ -273,6 +273,18 @@ on-mode-changed = []
 # Float CrossOver windows so AeroSpace doesn't try to tile game windows
 [[on-window-detected]]
 if.app-id = 'com.codeweavers.CrossOver'
+run = 'layout floating'
+
+# Ravenswatch (Steam game run through CrossOver) — hands off entirely.
+# The CrossOver rule above does NOT catch it: the game runs as its own Wine
+# process ('Ravenswatch.exe') whose bundle id AeroSpace reports as
+# NULL-APP-BUNDLE-ID, so app-id matching can never fire. Match on the app NAME
+# instead. 'layout floating' is the strongest opt-out AeroSpace offers per app —
+# it is never tiled, resized, or reflowed by the WM (there is no per-app
+# "unmanage"; `aerospace enable off` is global). Regex is a substring match, so
+# it covers 'Ravenswatch.exe' and any launcher/crash-handler window of the game.
+[[on-window-detected]]
+if.app-name-regex-substring = 'Ravenswatch'
 run = 'layout floating'
 
 # Float Stickies notes so AeroSpace leaves them untiled (Stickies handles its own
