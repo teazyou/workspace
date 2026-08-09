@@ -276,20 +276,23 @@ if.app-id = 'com.codeweavers.CrossOver'
 run = 'layout floating'
 
 # Games run through CrossOver — hands off entirely. ADD NEW GAMES TO THIS REGEX.
-# The CrossOver app-id rule above does NOT catch them, because a CrossOver game
-# never presents a stable bundle id of its own:
-#   - Ravenswatch    -> app 'Ravenswatch.exe', bundle id NULL-APP-BUNDLE-ID
-#                       (a bare Wine process; no app-id rule can ever fire on it)
-#   - Path of Exile 2 -> app 'Path of Exile 2', bundle id
-#                       'com.codeweavers.CrossOverHelper.<bottle-hash>.<app-hash>'
-#                       (a per-installation hash — it would break on a rebuild)
-# So match on the app NAME, which is stable in both cases. 'layout floating' is
-# the strongest per-app opt-out AeroSpace offers — the window is never tiled,
-# resized, or reflowed (there is no per-app "unmanage"; `aerospace enable off` is
-# global). The regex is a substring match, so each entry also covers the game's
-# launcher / crash-handler windows ('Ravenswatch.exe' etc.).
+# The CrossOver app-id rule above does NOT catch them: a CrossOver game runs as a
+# bare Wine process whose bundle id AeroSpace reports as NULL-APP-BUNDLE-ID, so no
+# app-id rule can ever fire on it (Ravenswatch -> app 'Ravenswatch.exe',
+# Path of Exile 2 -> app 'PathOfExile.exe').
+# Beware the CrossOver LAUNCHER: while a game boots, its front window belongs to a
+# short-lived helper with a *different* app name ('Path of Exile 2') and a hashed
+# 'com.codeweavers.CrossOverHelper.<bottle-hash>.<app-hash>' bundle id, which is
+# then replaced by the real Wine process. Never build the rule from what
+# `list-windows` shows during startup — check again once the game is actually
+# running. The alternation below therefore covers BOTH spellings per game, and
+# '(?i)' makes the whole regex case-insensitive.
+# 'layout floating' is the strongest per-app opt-out AeroSpace offers — the window
+# is never tiled, resized, or reflowed (there is no per-app "unmanage";
+# `aerospace enable off` is global). Matching is a substring match, so each entry
+# also covers the game's launcher / crash-handler windows.
 [[on-window-detected]]
-if.app-name-regex-substring = 'Ravenswatch|Path of Exile 2'
+if.app-name-regex-substring = '(?i)ravenswatch|path ?of ?exile'
 run = 'layout floating'
 
 # Float Stickies notes so AeroSpace leaves them untiled (Stickies handles its own
