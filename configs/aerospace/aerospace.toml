@@ -275,16 +275,21 @@ on-mode-changed = []
 if.app-id = 'com.codeweavers.CrossOver'
 run = 'layout floating'
 
-# Ravenswatch (Steam game run through CrossOver) — hands off entirely.
-# The CrossOver rule above does NOT catch it: the game runs as its own Wine
-# process ('Ravenswatch.exe') whose bundle id AeroSpace reports as
-# NULL-APP-BUNDLE-ID, so app-id matching can never fire. Match on the app NAME
-# instead. 'layout floating' is the strongest opt-out AeroSpace offers per app —
-# it is never tiled, resized, or reflowed by the WM (there is no per-app
-# "unmanage"; `aerospace enable off` is global). Regex is a substring match, so
-# it covers 'Ravenswatch.exe' and any launcher/crash-handler window of the game.
+# Games run through CrossOver — hands off entirely. ADD NEW GAMES TO THIS REGEX.
+# The CrossOver app-id rule above does NOT catch them, because a CrossOver game
+# never presents a stable bundle id of its own:
+#   - Ravenswatch    -> app 'Ravenswatch.exe', bundle id NULL-APP-BUNDLE-ID
+#                       (a bare Wine process; no app-id rule can ever fire on it)
+#   - Path of Exile 2 -> app 'Path of Exile 2', bundle id
+#                       'com.codeweavers.CrossOverHelper.<bottle-hash>.<app-hash>'
+#                       (a per-installation hash — it would break on a rebuild)
+# So match on the app NAME, which is stable in both cases. 'layout floating' is
+# the strongest per-app opt-out AeroSpace offers — the window is never tiled,
+# resized, or reflowed (there is no per-app "unmanage"; `aerospace enable off` is
+# global). The regex is a substring match, so each entry also covers the game's
+# launcher / crash-handler windows ('Ravenswatch.exe' etc.).
 [[on-window-detected]]
-if.app-name-regex-substring = 'Ravenswatch'
+if.app-name-regex-substring = 'Ravenswatch|Path of Exile 2'
 run = 'layout floating'
 
 # Float Stickies notes so AeroSpace leaves them untiled (Stickies handles its own
