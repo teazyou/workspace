@@ -123,35 +123,17 @@ Plus a 7th, whole-folder link made later by [`setup_dot_claude.sh`](../../script
 |---|---|
 | `~/.claude` | `configs/dot-claude` (the private submodule) |
 
-> **`setup_symlinks.sh` and `_index.md` currently OVERCLAIM this as "the canonical map."** It covers only **5 of the 7** documented symlinks in `_index.md`. The two missing from the script are the AutoRaise config and the AutoRaise daemon plist (see next section). Treat the "canonical map" label as aspirational until the code is fixed — `setup_symlinks.sh` is *a* map, not *the* map.
+> **`setup_symlinks.sh` is *a* map, not *the* map.** Its 5 links plus the step-15 `~/.claude` link are everything this flow wires. Other symlinks documented in `_index.md` (e.g. the nordvpn LaunchAgent plist) are wired out-of-band — see [Known limitations](#known-limitations--what-the-flow-does-not-wire).
 
 ---
 
 ## Known limitations — what the flow does NOT wire
 
-This is the biggest hidden gap in the whole install, and nothing in `scripts/installs/` does it for you.
+The WM stack (AeroSpace + SketchyBar + JankyBorders) is fully wired by the flow: step 3 symlinks all three configs and step 10 launches the stack — no LaunchAgent involved anywhere (`AeroSpace` starts at login via `start-at-login`; its after-startup-command spawns sketchybar + borders and runs `apply-display-profile.sh`). What the flow deliberately leaves out:
 
-### 1. AutoRaise (focus-follows-mouse) is entirely absent post-bootstrap
-
-Three independent omissions stack up:
-
-- **The binary is never installed.** There is **no `autoraise` formula or cask** anywhere in `install_brew.sh`. Yet `configs/autoraise/com.autoraise.daemon.plist` hard-codes `ProgramArguments` → `/opt/homebrew/bin/AutoRaise`. So even if the agent were loaded, it would fail to exec a binary that doesn't exist.
-- **The config is never symlinked.** `setup_symlinks.sh` does not link `configs/autoraise/config` → `~/.config/AutoRaise/config`.
-- **The daemon is never loaded.** No `installs/` script does `launchctl bootstrap` on `com.autoraise.daemon.plist`.
-
-**Net effect:** after a clean bootstrap, focus-follows-mouse does **not** work at all. AutoRaise must be installed (e.g. `brew install --cask autoraise` / from its GitHub) **and** wired (config symlinked, daemon bootstrapped) out-of-band.
-
-### Contrast: `aerospace-restart.sh` *does* manage it
-
-[`scripts/aerospace-restart.sh`](../../scripts/aerospace-restart.sh) — the **runtime** restart helper, not part of the install — boots out and re-bootstraps the `com.autoraise.daemon` LaunchAgent (the only one the WM stack still has) and kills/relaunches `AeroSpace`, `sketchybar`, `borders`, `AutoRaise`. So the runtime story is complete; the *install* story is not. If you ever fix the install gap, mirror what `aerospace-restart.sh` already does.
-
-### 2. Native NordVPN IKEv2 (deliberately not wired)
+### 1. Native NordVPN IKEv2 (deliberately not wired)
 
 The VPN stack (`scripts/vpn/`, `configs/nordvpn/`, guide: [`docs/vpn/guide-nordvpn-native.md`](../vpn/guide-nordvpn-native.md)) is **intentionally absent** from `installation.sh`/`setup_symlinks.sh` — same policy as the quota-keepalive agent. It cannot be unattended anyway: it needs `brew trust timac/vpnstatus` + `vpnutil`, service credentials fetched from the Nord dashboard (email-code gated) into `~/.config/nordvpn-native/`, one manual `.mobileconfig` approval in System Settings, and the LaunchAgent symlink + `launchctl bootstrap`. Full fresh-Mac steps are in the guide's Ops section.
-
-### 3. Case-sensitivity fragility (latent)
-
-The repo dir is **lowercase** `configs/autoraise`, but the intended symlink target is `~/.config/AutoRaise/config` (**capital** A). This works on the default case-*insensitive* APFS and would silently break on a case-*sensitive* volume. Worth knowing before anyone "fixes" the casing or clones onto a case-sensitive disk.
 
 ---
 

@@ -2,7 +2,7 @@
 
 source "$HOME/.config/sketchybar/colors.sh"
 source "$HOME/.config/sketchybar/icons.sh"
-# Visual template (division geometry: corner radius, border, blur, shadow, gap).
+# Visual template (division geometry: corner radius, border, blur, gap).
 # Single source of truth — change a value there to restyle the whole bar.
 source "$HOME/.config/sketchybar/theme.sh"
 
@@ -92,10 +92,6 @@ bracket_style=(
   background.drawing=on
   background.padding_left=0
   background.padding_right=0
-  background.shadow.drawing=$DIVISION_SHADOW_DRAWING
-  background.shadow.color=$DIVISION_SHADOW_COLOR
-  background.shadow.angle=$DIVISION_SHADOW_ANGLE
-  background.shadow.distance=$DIVISION_SHADOW_DISTANCE
 )
 
 # Shared base for the monitor pills (cpu, ram). These items are SOURCED (not

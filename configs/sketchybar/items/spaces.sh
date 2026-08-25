@@ -104,10 +104,6 @@ spaces_bracket_style=(
   blur_radius=$DIVISION_BLUR
   background.height=32
   background.drawing=on
-  background.shadow.drawing=$DIVISION_SHADOW_DRAWING
-  background.shadow.color=$DIVISION_SHADOW_COLOR
-  background.shadow.angle=$DIVISION_SHADOW_ANGLE
-  background.shadow.distance=$DIVISION_SHADOW_DISTANCE
 )
 
 # Bracket for main workspaces (1-6)
