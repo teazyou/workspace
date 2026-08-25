@@ -3,9 +3,9 @@
 source "$HOME/.config/sketchybar/colors.sh"
 PATH="/opt/homebrew/bin:$PATH"               # jq (sketchybar's env has no homebrew PATH)
 
-# Repaints BOTH vpn items (vpn_be, vpn_sn) from ONE vpnutil snapshot, whichever of
-# them invoked this script (30s tick, or vpn_change / wifi_change / system_woke) —
-# so an event delivered to only one item can never leave the other one stale, and
+# Repaints BOTH vpn items (vpn_be, vpn_sn) from ONE vpnutil snapshot. Invoked by
+# vpn_sn only (it is the sole owner of script=, update_freq and the subscriptions) —
+# so an event delivered to one item can never leave the other one stale, and
 # both always render from the same snapshot. Deliberately name-agnostic: $NAME is
 # NOT read here (only plugins/vpn_click.sh needs it).
 #

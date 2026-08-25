@@ -1,13 +1,9 @@
 #!/bin/bash
 
-# Single awk over the last "CPU usage" line of `top` parses the user ($3) and
-# sys ($5) percentages, strips the '%', sums them and truncates to an integer —
-# replacing the echo|awk|tr|bc|cut fork chain. Empty/absent fields print "0".
-TOTAL=$(top -l 1 -n 0 2>/dev/null | awk '
-  /^CPU/ {
-    usr=$3; sys=$5; sub(/%/, "", usr); sub(/%/, "", sys); line=1
-  }
-  END { if (line) printf "%d", usr + sys; else printf "0" }
-')
+# One `ps` pass sums %CPU across all processes. NOTE: ps %CPU is a decayed
+# (exponentially weighted since process start) average, not top's instantaneous
+# sample — for a bar gauge the smoothed value is equivalent (arguably nicer: no
+# spiky jitter) while costing one cheap fork instead of top's full snapshot.
+TOTAL=$(ps -axo %cpu 2>/dev/null | awk '{s+=$1} END {printf "%d", s}')
 
 sketchybar --set $NAME label="${TOTAL:-0}%"

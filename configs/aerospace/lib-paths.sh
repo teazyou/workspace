@@ -5,8 +5,10 @@
 # constants. Sourced by:
 #   - open-dock-app.sh          (PLACEMENT_CAP_SECONDS)
 #
-# IMPORTANT: every consumer runs under `set -euo pipefail`. Every name a
-# consumer references MUST be defined here or sourcing trips on an unset var.
+# NOTE: consumers deliberately run WITHOUT strict-mode flags. Do NOT add
+# `set -e` here or in consumers — benign nonzero exits (e.g. aerospace focus
+# races) would abort scripts; do NOT use `set -u` — bash 3.2 faults on empty-
+# array "${arr[@]}" expansion. Every name referenced is defined above.
 # Bash 3.2 compatible (no associative arrays / mapfile).
 
 # --- Timing constants ----------------------------------------------------

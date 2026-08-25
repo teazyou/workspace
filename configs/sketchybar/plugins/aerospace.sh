@@ -42,6 +42,47 @@ FOCUSED_WS=$(aerospace list-workspaces --focused 2>/dev/null)
 # All windows tagged by workspace, queried once instead of per-space.
 ALL_WINDOWS=$(aerospace list-windows --all --format '%{workspace}|%{app-name}' 2>/dev/null)
 
+# --- ONE pre-pass over ALL_WINDOWS ---------------------------------------------
+# Collapse the raw window list into "ws\037app\037count" records: distinct
+# (workspace, app) pairs in first-seen order, window counts folded in, Stickies
+# and empty app names skipped — exactly what the old per-workspace
+# $(printf|awk) extraction + read-loop dedup produced, but with ~10 awk forks
+# replaced by this single pass. \037 (unit separator) can't appear in app names;
+# everything after the FIRST '|' is the app name, matching the old strip rule.
+# Parsed into parallel indexed arrays (no associative arrays — bash 3.2).
+RECORDS=$(printf '%s\n' "$ALL_WINDOWS" | awk -F'|' '
+    {
+        ws = $1
+        if (i = index($0, "|")) { app = substr($0, i + 1) } else { app = $0 }
+        if (app == "" || app == "Stickies") next
+        key = ws SUBSEP app
+        if (!(key in first)) {
+            first[key] = 1
+            ord[++n] = ws "\037" app
+        }
+        cnt[key]++
+    }
+    END {
+        for (j = 1; j <= n; j++) {
+            split(ord[j], a, "\037")
+            k = a[1] SUBSEP a[2]
+            print ord[j] "\037" cnt[k]
+        }
+    }')
+
+RA_WS=()    # workspace id per record
+RA_APP=()   # app name per record
+RA_CNT=()   # window count per record
+if [ -n "$RECORDS" ]; then
+    while IFS= read -r rec; do
+        [ -z "$rec" ] && continue
+        ra_rest="${rec#*$'\037'}"
+        RA_WS+=("${rec%%$'\037'*}")
+        RA_APP+=("${ra_rest%%$'\037'*}")
+        RA_CNT+=("${ra_rest##*$'\037'}")
+    done <<< "$RECORDS"
+fi
+
 # --- Per-workspace render state -----------------------------------------------
 
 FONT="JetBrainsMono Nerd Font"
@@ -86,64 +127,45 @@ for WORKSPACE_ID in $ALL_WORKSPACES; do
         fi
     done
 
-    # Get apps in this workspace from the single ALL_WINDOWS capture. When the
+    # Get apps in this workspace by scanning the pre-pass records. When the
     # same app has multiple windows in the space, collapse them into a single
     # entry and append one '*' per EXTRA instance (no space): four iTerm2 windows
-    # render as "iTerm2***". Distinct apps keep their first-seen order. Uses
-    # parallel indexed arrays (no associative arrays) to stay bash 3.2 compatible.
+    # render as "iTerm2***". Distinct apps keep their first-seen order.
     APPS=""        # text label: app names (+ window-count stars) — fallback
     ICONS=""       # app-font label: one icon glyph per distinct app
     ALL_KNOWN=true # false as soon as any app has no mapped icon
-    APP_LIST=$(printf '%s\n' "$ALL_WINDOWS" | awk -F'|' -v ws="$WORKSPACE_ID" '$1==ws {sub(/^[^|]*\|/, ""); print}')
+    for ridx in "${!RA_WS[@]}"; do
+        [ "${RA_WS[ridx]}" = "$WORKSPACE_ID" ] || continue
+        app="${RA_APP[ridx]}"
 
-    if [ -n "$APP_LIST" ]; then
-        ORDER=()   # distinct app names, first-seen order
-        COUNTS=()  # parallel: window count per app in ORDER
-        while IFS= read -r app; do
-            # Skip Stickies: it's an always-on-top floating note, not a managed
-            # window, so it shouldn't clutter the workspace app-name list.
-            [ -z "$app" ] && continue
-            [ "$app" = "Stickies" ] && continue
-            found=-1
-            for idx in "${!ORDER[@]}"; do
-                if [ "${ORDER[idx]}" = "$app" ]; then
-                    found=$idx
-                    break
-                fi
-            done
-            if [ "$found" -ge 0 ]; then
-                COUNTS[found]=$(( COUNTS[found] + 1 ))
-            else
-                ORDER+=("$app")
-                COUNTS+=(1)
-            fi
-        done <<< "$APP_LIST"
+        extra=$(( RA_CNT[ridx] - 1 ))
+        stars=""
+        if [ "$extra" -gt 0 ]; then
+            printf -v stars '%*s' "$extra" ''
+            stars="${stars// /*}"
+        fi
 
-        for idx in "${!ORDER[@]}"; do
-            app="${ORDER[idx]}"
-            SHORT_NAME=$(shorten_app_name "$app")
-            extra=$(( COUNTS[idx] - 1 ))
-            stars=""
-            [ "$extra" -gt 0 ] && stars=$(printf '%*s' "$extra" '' | tr ' ' '*')
-            entry="$SHORT_NAME$stars"
-            if [ -z "$APPS" ]; then
-                APPS="$entry"
-            else
-                APPS="$APPS $entry"
-            fi
+        # Sets the SHORT_APP_NAME global (no $() subshell fork).
+        shorten_app_name "$app"
+        entry="$SHORT_APP_NAME$stars"
+        if [ -z "$APPS" ]; then
+            APPS="$entry"
+        else
+            APPS="$APPS $entry"
+        fi
 
-            # App-font icon token for this app (":default:" when not in the map).
-            # A space renders as icons only when EVERY app maps; one unmapped app
-            # falls the whole space back to text names.
-            token=$(__icon_map "$app")
-            [ "$token" = ":default:" ] && ALL_KNOWN=false
-            if [ -z "$ICONS" ]; then
-                ICONS="$token"
-            else
-                ICONS="$ICONS $token"
-            fi
-        done
-    fi
+        # App-font icon token for this app (":default:" when not in the map).
+        # A space renders as icons only when EVERY app maps; one unmapped app
+        # falls the whole space back to text names. Sets icon_result global.
+        __icon_map "$app"
+        token="$icon_result"
+        [ "$token" = ":default:" ] && ALL_KNOWN=false
+        if [ -z "$ICONS" ]; then
+            ICONS="$token"
+        else
+            ICONS="$ICONS $token"
+        fi
+    done
 
     # Determine highlight color based on monitor - dark red theme
     if [ "$IS_FOCUSED" = true ]; then

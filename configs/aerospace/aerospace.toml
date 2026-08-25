@@ -204,18 +204,19 @@ on-mode-changed = []
     # alt-a = 'workspace A' # In your config, you can drop workspace bindings that you don't need
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#move-node-to-workspace
-    # Each move also triggers sketchybar update to refresh workspace app lists
-    # --focus-follows-window: switch to the destination workspace after the move
-    alt-shift-1 = ['move-node-to-workspace --focus-follows-window 1', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-2 = ['move-node-to-workspace --focus-follows-window 2', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-3 = ['move-node-to-workspace --focus-follows-window 3', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-4 = ['move-node-to-workspace --focus-follows-window 4', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-5 = ['move-node-to-workspace --focus-follows-window 5', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-6 = ['move-node-to-workspace --focus-follows-window 6', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-7 = ['move-node-to-workspace --focus-follows-window 7', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-8 = ['move-node-to-workspace --focus-follows-window 8', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-9 = ['move-node-to-workspace --focus-follows-window 9', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
-    alt-shift-0 = ['move-node-to-workspace --focus-follows-window 0', 'move-mouse window-lazy-center', 'exec-and-forget sketchybar --trigger aerospace_workspace_change']
+    # --focus-follows-window: switch to the destination workspace after the move.
+    # No explicit sketchybar trigger needed: exec-on-workspace-change (top of
+    # file) already fires it when the move switches workspaces.
+    alt-shift-1 = ['move-node-to-workspace --focus-follows-window 1', 'move-mouse window-lazy-center']
+    alt-shift-2 = ['move-node-to-workspace --focus-follows-window 2', 'move-mouse window-lazy-center']
+    alt-shift-3 = ['move-node-to-workspace --focus-follows-window 3', 'move-mouse window-lazy-center']
+    alt-shift-4 = ['move-node-to-workspace --focus-follows-window 4', 'move-mouse window-lazy-center']
+    alt-shift-5 = ['move-node-to-workspace --focus-follows-window 5', 'move-mouse window-lazy-center']
+    alt-shift-6 = ['move-node-to-workspace --focus-follows-window 6', 'move-mouse window-lazy-center']
+    alt-shift-7 = ['move-node-to-workspace --focus-follows-window 7', 'move-mouse window-lazy-center']
+    alt-shift-8 = ['move-node-to-workspace --focus-follows-window 8', 'move-mouse window-lazy-center']
+    alt-shift-9 = ['move-node-to-workspace --focus-follows-window 9', 'move-mouse window-lazy-center']
+    alt-shift-0 = ['move-node-to-workspace --focus-follows-window 0', 'move-mouse window-lazy-center']
     # alt-shift-a = 'move-node-to-workspace A'
 
     # See: https://nikitabobko.github.io/AeroSpace/commands#workspace-back-and-forth

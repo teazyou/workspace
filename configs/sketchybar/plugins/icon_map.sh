@@ -109,37 +109,36 @@ __icon_map() {
     "TextEdit"|"文本编辑") icon_result=":textedit:" ;;
     *) icon_result=":default:" ;;
   esac
-
-  echo "$icon_result"
 }
 
 # Shorten common app display names for the spaces strip. Lives here alongside
 # __icon_map so the two app-display-name maps are edited in one place. Sourced
-# (not run) by plugins/aerospace.sh, which calls it directly.
+# (not run) by plugins/aerospace.sh, which calls it directly and reads the
+# SHORT_APP_NAME global it sets (no $() subshell fork).
 shorten_app_name() {
     local app="$1"
     case "$app" in
-        "Google Chrome") echo "Chrome" ;;
-        "Visual Studio Code") echo "Code" ;;
-        "Microsoft Edge") echo "Edge" ;;
-        "Microsoft Word") echo "Word" ;;
-        "Microsoft Excel") echo "Excel" ;;
-        "Microsoft PowerPoint") echo "PPT" ;;
-        "Microsoft Outlook") echo "Outlook" ;;
-        "System Preferences") echo "Prefs" ;;
-        "System Settings") echo "Settings" ;;
-        "Activity Monitor") echo "Activity" ;;
-        "Sublime Text") echo "Sublime" ;;
-        "IntelliJ IDEA") echo "IDEA" ;;
-        "Android Studio") echo "Android" ;;
-        "Docker Desktop") echo "Docker" ;;
-        "Brave Browser") echo "Brave" ;;
-        *) echo "$app" ;;
+        "Google Chrome")          SHORT_APP_NAME="Chrome" ;;
+        "Visual Studio Code")     SHORT_APP_NAME="Code" ;;
+        "Microsoft Edge")         SHORT_APP_NAME="Edge" ;;
+        "Microsoft Word")         SHORT_APP_NAME="Word" ;;
+        "Microsoft Excel")        SHORT_APP_NAME="Excel" ;;
+        "Microsoft PowerPoint")   SHORT_APP_NAME="PPT" ;;
+        "Microsoft Outlook")      SHORT_APP_NAME="Outlook" ;;
+        "System Preferences")     SHORT_APP_NAME="Prefs" ;;
+        "System Settings")        SHORT_APP_NAME="Settings" ;;
+        "Activity Monitor")       SHORT_APP_NAME="Activity" ;;
+        "Sublime Text")           SHORT_APP_NAME="Sublime" ;;
+        "IntelliJ IDEA")          SHORT_APP_NAME="IDEA" ;;
+        "Android Studio")         SHORT_APP_NAME="Android" ;;
+        "Docker Desktop")         SHORT_APP_NAME="Docker" ;;
+        "Brave Browser")          SHORT_APP_NAME="Brave" ;;
+        *)                        SHORT_APP_NAME="$app" ;;
     esac
 }
 
-# Only emit an icon when executed directly (icon_map.sh "<app>"). When this file
-# is sourced for shorten_app_name(), skip the call so no stray glyph is printed.
-if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
-    __icon_map "$1"
-fi
+# Direct execution no longer prints anything: callers read the icon_result /
+# SHORT_APP_NAME globals after sourcing this file (see plugins/aerospace.sh).
+
+# Direct execution no longer prints anything: callers read the icon_result /
+# SHORT_APP_NAME globals after sourcing this file (see plugins/aerospace.sh).

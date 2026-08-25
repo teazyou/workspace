@@ -306,8 +306,6 @@ update_aerospace_config() {
     local outer_top="$1"
     local ws_pattern="$2"
 
-    cp "$AEROSPACE_CONFIG" "$AEROSPACE_CONFIG.bak"
-
     local tmp_file
     tmp_file=$(mktemp)
 
@@ -342,6 +340,11 @@ update_aerospace_config() {
     }
     { print }
     ' "$AEROSPACE_CONFIG" > "$tmp_file"
+
+    # Skip the rewrite entirely when the awk output is byte-identical to the
+    # current config — avoids touching the file (and the .bak) on no-op runs.
+    if cmp -s "$tmp_file" "$AEROSPACE_CONFIG"; then rm -f "$tmp_file"; return 0; fi
+    cp "$AEROSPACE_CONFIG" "$AEROSPACE_CONFIG.bak"
 
     # cp (not mv) to write through symlinks instead of replacing them
     cp "$tmp_file" "$AEROSPACE_CONFIG"
