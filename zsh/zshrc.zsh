@@ -35,5 +35,6 @@ source $ZSH_ALIAS/installations.zsh
 source $ZSH_ALIAS/checkpoint.zsh
 source $ZSH_ALIAS/claude.zsh
 source $ZSH_ALIAS/vpn.zsh
+source $ZSH_ALIAS/tiktoken.zsh
 
 echo Workspace Loaded!

@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cross-Harness Plugin Hooks — DeepSeek Harness vs OpenCode vs Hermes</title>
+<style>
+  :root{
+    --bg:#0a0f1c;
+    --bg2:#0e1526;
+    --panel:#121a2f;
+    --panel2:#16203a;
+    --border:#24304f;
+    --text:#dbe4f5;
+    --muted:#8ea0c0;
+    --dsh:#2dd4bf;
+    --dsh-dim:#0f766e;
+    --oc:#f59e0b;
+    --oc-dim:#92600c;
+    --her:#a78bfa;
+    --her-dim:#6d28d9;
+    --green:#34d399;
+    --yellow:#fbbf24;
+    --red:#f87171;
+    --gray:#64748b;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:linear-gradient(160deg,#0a0f1c 0%,#0d1424 45%,#0a0f1c 100%);
+    color:var(--text);
+    font-family:var(--mono);
+    font-size:14px;
+    line-height:1.65;
+    padding-bottom:60px;
+  }
+  .wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+  a{color:#5eead4;text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---------- header ---------- */
+  header{padding:52px 0 30px;text-align:center;border-bottom:1px solid var(--border)}
+  header h1{font-size:1.9rem;letter-spacing:.5px;margin-bottom:10px}
+  header h1 .a{color:var(--dsh)} header h1 .b{color:var(--oc)} header h1 .c{color:var(--her)}
+  header p.sub{color:var(--muted);font-size:.92rem}
+  header p.date{color:#5b6b8c;font-size:.8rem;margin-top:6px}
+
+  /* ---------- sticky nav ---------- */
+  nav{
+    position:sticky;top:0;z-index:100;
+    background:rgba(10,15,28,.92);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--border);
+    padding:10px 0;
+  }
+  nav .wrap{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center}
+  nav a{
+    display:inline-block;padding:4px 12px;border:1px solid var(--border);
+    border-radius:999px;font-size:.78rem;color:var(--muted);
+    background:rgba(255,255,255,.02);
+  }
+  nav a:hover{color:#fff;border-color:#3b4b73;text-decoration:none;background:rgba(255,255,255,.06)}
+  nav a.tldr{border-color:var(--dsh-dim);color:var(--dsh)}
+  nav a.guide{border-color:var(--oc-dim);color:var(--oc)}
+  nav a.unc{border-color:#7e5aa8;color:var(--her)}
+
+  /* ---------- sections ---------- */
+  section{padding:44px 0 10px;scroll-margin-top:70px;animation:fadein .6s ease both}
+  h2{font-size:1.35rem;margin-bottom:4px;letter-spacing:.3px}
+  h2 .num{color:#5b6b8c;font-size:1rem;margin-right:8px}
+  h2.dsh{color:var(--dsh)}
+  h2.oc{color:var(--oc)}
+  h2.her{color:var(--her)}
+  h2.guidance{color:var(--oc)}
+  h2.unc{color:var(--her)}
+  h3{font-size:1.0rem;margin:26px 0 10px;color:#e6ecfb;border-left:3px solid var(--border);padding-left:10px}
+  h3.t{color:var(--dsh);border-color:var(--dsh)}
+  h3.o{color:var(--oc);border-color:var(--oc)}
+  h3.p{color:var(--her);border-color:var(--her)}
+  p{margin:10px 0}
+  .lead{color:var(--muted);margin-bottom:14px}
+  blockquote{
+    margin:12px 0;padding:10px 14px;border-left:3px solid var(--border);
+    background:rgba(255,255,255,.03);color:var(--muted);font-size:.85rem;
+  }
+
+  /* ---------- pills ---------- */
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+  .pill{
+    padding:3px 12px;border-radius:999px;font-size:.74rem;letter-spacing:.4px;
+    border:1px solid var(--border);background:rgba(255,255,255,.03);color:var(--muted);
+  }
+  .pill.dsh{border-color:var(--dsh-dim);color:var(--dsh);background:rgba(45,212,191,.08)}
+  .pill.oc{border-color:var(--oc-dim);color:var(--oc);background:rgba(245,158,11,.08)}
+  .pill.her{border-color:#5b4b9d;color:var(--her);background:rgba(167,139,250,.1)}
+  .pill.dark{border-color:var(--border);color:var(--muted)}
+  .pill.green{border-color:#14532d;color:var(--green);background:rgba(52,211,153,.08)}
+  .pill.yellow{border-color:#78450c;color:var(--yellow);background:rgba(251,191,36,.08)}
+
+  /* ---------- chips ---------- */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 4px}
+  .chip{
+    font-size:.72rem;padding:4px 10px;border-radius:6px;letter-spacing:.3px;
+    border:1px solid;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  }
+  .chip .dot{width:7px;height:7px;border-radius:50%;display:inline-block}
+  .chip.g{color:var(--green);border-color:#14532d;background:rgba(52,211,153,.07)}
+  .chip.g .dot{background:var(--green)}
+  .chip.y{color:var(--yellow);border-color:#78450c;background:rgba(251,191,36,.07)}
+  .chip.y .dot{background:var(--yellow)}
+  .chip.r{color:var(--red);border-color:#7f1d1d;background:rgba(248,113,113,.07)}
+  .chip.r .dot{background:var(--red)}
+  .chips .lbl{font-size:.72rem;color:var(--muted);align-self:center;margin-right:2px}
+
+  /* ---------- tables ---------- */
+  .table-wrap{overflow-x:auto;margin:14px 0;border:1px solid var(--border);border-radius:8px}
+  table{width:100%;border-collapse:collapse;font-size:.8rem;min-width:640px}
+  th{
+    background:var(--panel2);color:#c7d3ea;text-align:left;
+    padding:9px 12px;font-size:.72rem;letter-spacing:.6px;text-transform:uppercase;
+    border-bottom:1px solid var(--border);
+  }
+  td{padding:9px 12px;border-bottom:1px solid #1c2743;vertical-align:top;color:#c3cfdf}
+  tr:last-child td{border-bottom:none}
+  tbody tr{transition:background .15s ease}
+  tbody tr:hover{background:rgba(255,255,255,.045)}
+  td .m{color:var(--muted)}
+  table.plain{font-size:.79rem}
+
+  /* verdict coloring */
+  .ok{color:var(--green);font-weight:600}
+  .bad{color:var(--red);font-weight:600}
+  .warn{color:var(--yellow);font-weight:600}
+  .mit{color:var(--gray)}
+
+  /* ---------- code ---------- */
+  .codewrap{position:relative;margin:14px 0}
+  .codehead{
+    font-size:.7rem;color:var(--muted);padding:6px 14px;letter-spacing:.5px;
+    border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;
+    background:rgba(255,255,255,.02);
+  }
+  pre{
+    overflow-x:auto;padding:14px 16px;border-radius:0 0 8px 8px;
+    border:1px solid var(--border);
+    background:#0b1020;font-family:var(--mono);font-size:.78rem;line-height:1.6;
+    color:#c9d7f2;
+  }
+  pre.dsh{border-left:3px solid var(--dsh)}
+  pre.oc{border-left:3px solid var(--oc)}
+  pre.her{border-left:3px solid var(--her)}
+  pre .c{color:#5b6b8c}
+  pre .k{color:#7dd3fc}
+  pre .s{color:#86efac}
+  pre .n{color:#fbbf24}
+
+  /* ---------- callouts ---------- */
+  .callout{
+    margin:14px 0;padding:12px 16px;border-radius:8px;font-size:.82rem;
+    border:1px solid;background:rgba(255,255,255,.02);
+  }
+  .callout.warn{border-color:#78450c;background:rgba(251,191,36,.06)}
+  .callout.warn b{color:var(--yellow)}
+  .callout.danger{border-color:#7f1d1d;background:rgba(248,113,113,.06)}
+  .callout.danger b{color:var(--red)}
+  .callout.info{border-color:#1e5e96;background:rgba(56,189,248,.06)}
+  .callout.info b{color:#7dd3fc}
+  .callout .t{display:block;font-weight:700;letter-spacing:.4px;margin-bottom:4px;font-size:.8rem}
+
+  ul{margin:8px 0 8px 22px}
+  li{margin:5px 0;color:#c3cfdf}
+  li::marker{color:#54689a}
+  ul.compact li{margin:3px 0}
+  ul.two{columns:2;column-gap:32px}
+  @media(max-width:760px){ul.two{columns:1}}
+
+  /* ---------- footer ---------- */
+  footer{
+    margin-top:60px;padding:30px 0 10px;border-top:1px solid var(--border);
+    font-size:.78rem;color:var(--muted);
+  }
+  footer h3{color:#9db1d6;border:none;padding:0;margin:0 0 12px;font-size:.92rem}
+  footer ul{list-style:none;margin-left:0}
+  footer li{margin:7px 0;color:#8ea0c0}
+
+  @keyframes fadein{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @media(max-width:900px){
+    header h1{font-size:1.4rem}
+    nav a{font-size:.7rem;padding:3px 9px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= HEADER ================= -->
+<header>
+  <div class="wrap">
+    <h1>Cross-Harness Plugin Hooks&nbsp;&mdash;&nbsp;<span class="a">DeepSeek Harness</span> vs <span class="b">OpenCode</span> vs <span class="c">Hermes</span></h1>
+    <p class="sub">Event hook coverage, system-prompty rewrite paths, AGENTS.md injection semantics, and per-harness entry-point tradeoffs &mdash; a research comparison for cross-harness tooling.</p>
+    <p class="date">August 27, 2026</p>
+  </div>
+</header>
+
+<!-- ================= STICKY NAV ================= -->
+<nav>
+  <div class="wrap">
+    <a href="#tldr" class="tldr">TL;DR</a>
+    <a href="#dsh">1. DeepSeek Harness</a>
+    <a href="#oc">2. OpenCode</a>
+    <a href="#her">3. Hermes</a>
+    <a href="#guidance" class="guide">Design Guidance</a>
+    <a href="#unc" class="unc">Uncertainties</a>
+    <a href="#src">Sources</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- ================= TL;DR ================= -->
+<section id="tldr">
+  <h2><span class="num">TL;DR</span>Verdict Table</h2>
+  <p class="lead">All three harnesses support hooks; none offers a <code>--system-prompt</code> CLI flag; AGENTS.md injection semantics differ sharply.</p>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Harness</th>
+          <th>Hooks possible?</th>
+          <th>System prompt rewrite via CLI</th>
+          <th>System prompt rewrite via Desktop</th>
+          <th>AGENTS.md injection location</th>
+          <th>Context size limits</th>
+          <th>Entry-point style</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><b style="color:var(--dsh)">DeepSeek Harness</b> (Cordis)</td>
+          <td><span class="ok">YES</span> <span class="m">&mdash; native typed plugins + CC/Codex hooks.json bridge</span></td>
+          <td><span class="bad">NO</span> <span class="m">--system-prompt flag; rewrite via <code>complete: true</code> persona + artifacts</span></td>
+          <td><span class="bad">NONE</span> <span class="m">no desktop app exists (web UI only)</span></td>
+          <td><span class="warn">NOT in system prompt</span> <span class="m">durable user message in history, inside <code>&lt;system-reminder&gt;</code>, lower priority</span></td>
+          <td><span class="warn">maxBytes REQUIRED</span> <span class="m">(shipped 64 KiB); maxSourceBytes default 1 MiB</span></td>
+          <td><span class="ok">Script-in-config</span> <span class="m">(hooks.json + dsh-hooks-claude-code bridge)</span></td>
+        </tr>
+        <tr>
+          <td><b style="color:var(--oc)">OpenCode</b> (anomalyco)</td>
+          <td><span class="ok">YES</span> <span class="m">&mdash; JS/TS plugins only; no declarative shell hooks</span></td>
+          <td><span class="bad">NO</span> <span class="m">--system-prompt flag; rewrite via agent prompt or <code>experimental.chat.system.transform</code></span></td>
+          <td><span class="warn">YES</span> <span class="m">(BETA Electron desktop, same server+config; desktop-specific limitation <i>UNVERIFIED</i>)</span></td>
+          <td><span class="ok">INSIDE system prompt</span> <span class="m">as separate system-role messages ("Instructions from: &lt;path&gt;")</span></td>
+          <td><span class="ok">NO</span> <span class="m">truncation/token cap found; only remote fetch 5s timeout</span></td>
+          <td><span class="warn">JS plugin</span> <span class="m">(opencode.json "plugin" / .opencode/plugins/)</span></td>
+        </tr>
+        <tr>
+          <td><b style="color:var(--her)">Hermes</b> (NousResearch/hermes-agent)</td>
+          <td><span class="ok">YES</span> <span class="m">&mdash; Gateway hooks (HOOK.yaml), Plugin hooks (Python), Shell hooks (config.yaml commands)</span></td>
+          <td><span class="bad">NO</span> <span class="m">--system-prompt flag (UNVERIFIED); rewrite via ~/.hermes/SOUL.md or display.personality/agent.personalities</span></td>
+          <td><span class="ok">YES</span> <span class="m">("Hermes Desktop", <code>hermes desktop</code>; per-agent SOUL in Advanced panel)</span></td>
+          <td><span class="ok">INSIDE system prompt</span> <span class="m">as labeled "Layer 8: Context files" section</span></td>
+          <td><span class="warn">context_file_max_chars else dynamic</span> <span class="m">floor 20k, ceiling 500k; 70/20/10 truncation</span></td>
+          <td><span class="ok">Script-in-config</span> <span class="m">(hooks: in ~/.hermes/config.yaml, shlex, shell=False)</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ================= 1. DEEPSEEK HARNESS ================= -->
+<section id="dsh">
+  <h2 class="dsh"><span class="num">1</span>DeepSeek Harness</h2>
+  <p class="lead"><code>deepseek-ai/deepseek-harness</code>, "dsh", built on Cordis. TypeScript. CLI + web UI (127.0.0.1:3080); portable sandbox via lanbdlock-run in <code>native/</code>; no desktop app.</p>
+  <div class="pills">
+    <span class="pill dsh">LANGUAGE: TypeScript (Cordis)</span>
+    <span class="pill dsh">HOOK TYPE: native typed plugins + CC/Codex bridge</span>
+    <span class="pill dark">DESKTOP: NONE (web UI only)</span>
+  </div>
+
+  <h3 class="t">Hooks: two-layer system</h3>
+  <p>(1) <b>Native typed Cordis plugin extension points.</b> (2) <b>Compatibility bridges</b> (<code>dsh-hooks-claude-code</code>, <code>hooks-codex</code>) that execute existing Claude-Code/Codex hooks.json command hooks.</p>
+
+  <h3 class="t">Event mapping (CC event &rarr; DSH emitter, from packages/hooks/hooks-claude-code/README.md)</h3>
+  <div class="table-wrap">
+    <table class="plain">
+      <thead><tr><th>CC event</th><th>DSH emitter</th><th>Flow style</th></tr></thead>
+      <tbody>
+        <tr><td>SessionStart</td><td rowspan="1"><code>agent/session-start</code></td><td><span class="mit">emit</span></td></tr>
+        <tr><td>UserPromptSubmit</td><td><code>agent/pre-step</code></td><td><span class="warn">waterfall</span></td></tr>
+        <tr><td>PreToolUse</td><td><code>tools/pre-execute</code></td><td><span class="warn">waterfall</span></td></tr>
+        <tr><td>PostToolUse</td><td><code>tools/post-execute</code></td><td><span class="warn">waterfall</span></td></tr>
+        <tr><td>Stop</td><td><code>agent/turn-stopping</code></td><td><span class="ok">serial</span></td></tr>
+        <tr><td>SubagentStart</td><td><code>subagent/start</code></td><td><span class="mit">emit</span></td></tr>
+        <tr><td>SubagentStop</td><td><code>subagent/end</code></td><td><span class="mit">emit</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="t">Config &mdash; NOT settings.json hooks key; mount as Cordis row in <code>cordis.yml</code></h3>
+  <div class="codewrap">
+    <div class="codehead">cordis.yml &mdash; mount the bridge as a Cordis row</div>
+<pre class="dsh"><span class="k">- dsh-hooks-claude-code:</span>
+    configPath: ./.claude/hooks.json
+    pluginRoot: ./.claude/plugins/my-plugin
+    projectDir: .
+    defaultTimeoutMs: 600_000
+    stderrSummaryMaxChars: 500</pre>
+  </div>
+  <p>Then claude-code-style <code>hooks.json</code> works verbatim:</p>
+  <div class="codewrap">
+    <div class="codehead">.claude/hooks.json &mdash; standard CC dialect</div>
+<pre class="dsh">{"PreToolUse":[{"matcher":"Bash","hooks":[{"type":"command","command":"x.sh"}]}]}</pre>
+  </div>
+
+  <h3 class="t">Input contract</h3>
+  <p>stdin = JSON (CC dialect camelCase): <code>session_id</code>, <code>transcript_path</code>, <code>cwd</code>, <code>hook_event_name</code> + per-event fields (<code>prompt</code> / <code>tool_name</code> / <code>tool_input</code> / <code>tool_use_id</code> / <code>tool_response</code> / <code>source</code> / <code>agent_id</code> / <code>agent_type</code> / <code>stop_hook_active: false</code>).</p>
+  <p>env: <code>CLAUDE_PROJECT_DIR</code>; <code>${CLAUDE_PLUGIN_ROOT}</code>, <code>${CLAUDE_PROJECT_DIR}</code> substitution in command.</p>
+
+  <h3 class="t">Output contract</h3>
+  <p><b>exit 2 = block</b> (stderr reason). stdout JSON <code>hookSpecificOutput</code> (<code>hookEventName</code>, <code>permissionDecision</code>, <code>permissionDecisionReason</code>, <code>additionalContext</code>, <code>systemMessage</code>, <code>updatedInput</code>) or legacy <code>{decision: approve|block}</code>. <code>deny &gt; ask &gt; allow</code> folding. <code>additionalContext</code> &rarr; injected as sourced user message; <code>updatedInput</code> / <code>systemMessage</code> parsed but NOT honored (warned).</p>
+
+  <h3 class="t">Unsupported / limitations</h3>
+  <p><b>23 CC events unsupported:</b></p>
+  <ul class="compact two">
+    <li>Setup</li><li>InstructionsLoaded</li><li>UserPromptExpansion</li><li>MessageDisplay</li>
+    <li>PermissionRequest</li><li>PostToolUseFailure</li><li>PostToolBatch</li><li>PermissionDenied</li>
+    <li>Notification</li><li>TaskCreated</li><li>TaskCompleted</li><li>StopFailure</li>
+    <li>TeammateIdle</li><li>ConfigChange</li><li>CwdChanged</li><li>FileChanged</li>
+    <li>WorktreeCreate</li><li>WorktreeRemove</li><li>PreCompact</li><li>PostCompact</li>
+    <li>SessionEnd</li><li>Elicitation</li><li>ElicitationResult</li>
+  </ul>
+  <ul>
+    <li>Only <code>type:'command'</code> hooks run.</li>
+    <li><code>PreToolUse</code> allow/defer/updatedInput unsupported.</li>
+    <li><code>PostToolUse</code> updatedToolOutput unsupported.</li>
+    <li><code>stop_hook_active</code> always false.</li>
+    <li>Serial execution only.</li>
+    <li>Bridges <b>NOT shipped by default</b> &mdash; enable via <code>--patch</code> overlay or profile.</li>
+  </ul>
+
+  <h3 class="t">System prompt</h3>
+  <ul>
+    <li><b>NO <code>--system-prompt</code> CLI flag</b> (verified in all arg parsers).</li>
+    <li><b>REWRITE possible:</b> <code>complete: true</code> on a prompt section + artifact (persona config <code>complete?: boolean</code> = <i>"Make this persona the complete system prompt, suppressing every other section."</i>). <code>includeHarnessIdentity: false</code> drops built-in identity opener.</li>
+    <li><b>INJECT via:</b> <code>persona</code> key in <code>@deepseek-ai/dsh-system-prompt</code> row (base composition <code>cordis.patch.yml:429-432</code>) or per-agent <code>@deepseek-ai/dsh-persona</code> text; plugins: <code>ctx.systemPrompt.section({name, order, text, complete?})</code>, <code>.context()</code>, <code>.tools()</code>, <code>.variable()</code>.</li>
+    <li>Section order bands: <code>&minus;100</code> harness identity, <code>0</code> persona, tools <code>100&ndash;199</code>. <code>{{model}}</code>, <code>{{cwd}}</code> templates.</li>
+    <li><b>Desktop:</b> NO desktop app exists (<code>apps/</code> = cli + web UI at 127.0.0.1:3080; <code>native/</code> = landlock-run sandbox). No persona/system-prompt UI found.</li>
+  </ul>
+  <blockquote>&ldquo;Deployment-authored prompt text is config/composition only &hellip; there is no end-user prompt-editing API.&rdquo;</blockquote>
+  <p>One effective <code>complete</code> section wins; &gt;1 &rarr; assembly rejects.</p>
+
+  <h3 class="t">AGENTS.md</h3>
+  <ul>
+    <li>Reads <code>AGENTS.md</code> + <code>CLAUDE.md</code> (supports <code>AGENTS.local.md</code> / <code>CLAUDE.local.md</code>).</li>
+    <li>Global file always <code>$DSH_HOME/AGENTS.md</code> (<code>~/.dsh/AGENTS.md</code>).</li>
+    <li><b>NOT inside system prompt:</b> injected as durable user/message in history, inside <code>&lt;system-reminder&gt;</code> with explicit lower-priority language:</li>
+  </ul>
+  <blockquote>&ldquo;The following workspace instructions may be relevant&hellip; They do not override system, developer, or direct user instructions.&rdquo;</blockquote>
+  <ul>
+    <li>Sourced as typed plugin context.</li>
+    <li><b>Limits:</b> <code>maxBytes</code> REQUIRED, shipped 65536 (64 KiB) in bundle/base <code>cordis.patch.yml</code>; <code>maxSourceBytes</code> default 1 MiB; drops whole broader files before truncating most-specific; emits "Workspace instruction budget &hellip;" notice; never summarizes; non-positive budget disables.</li>
+    <li>No <code>DS.md</code> / <code>DEEPSEEK.md</code>.</li>
+  </ul>
+
+  <h3 class="t">Other integration facts</h3>
+  <ul class="compact">
+    <li>MCP clients (stdio/streamable-http, tools-only; <code>mcp__name__tool</code>).</li>
+    <li>Plugins via profiles (<code>$DSH_HOME/profiles/&lt;name&gt;</code>); skills.</li>
+    <li>Subagent backends incl. ACP/Claude-Code/Codex.</li>
+    <li>Python + TS SDKs; <code>DSH_CORDIS_CONFIG</code> env to inject custom composition.</li>
+  </ul>
+
+  <h3 class="t">Target events coverage</h3>
+  <div class="chips">
+    <span class="lbl">coverage:</span>
+    <span class="chip g"><span class="dot"></span>post-tool-use &mdash; PostToolUse &rarr; tools/post-execute</span>
+    <span class="chip g"><span class="dot"></span>session-start &mdash; SessionStart &rarr; agent/session-start</span>
+    <span class="chip g"><span class="dot"></span>subagent-start &mdash; SubagentStart &rarr; subagent/start</span>
+    <span class="chip y"><span class="dot"></span>after-answer &mdash; stop_hook_active always false; use Stop/agent/turn-stopping</span>
+    <span class="chip g"><span class="dot"></span>after-submit &mdash; UserPromptSubmit &rarr; agent/pre-step</span>
+  </div>
+</section>
+
+<!-- ================= 2. OPENCODE ================= -->
+<section id="oc">
+  <h2 class="oc"><span class="num">2</span>OpenCode</h2>
+  <p class="lead"><code>github.com/anomalyco/opencode</code> (<code>sst/opencode</code> redirects). TypeScript + Bun. JS/TS plugin system only; no declarative shell-command hooks, no <code>hooks</code> key in opencode.json; <code>/docs/hooks</code> is 404, folded into <code>/docs/plugins</code>.</p>
+  <div class="pills">
+    <span class="pill oc">LANGUAGE: TypeScript/Bun</span>
+    <span class="pill oc">HOOK TYPE: JS/TS plugins only</span>
+    <span class="pill green">DESKTOP: YES (BETA Electron)</span>
+  </div>
+
+  <h3 class="o">Plugin entry points</h3>
+  <ul class="compact">
+    <li>Files: <code>.opencode/plugins/</code> (project), <code>~/.config/opencode/plugins/</code> (global), auto-loaded at startup.</li>
+    <li>npm: config <code>"plugin": ["pkg", ["pkg", options]]</code>.</li>
+    <li>CLI: <code>opencode plugin &lt;module&gt;</code>.</li>
+    <li>Register: <code>export plugin function async ({project, client, $, directory, worktree}) =&gt; ({ "hook.name": async (input, output) =&gt; {...} })</code>. <code>$</code> = Bun shell API. Types <code>@opencode-ai/plugin</code>.</li>
+  </ul>
+  <div class="codewrap">
+    <div class="codehead">plugin &mdash; hook registration shape</div>
+<pre class="oc"><span class="k">export const plugin</span> = <span class="k">async</span> ({ project, client, $, directory, worktree }) =&gt; ({
+  <span class="s">"tool.execute.after"</span>: <span class="k">async</span> (input, output) =&gt; {
+    <span class="c">// input: { tool, sessionID, callID, args }</span>
+    <span class="c">// output: { title, output, metadata } &mdash; mutate output</span>
+  },
+})</pre>
+  </div>
+
+  <h3 class="o">Requested events mapping</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Requested event</th><th>Implementation</th><th>Coverage</th></tr></thead>
+      <tbody>
+        <tr><td>after tool use</td><td><code>tool.execute.after</code>, full (all built-in + MCP + custom tools; task/subagent too)</td><td><span class="ok">green</span></td></tr>
+        <tr><td>session start</td><td>event hook receives <code>session.created</code> (also <code>session.updated/deleted/error/status</code>; <code>session.idle</code> deprecated)</td><td><span class="warn">partial</span></td></tr>
+        <tr><td>subagent start</td><td><code>tool.execute.before</code> with <code>tool === "task"</code></td><td><span class="warn">partial</span></td></tr>
+        <tr><td>after AI answer</td><td><code>experimental.text.complete</code> (rewrite assistant text); events <code>message.updated</code>, <code>message.part.updated</code>, <code>session.idle</code></td><td><span class="warn">partial</span></td></tr>
+        <tr><td>after user submit</td><td><code>chat.message</code> ("Called when a new message is received", in <code>createUserMessage</code> before save)</td><td><span class="ok">yes</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3 class="o">Full hook list</h3>
+  <p><code>tool.execute.before</code>, <code>tool.execute.after</code>, <code>shell.env</code>, <code>chat.message</code>, <code>chat.params</code>, <code>chat.headers</code>, <code>command.execute.before</code>, <code>permission.ask</code>, <code>tool.definition</code>, <code>experimental.chat.messages.transform</code>, <code>experimental.chat.system.transform</code>, <code>experimental.text.complete</code>, <code>experimental.session.compacting</code>, <code>experimental.compaction.autocontinue</code>, <code>experimental.provider.small_model</code>, <code>event</code>, <code>config</code>, <code>tool</code>, <code>auth</code>, <code>provider</code>, <code>dispose</code>.</p>
+
+  <h3 class="o">Data & mutation model</h3>
+  <ul class="compact">
+    <li><code>(input) =&gt; (output)</code> mutation pattern &mdash; get in <code>{tool, sessionID, callID, args}</code>; out <code>{title, output, metadata}</code>.</li>
+    <li>Content mutation via <code>output</code>; injections via <code>chat.message</code> <code>output.parts</code> or <code>session.prompt({body:{noReply:true}})</code>.</li>
+  </ul>
+
+  <h3 class="o">Event types</h3>
+  <p><code>command.executed</code>, <code>file.edited/file.watcher.updated</code>, <code>installation.updated</code>, <code>lsp.*</code>, <code>message.updated/message.removed/message.part.updated/message.part.removed</code>(, delta), <code>permission.asked/replied</code>, <code>server.connected</code>, <code>session.created/updated/deleted/error/diff/compacted/status/idle</code>(<code>deprecated</code>)/<code>next.*</code> (<code>agent.switched</code>, <code>prompted</code>, <code>text.delta/ended</code>, <code>tool.called/success/failed</code>, <code>compaction.*</code> &hellip;), <code>todo.updated</code>, <code>tui.prompt.append/tui.command.execute</code> (<code>prompt.submit</code>)/<code>tui.toast.show/tui.session.select</code>, <code>workspace.*</code>, <code>worktree.*</code>, <code>vcs.branch.updated</code>, <code>project.updated</code>, <code>reference.updated</code>, <code>plugin.added</code>, <code>global.disposed</code>.</p>
+
+  <h3 class="o">NOT supported</h3>
+  <ul class="compact">
+    <li><code>user.prompt.submit</code>, <code>agent.start</code>, <code>session.start</code>, <code>system.message</code>, timer hooks/subs.</li>
+    <li>No <code>%C</code>/<code>%T</code> substitutions (Commands support <code>!`cmd`</code> shell injection + <code>$ARGUMENTS</code>/<code>$1..$9</code>/<code>@file</code>).</li>
+    <li>CLI: no <code>--system-prompt</code> flag. Global flags: <code>--pure</code> (no external plugins), <code>OPENCODE_DISABLE_DEFAULT_PLUGINS</code>.</li>
+  </ul>
+
+  <h3 class="o">System prompt rewrite paths</h3>
+  <ol>
+    <li><b>Per-agent prompt config</b> &mdash; agent <code>prompt</code> replaces model-default system prompt (<code>session/llm/request.ts L53</code>: <code>[agent.prompt &rarr; SystemPrompt.provider(model)] + system + user.system</code>); opencode.json <code>"agent": {"build": {"prompt": "{file:./prompts/build.txt}"}}</code> or md frontmatter.</li>
+    <li><b>Plugin <code>experimental.chat.system.transform</code></b> &mdash; output <code>{system: string[]}</code> full replace/augment; <code>system[0]</code> zero-key = wholesale override.</li>
+    <li><b><code>PromptInput</code> <code>system</code> string</b> appended as extra system message (SDK) &mdash; NOT a rewrite.</li>
+  </ol>
+  <p>No config key <code>system_prompt</code> (verified vs <code>https://opencode.ai/config.json</code>).</p>
+  <p><b>Desktop:</b> YES exists (BETA Electron, <code>packages/desktop</code>, brew cask <code>opencode-desktop</code>) running same server+config &mdash; no documented desktop-specific rewrite limitation; extra limitations <i>UNVERIFIED</i>.</p>
+
+  <h3 class="o">AGENTS.md</h3>
+  <ul>
+    <li><b>Discovery:</b> global <code>~/.config/opencode/AGENTS.md</code> (fallback <code>~/.claude/CLAUDE.md</code>; disable via <code>OPENCODE_DISABLE_CLAUDE_CODE_PROMPT</code>); project first match <code>AGENTS.md</code> &rarr; <code>CLAUDE.md</code> &rarr; <code>CONTEXT.md</code> via <code>findUp</code> (first match wins, no stacking); config <code>instructions</code> globs/paths with <code>{file:}</code>/<code>~/</code> and remote <code>https</code> (5s fetch timeout).</li>
+    <li><b>Injection location:</b> INSIDE system prompt as separate system-role messages <code>"Instructions from: &lt;path&gt;\n&lt;content&gt;"</code> (<code>session/instruction.ts</code> <code>Instruction.system()</code> &rarr; <code>prompt.ts</code> runLoop system array &rarr; <code>request.ts</code> maps each to <code>{role:"system"}</code>). NOT a separate user-turned additional context.</li>
+    <li>Also injected once per message on Read of files with nearby AGENTS.md.</li>
+    <li><b>Limits:</b> NO truncation/token cap found in source &mdash; read in full verbatim. Only remote fetch 5s timeout. No documented max size (UNVERIFIED/absent).</li>
+  </ul>
+
+  <h3 class="o">Other integration facts</h3>
+  <ul class="compact">
+    <li>External processes: yes via Bun shell <code>$</code> or <code>node:child_process</code> in JS plugin; <code>shell.env</code> hook injects env into AI's bash tool.</li>
+    <li>MCP servers via config <code>mcp</code> section. Slash commands; agents; skills.</li>
+    <li>Plugin runs inside opencode server process (Bun).</li>
+  </ul>
+
+  <h3 class="o">Target events coverage</h3>
+  <div class="chips">
+    <span class="lbl">coverage:</span>
+    <span class="chip g"><span class="dot"></span>post-tool-use &mdash; tool.execute.after (full)</span>
+    <span class="chip y"><span class="dot"></span>session-start &mdash; no dedicated hook; event + session.created</span>
+    <span class="chip y"><span class="dot"></span>subagent-start &mdash; partial: tool.execute.before with tool==="task"</span>
+    <span class="chip y"><span class="dot"></span>after-answer &mdash; experimental.text.complete (experimental, partial)</span>
+    <span class="chip g"><span class="dot"></span>after-submit &mdash; chat.message (before save)</span>
+  </div>
+</section>
+
+<!-- ================= 3. HERMES ================= -->
+<section id="her">
+  <h2 class="her"><span class="num">3</span>Hermes</h2>
+  <p class="lead">NousResearch/hermes-agent (<code>github.com/NousResearch/hermes-agent</code>; Python). Note: <i>"nosequey/hermes" does not exist &rarr; 404</i>; other "Hermes" candidates off-target. Sessions in <code>~/.hermes/sessions/</code>.</p>
+  <div class="pills">
+    <span class="pill her">LANGUAGE: Python</span>
+    <span class="pill her">HOOK TYPE: gateway YAML/Python + shell subprocess (3 systems)</span>
+    <span class="pill green">DESKTOP: YES (Electron, hermes desktop)</span>
+  </div>
+
+  <h3 class="p">Hooks: THREE systems</h3>
+  <ul class="compact">
+    <li><b>Gateway hooks</b> &mdash; <code>HOOK.yaml</code> + <code>handler.py</code> in <code>~/.hermes/hooks/</code>, gateway-only.</li>
+    <li><b>Plugin hooks</b> &mdash; <code>register_hook</code>, Python, CLI+gateway; plugins register tools.</li>
+    <li><b>Shell hooks</b> &mdash; subprocess, <code>hooks:</code> in <code>~/.hermes/config.yaml</code>, CLI+gateway.</li>
+  </ul>
+  <div class="codewrap">
+    <div class="codehead">~/.hermes/config.yaml &mdash; shell hook schema</div>
+<pre class="her"><span class="k">hooks:</span>
+  <span class="n">&lt;event_name&gt;</span>:
+    <span class="k">- matcher:</span> <span class="s">"&lt;regex&gt;"</span>   <span class="c"># pre/post_tool_call only</span>
+      <span class="k">command:</span> <span class="s">"&lt;cmd&gt;"</span>     <span class="c"># shlex.split, shell=False</span>
+      <span class="k">timeout:</span> <span class="n">&lt;seconds&gt;</span>   <span class="c"># default 60, max 300</span>
+      <span class="k">fail_closed:</span> <span class="n">false</span>   <span class="c"># pre_tool_call only; failClosed accepted (Cursor/CC compat)</span>
+<span class="k">hooks_auto_accept:</span> <span class="n">false</span></pre>
+  </div>
+
+  <h3 class="p">Events: ~35+</h3>
+  <p>Source <code>hermes_cli/plugins.py</code> VALID_HOOKS: <code>pre_tool_call</code>, <code>post_tool_call</code>, <code>transform_terminal_output</code>, <code>transform_tool_result</code>, <code>transform_llm_output</code>, <code>pre_llm_call</code>, <code>post_llm_call</code>, <code>on_stream_start/delta/end</code>, <code>on_interim_message</code>, <code>pre_verify</code>, <code>pre_api_request</code>, <code>post_api_request</code>, <code>api_request_error</code>, <code>transform_api_error_classification</code>, <code>on_session_start</code>, <code>on_session_end</code>, <code>on_session_finalize</code>, <code>on_session_reset</code>, <code>on_skill_lifecycle</code>, <code>subagent_start</code>, <code>subagent_stop</code>, <code>pre_gateway_dispatch</code>, <code>pre_approval_request</code>, <code>post_approval_response</code>, <code>pre_transcription</code>, <code>kanban_*</code> (~10), <code>gateway_platform_event</code>, <code>pre_command</code> (~37). All shell-executable except <code>transform_api_error_classification</code> (gateway-only).</p>
+
+  <h3 class="p">Requested events</h3>
+  <ul>
+    <li><b>post tool use</b> = <code>post_tool_call</code> (also fires <code>status:"blocked"</code>);</li>
+    <li><b>session start</b> = <code>on_session_start</code> (+ <code>on_session_end</code> / <code>on_session_finalize</code> / <code>on_session_reset</code>);</li>
+    <li><b>subagent start</b> = <code>subagent_start</code> (+ <code>subagent_stop</code>) &mdash; observer-only, can't edit child prompt;</li>
+    <li><b>after AI answer</b> = <code>post_llm_call</code> / <code>transform_llm_output</code> / <code>pre_verify</code> (keep-going);</li>
+    <li><b>after user submit</b> = NO dedicated event &mdash; docs: <i>&ldquo;Claude Code's UserPromptSubmit event is intentionally not a separate Hermes event &mdash; pre_llm_call fires at the same place&rdquo;</i>.</li>
+  </ul>
+
+  <h3 class="p">Data contract</h3>
+  <p><b>stdin JSON</b>: <code>{hook_event_name, tool_name, tool_input, session_id, cwd, extra: per-event kwargs}</code>.</p>
+  <p><b>stdout</b>: block <code>{"decision":"block","reason":&hellip;}</code> (CC) or <code>{"action":"block","message":&hellip;}</code>; modify <code>{"action":"modify","args":&hellip;}</code> / <code>{"decision":"modify","tool_input":&hellip;}</code>; context <code>{"context":"&hellip;"}</code> for <code>pre_llm_call</code>; continue <code>{"action":"continue"}</code>.</p>
+  <p><b>Exit code 2</b> = block on <code>pre_tool_call</code> (message = stdout JSON &rarr; first 400 chars stderr &rarr; generic).</p>
+
+  <h3 class="p">Limits</h3>
+  <ul class="compact">
+    <li>Blocking ONLY <code>pre_tool_call</code>; <code>fail_closed</code> only <code>pre_tool_call</code>; matcher only <code>pre/post_tool_call</code>.</li>
+    <li><code>subagent_start</code> observer-only (can't edit child prompt &mdash; block delegation via <code>pre_tool_call</code> on <code>delegate_task</code>).</li>
+    <li>No <code>PreCompact</code>/<code>PostCompact</code>/<code>StatusLine</code>.</li>
+    <li>Command syntax: <code>hooks</code> in <code>~/.hermes/config.yaml</code> (JSON <code>.claude/settings.json</code> NOT read).</li>
+    <li><b>Consent:</b> <code>hooks_auto_accept</code> / <code>--accept-hooks</code> / <code>HERMES_ACCEPT_HOOKS=1</code> / allowlist <code>~/.hermes/shell-hooks-allowlist.json</code>.</li>
+  </ul>
+
+  <h3 class="p">System prompt</h3>
+  <ul>
+    <li>NO CLI <code>--system-prompt</code> flag (untracked in docs; UNVERIFIED/absent).</li>
+    <li><b>REWRITE mechanisms:</b>
+      <ol>
+        <li><code>~/.hermes/SOUL.md</code> REPLACES hardcoded <code>DEFAULT_AGENT_IDENTITY</code> (identity slot #1; auto-seeded; security-scanned + truncated).</li>
+        <li><code>display.personality</code> (name, authoritative since PR #81946) + <code>agent.personalities</code> (dicts with <code>system_prompt</code>/<code>tone</code>/<code>style</code>).</li>
+        <li><code>HERMES_EPHEMERAL_SYSTEM_PROMPT</code> env &rarr; API-call-time only, never cached.</li>
+        <li><code>platform_hints</code>: per-platform <code>append:</code>/<code>replace:</code>.</li>
+      </ol>
+    </li>
+    <li><b>APPEND only:</b> <code>agent.system_prompt</code> in <code>~/.hermes/config.yaml</code> flows in as <code>system_message</code> (Layer 4, context tier of cached system prompt &mdash; built-in prompt always present; SOUL.md replaces ONLY identity block).</li>
+    <li><b>Desktop:</b> YES "Hermes Desktop" (<code>hermes desktop</code>, Electron). Per-agent/bot "Advanced" exposes "full capabilities surface (model, SOUL, skills, toolsets, MCP servers)" &rarr; SOUL rewrite possible per agent in desktop.</li>
+  </ul>
+
+  <h3 class="p">AGENTS.md</h3>
+  <ul>
+    <li>Reads BOTH <code>AGENTS.md</code> and <code>CLAUDE.md</code> (+ <code>.hermes.md</code>/<code>HERMES.md</code> &rarr; <code>AGENTS.override.md</code> &rarr; <code>AGENTS.md</code> &rarr; <code>CLAUDE.md</code> &rarr; <code>.cursorrules</code>). First match wins per priority chain; AGENTS.md merged git-root&rarr;cwd with provenance headers, deduped. Global SOUL.md independent (<code>~/.hermes</code>).</li>
+    <li><b>Injection location:</b> INSIDE system prompt as labeled section (context tier), verbatim <i>"Layer 8: Context files"</i> &mdash; </li>
+  </ul>
+  <blockquote>&ldquo;# Project Context &hellip; The following project context files have been loaded and should be followed:&rdquo; + sections + SOUL appended without wrapper.</blockquote>
+  <ul>
+    <li>NOT a separate claude-code-style "Additional Context" user message. Subdirectory-discovered files (SubdirectoryHintTracker) appended into TOOL RESULT instead.</li>
+    <li><b>Limits:</b> config <code>context_file_max_chars</code> else dynamic &mdash; scales with model context window, floor 20,000 chars, ceiling 500,000; truncation 70% head / 20% tail / 10% marker, e.g.</li>
+  </ul>
+  <blockquote><code>[...truncated AGENTS.md: kept 14000+4000 of 25000 chars. Use file tools to read the full file.]</code></blockquote>
+  <ul>
+    <li>Subdirectory hints 8,000 chars/file; pre-injection security scan &rarr; <code>[BLOCKED: &hellip; prompt_injection &hellip;]</code>.</li>
+  </ul>
+
+  <h3 class="p">Other integration facts</h3>
+  <ul class="compact">
+    <li>MCP client full (stdio/HTTP, oauth, untrusted&rarr;approval gate, sampling, elicitation); <code>tools.include/exclude</code>.</li>
+    <li><code>pre_tool_call</code> can block/modify ANY tool incl MCP.</li>
+    <li>No claude-code <code>.claude/agents/*.md</code> &mdash; subagents = <code>delegate_task</code> tool.</li>
+  </ul>
+
+  <h3 class="p">Target events coverage</h3>
+  <div class="chips">
+    <span class="lbl">coverage:</span>
+    <span class="chip g"><span class="dot"></span>post-tool-use &mdash; post_tool_call (fires on status:"blocked" too)</span>
+    <span class="chip g"><span class="dot"></span>session-start &mdash; on_session_start</span>
+    <span class="chip y"><span class="dot"></span>subagent-start &mdash; subagent_start, observer-only &mdash; cannot edit child prompt</span>
+    <span class="chip y"><span class="dot"></span>after-answer &mdash; post_llm_call / transform_llm_output / pre_verify</span>
+    <span class="chip r"><span class="dot"></span>after-submit &mdash; NO dedicated event; pre_llm_call fires at the same place</span>
+  </div>
+</section>
+
+<!-- ================= 4. DESIGN GUIDANCE ================= -->
+<section id="guidance">
+  <h2 class="guidance"><span class="num">4</span>Cross-Harness Design Guidance</h2>
+
+  <h3>Hook goal &times; implementation per harness</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Requested event</th><th>DeepSeek Harness</th><th>OpenCode</th><th>Hermes</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>post-tool-use</td>
+          <td>PostToolUse &rarr; <code>tools/post-execute</code> (bridge, hooks.json)</td>
+          <td><code>tool.execute.after</code></td>
+          <td><code>post_tool_call</code> (fires on <code>status:"blocked"</code> too)</td>
+        </tr>
+        <tr>
+          <td>session start</td>
+          <td>SessionStart &rarr; <code>agent/session-start</code></td>
+          <td>no dedicated hook; event + <code>session.created</code></td>
+          <td><code>on_session_start</code></td>
+        </tr>
+        <tr>
+          <td>subagent start</td>
+          <td>SubagentStart &rarr; <code>subagent/start</code></td>
+          <td>partial: <code>tool.execute.before</code> with <code>tool==="task"</code></td>
+          <td><code>subagent_start</code> &mdash; observer-only, cannot edit child prompt</td>
+        </tr>
+        <tr>
+          <td>after AI answer</td>
+          <td><code>stop_hook_active</code> always false; message hooks via Stop/<code>agent/turn-stopping</code></td>
+          <td><code>experimental.text.complete</code> / <code>message.updated</code></td>
+          <td><code>post_llm_call</code> / <code>transform_llm_output</code> / <code>pre_verify</code></td>
+        </tr>
+        <tr>
+          <td>after user submit</td>
+          <td>UserPromptSubmit &rarr; <code>agent/pre-step</code></td>
+          <td><code>chat.message</code> (before save)</td>
+          <td>NO dedicated event &mdash; same place as <code>pre_llm_call</code></td>
+        </tr>
+        <tr>
+          <td>Entry point</td>
+          <td>CC-style script-in-config (hooks.json + bridge)</td>
+          <td>JS plugin only (no script-in-config)</td>
+          <td>CC-style script-in-config (config.yaml command, shlex, shell=False)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Key architectural differences</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Aspect</th><th>DeepSeek Harness</th><th>OpenCode</th><th>Hermes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Language</td><td><span style="color:var(--dsh)">TypeScript (Cordis)</span></td><td><span style="color:var(--oc)">TypeScript/Bun</span></td><td><span style="color:var(--her)">Python</span></td></tr>
+        <tr><td>Hook mechanism</td><td>Native Cordis events + bridge</td><td>JS/TS plugin registrations</td><td>Gateway YAML/Python / shell subprocess</td></tr>
+        <tr><td>"Script path entry point"?</td><td><span class="ok">YES</span> (hooks.json + bridge)</td><td><span class="bad">NO</span> &mdash; JS plugin only</td><td><span class="ok">YES</span> (config.yaml command)</td></tr>
+        <tr><td>Desktop availability</td><td><span class="bad">NONE</span> (web UI only)</td><td><span class="warn">YES</span> (BETA Electron)</td><td><span class="ok">YES</span> (Electron, <code>hermes desktop</code>)</td></tr>
+        <tr><td>System prompt full-replace</td><td><span class="ok">YES</span> (<code>complete: true</code> persona, <code>includeHarnessIdentity:false</code>)</td><td><span class="ok">YES</span> (agent prompt / system.transform zero-key)</td><td><span class="warn">Partial</span> &mdash; SOUL.md replaces identity slot only</td></tr>
+        <tr><td>AGENTS.md context</td><td>User message w/ <code>&lt;system-reminder&gt;</code>, lower priority</td><td>System-role messages in system prompt</td><td>System prompt "Layer 8: Context files"</td></tr>
+        <tr><td>Max context size</td><td>64 KiB budget (configurable, maxBytes REQUIRED)</td><td>No cap found (unverified)</td><td>20k&ndash;500k chars dynamic (70/20/10 truncate)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>Recommendation</h3>
+  <div class="callout info">
+    <span class="t">RECOMMENDED STRATEGY</span>
+    Single realistic strategy: <b>thin adapter script per harness + one shared core</b>. Each harness gets a minimal shim (<code>hooks.json</code> entry for DSH, tiny JS plugin wrapper for OpenCode, YAML command entry for Hermes) that serializes the same JSON event envelope and invokes a shared core (plain POSIX/Node shell or a CLI tool) &mdash; Do NOT write three full feature sets.
+    <ul>
+      <li><b>DSH</b> = richest (native Cordis plugins + bridge, block via exit 2, <code>additionalContext</code> inject, profile/<code>--patch</code> overlays);</li>
+      <li><b>OpenCode</b> = mutate via <code>output</code> in JS only (no subprocess bridge without a long-lived server process);</li>
+      <li><b>Hermes</b> = gateway/plugin hooks for logic-heavy work, shell hooks for simple command shims.</li>
+    </ul>
+  </div>
+
+  <h3>Max-compat cuts (what must be dropped)</h3>
+  <div class="callout danger">
+    <span class="t">DROP: SUBAGENT-START PROMPT EDITING</span>
+    NOT possible in Hermes (observer-only) or OpenCode (no <code>agent.start</code>); only DSH supports it. For compat, treat subagent-start as informational/log-only.
+  </div>
+  <div class="callout warn">
+    <span class="t">DROP: PostToolUse updatedToolOutput</span>
+    NOT honored in DSH (parsed, warned, ignored).
+  </div>
+  <div class="callout warn">
+    <span class="t">DROP: PreToolUse allow/defer/updatedInput</span>
+    Unsupported in DSH.
+  </div>
+  <div class="callout warn">
+    <span class="t">DROP: after-AI-answer message edits</span>
+    <code>experimental.text.complete</code> is OpenCode-only (experimental, can rewrite); DSH has no equivalent message-edit hook &mdash; fall back to Stop/<code>agent/turn-stopping</code>.
+  </div>
+  <div class="callout warn">
+    <span class="t">ADAPT: user-submit handling</span>
+    Hermes offers no distinct event &mdash; use <code>pre_llm_call</code> and gate on context.
+  </div>
+  <div class="callout danger">
+    <span class="t">ADAPT: injection strategy must be per-harness</span>
+    None of the three share an injection channel (<code>additionalContext</code> user message / <code>output.parts</code>+<code>session.prompt</code> / <code>context:{}</code> JSON).
+  </div>
+</section>
+
+<!-- ================= 5. UNCERTAINTIES ================= -->
+<section id="unc">
+  <h2 class="unc"><span class="num">5</span>Verification notes &amp; uncertainties</h2>
+
+  <div class="callout info">
+    <span class="t">DEEPSEEK HARNESS</span>
+    <ul class="compact">
+      <li>No desktop app &mdash; confirmed absent (apps = CLI + web UI; native/ = sandbox).</li>
+      <li>No end-user prompt-editing UI.</li>
+      <li>TODO items in source: shipped status unclear.</li>
+      <li><code>maxBytes</code> REQUIRED &mdash; non-positive silently disables AGENTS.md budget; shipped default 65536.</li>
+    </ul>
+  </div>
+  <div class="callout info">
+    <span class="t">OPENCODE</span>
+    <ul class="compact">
+      <li>Desktop-specific prompt rewrite limitation: <b>UNVERIFIED</b> (desktop runs same server+config).</li>
+      <li><code>lsp.*</code> event definitions: <b>UNVERIFIED</b>.</li>
+      <li>No documented AGENTS.md size cap &mdash; read in full, <b>UNVERIFIED/absent</b>.</li>
+    </ul>
+  </div>
+  <div class="callout info">
+    <span class="t">HERMES</span>
+    <ul class="compact">
+      <li>No <code>--system-prompt</code> flag: <b>UNVERIFIED/absent</b> (untracked in docs).</li>
+      <li><code>on_status_bar_render</code> NOT in VALID_HOOKS.</li>
+      <li>MCP server mode: partly <b>UNVERIFIED</b>.</li>
+      <li><i>"nosequey/hermes"</i> does not exist (404) &mdash; resolved to NousResearch/hermes-agent from description.</li>
+      <li>Desktop per-agent SOUL rewrite: noted from docs &mdash; runtime behavior not independently exercised.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer id="src">
+  <div class="wrap">
+    <h3>Sources</h3>
+    <ul>
+      <li><b>DeepSeek Harness:</b> <a href="https://github.com/deepseek-ai/deepseek-harness">github.com/deepseek-ai/deepseek-harness</a> &mdash; packages/hooks/hooks-claude-code/README.md; base composition <code>cordis.patch.yml</code> (system prompt rows 429-432, AGENTS.md maxBytes 65536); arg parsers (verified no <code>--system-prompt</code>); <code>apps/</code> (cli, web UI at 127.0.0.1:3080), <code>native/</code> (landlock-run sandbox).</li>
+      <li><b>OpenCode:</b> <a href="https://github.com/anomalyco/opencode">github.com/anomalyco/opencode</a> (<a href="https://github.com/sst/opencode">sst/opencode</a> redirects) &mdash; <code>session/llm/request.ts</code> (L53 agent.prompt composition), <code>session/instruction.ts</code> (Instruction.system()), <code>session/prompt.ts</code> (runLoop system array); docs: <a href="https://opencode.ai/docs/plugins">https://opencode.ai/docs/plugins</a> (hooks folded in; /docs/hooks is 404), <a href="https://opencode.ai/config.json">https://opencode.ai/config.json</a> (verified no <code>system_prompt</code> key); <code>packages/desktop</code> (BETA Electron, brew cask <code>opencode-desktop</code>).</li>
+      <li><b>Hermes:</b> <a href="https://github.com/NousResearch/hermes-agent">github.com/NousResearch/hermes-agent</a> (Python) &mdash; <code>hermes_cli/plugins.py</code> (VALID_HOOKS), hooks.md (shell hook schema), config.yaml (<code>hooks:</code> / <code>hooks_auto_accept</code>), <code>~/.hermes/{SOUL.md, hooks/, sessions/, shell-hooks-allowlist.json}</code>; PR #81946 (<code>display.personality</code> authoritative); context file docs ("Layer 8: Context files", truncation format, security scan).</li>
+      <li><b>Generic:</b> Claude Code hooks.json dialect (mapping tables, 23 unsupported CC events list for DSH; Hermes UserPromptSubmit&rarr;pre_llm_call note).</li>
+    </ul>
+  </div>
+</footer>
+
+</div>
+</body>
+</html>

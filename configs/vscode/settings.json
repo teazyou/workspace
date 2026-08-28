@@ -96,7 +96,7 @@
     "chat.viewSessions.orientation": "stacked",
     "window.customTitleBarVisibility": "never",
     "workbench.activityBar.location": "top",
-    "workbench.colorTheme": "Red",
+    "workbench.colorTheme": "Monokai Dimmed",
     "workbench.colorCustomizations": {
         "terminal.background": "#1e1e1eff",
         "editorPane.background": "#1e1e1eff",
