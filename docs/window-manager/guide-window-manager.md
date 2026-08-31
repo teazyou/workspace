@@ -30,8 +30,9 @@
 - ./configs/sketchybar/icons.sh
 - ./configs/sketchybar/theme.sh
 - ./configs/sketchybar/helpers/wifi_rssi.swift
-- ./configs/sketchybar/items/*.sh (14 files)
-- ./configs/sketchybar/plugins/*.sh (23 files)
+- ./configs/sketchybar/items/*.sh (15 files)
+- ./configs/sketchybar/plugins/*.sh (25 files)
+- ./configs/sketchybar/tests/pomodoro_test.sh
 - ./configs/vscode/settings.json
 
 ## Descriptions
@@ -113,18 +114,19 @@
 
 `./configs/sketchybar/sketchybarrc`
 - Main sketchybar entry point (status bar)
-- Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, ram, cpu, battery, vpn_be + vpn_sn (both from items/vpn.sh), wifi, ethernet (the audio division — volume + headset — was removed entirely 2026-07; its item/plugin files are deleted, only the icons.sh glyph exports and the dead volume_click.sh template remain)
+- Sources colors.sh, icons.sh, theme.sh, then items: spaces, calendar, the four-item Pomodoro timer, ram, cpu, battery, vpn_be + vpn_sn (both from items/vpn.sh), wifi, ethernet (the audio division — volume + headset — was removed entirely 2026-07; its item/plugin files are deleted, only the icons.sh glyph exports and the dead volume_click.sh template remain)
 - Commented out (disabled): apple.sh, settings.sh
 - Not sourced (disabled): front_app.sh, brew.sh, github.sh, spotify.sh
 - Defines bar: height=58, floating style, transparent bg, `display=main` (bar on the main monitor ONLY — secondary monitors never draw it; apply-display-profile.sh emits the matching per-monitor top gaps)
 - Edge alignment: `margin=0` + `BAR_SIDE_PADDING` place the outer divisions `BAR_SIDE_PADDING` px from each screen edge. Keep `BAR_SIDE_PADDING` = aerospace `gaps.outer.left/right` (5) so the left/right divisions line up with the tiled-window (app) area edges
 - Defines defaults + the shared `bracket_style`: division geometry (corner radius, border, blur) all pulled from theme.sh tokens; font=JetBrainsMono
-- Groups items into brackets: calendar_group, resources, connectivity
-- Inter-group spacer items (spacer0–1: calendar↔resources, resources↔connectivity) all use theme.sh's `GROUP_GAP` width — exactly one gap per adjacent division pair
+- Groups right-side items into brackets in visual order connectivity | resources | Pomodoro | calendar: `calendar_group`, `pomodoro_group`, `resources`, `connectivity`
+- Inter-group spacer items (spacer0–2: calendar↔Pomodoro, Pomodoro↔resources, resources↔connectivity) all use theme.sh's `GROUP_GAP` width — exactly one gap per adjacent division pair
+- Runs one Pomodoro `sync` after all items/brackets exist, then paints the spaces strip; startup/wake reconciliation resumes a future absolute deadline or commits one expired rollover
 - Edit for: bar position, default item styling, enable/disable items (for the overall division look, edit theme.sh)
 
 `./configs/sketchybar/theme.sh`
-- Visual TEMPLATE — single source of truth for "division" geometry (a division = any grouped pill: spaces 1-6 / 7-9 / 0, calendar, resources, connectivity)
+- Visual TEMPLATE — single source of truth for "division" geometry (a division = any grouped pill: spaces 1-6 / 7-9 / 0, calendar, Pomodoro, resources, connectivity)
 - Tokens: `DIVISION_RADIUS` / `SPACE_BUBBLE_RADIUS` / `POPUP_RADIUS` (corner rounding), `DIVISION_BORDER_WIDTH` (0 = no border), `DIVISION_BLUR` (0 — fills are opaque), `GROUP_GAP` (the single uniform gap BETWEEN divisions), `DIVISION_PAD` (inner pad between a division edge and its first/last element) and `ELEMENT_GAP` (gap between elements inside a division)
 - SUB-LABEL MARKER lesson (**not in use** — built as a selection dot, then a selection underline, for the VPN items on 2026-07-30 and removed the same day: colour alone reads the VPN state, and two grey icons simply mean "off"; kept here because the findings cost real measurement): SketchyBar has no sub-label slot, and neither `label.background` nor the item `background` can be shrunk or inset — `label.background.padding_*` does not change the fill's width at all, and the item background's padding does not inset it either: it only TRANSLATES the fill and ADDS outward layout width (measured: `background.padding_left/right=6` grew the connectivity division 85 → 97 px), so a background can only ever be a full-element-width rule (30 px under an 18 px label). A narrower/thinner marker therefore has to be the element's own ICON slot carrying a glyph (`●` U+25CF, or a `─` U+2500 hairline), dropped below the text with `icon.y_offset` (negative = DOWN) and pulled back under it with a NEGATIVE `icon.padding_right` such that `pad_left + <glyph advance> + pad_right == 0` → zero layout cost. Show/hide must then be a COLOUR (`icon.color=$TRANSPARENT`), NEVER `icon.drawing`: `drawing=off` removes the glyph's advance and shifts the label. Thinness floor: the display is @1:1, so 1 pt == 1 px — a sub-pixel rule is not expressible; U+2500 at `:Regular:` is the thinnest the font stack gives (`:Bold:` and `▁` U+2581 are visibly thicker), and glyph size trades stroke weight against rule length (`:Regular:13.0` → 14 px long)
 - DIVISION_PAD/ELEMENT_GAP are applied via item paddings (NOT bracket bg padding — that does nothing in this build); kept EQUAL so a hiding edge element's neighbour gap doubles cleanly as the edge pad. The leftmost item gets DIVISION_PAD on its left, the rightmost DIVISION_PAD on its right, internal boundaries ELEMENT_GAP. Plugins that toggle visibility (ethernet) source theme.sh and set these
@@ -144,28 +146,37 @@
 
 `./configs/sketchybar/icons.sh`
 - Nerd Font icon exports
-- Categories: general, git, spotify, aerospace, battery, volume, calendar, wifi, ethernet, vpn, ram, headset, settings, network speed
+- Categories: general, git, spotify, aerospace, battery, volume, calendar, Pomodoro (work/break/play/pause/reset), wifi, ethernet, vpn, ram, headset, settings, network speed
 - Edit for: adding/changing icons
 
 `./configs/sketchybar/items/*.sh`
 - Item definitions (visual config, positioning, subscriptions)
 - Pattern: define item properties, add to bar, subscribe events
-- Active items: spaces.sh, calendar.sh, ram.sh, cpu.sh, battery.sh, vpn.sh (defines TWO items: vpn_be + vpn_sn), wifi.sh, ethernet.sh (9 live items from 8 files; volume.sh/headset.sh deleted with the audio division)
+- Active item files: spaces.sh, calendar.sh, pomodoro.sh (defines preset/countdown/toggle/reset), ram.sh, cpu.sh, battery.sh, vpn.sh (defines TWO items: vpn_be + vpn_sn), wifi.sh, ethernet.sh; volume.sh/headset.sh were deleted with the audio division
 - Disabled items: apple.sh (commented), settings.sh (commented), front_app.sh (not sourced), brew.sh, github.sh, spotify.sh
 - Edge/element paddings come from theme.sh (DIVISION_PAD / ELEMENT_GAP), not per-item magic numbers — each item marks its left/right-edge vs internal paddings with those tokens
-- State-driven items: calendar = one clock icon + "Day DD HH:MM" (date+time pair); resources = single stats icon + "cpu% ramGB" + battery last; ethernet shows ONLY when connected; vpn_be/vpn_sn = two text icons "BE"/"SN", colour-only (grey = not connected, red = connected, yellow = connecting, magenta = `nord refresh` needed) — no orange, and deliberately no selection marker (both grey = VPN off); wifi = RSSI strength bars
-- Poller freqs as defined in items/*.sh — always-on: battery 60, vpn_be/vpn_sn 30, ethernet 30, wifi 30, cpu 5, ram 5
+- State-driven items: calendar = one clock icon + "Day DD HH:MM" (date+time pair); Pomodoro = preset + countdown + play/pause + reset; resources = single stats icon + "cpu% ramGB" + battery last; ethernet shows ONLY when connected; vpn_be/vpn_sn = two text icons "BE"/"SN", colour-only (grey = not connected, red = connected, yellow = connecting, magenta = `nord refresh` needed) — no orange, and deliberately no selection marker (both grey = VPN off); wifi = RSSI strength bars
+- Poller freqs as defined in items/*.sh — always-on: battery 60, vpn_be/vpn_sn 30, ethernet 30, wifi 30, cpu 5, ram 5. Pomodoro alone switches dynamically: 1 second while running, 0 while paused
 - Key file: spaces.sh (workspaces with aerospace integration)
 - Edit for: item appearance, positioning, which events trigger updates
 
 `./configs/sketchybar/plugins/*.sh`
-- Event handlers and data fetchers (23 files)
+- Event handlers and data fetchers (25 files)
 - Pattern: receive events, query system, update sketchybar items
-- Key files: aerospace.sh (workspace state), wifi.sh, ethernet.sh, ram.sh
+- Key files: aerospace.sh (workspace state), pomodoro.sh, wifi.sh, ethernet.sh, ram.sh
 - aerospace.sh: workspace display with multi-monitor colors. Renders app ICONS via sketchybar-app-font (__icon_map in icon_map.sh) when EVERY app in a space is mapped, else falls back to text names (shorten_app_name). Subscribes front_app_switched so it repaints on app open, not only on workspace change
 - wifi.sh: maps current-link RSSI (helpers/wifi_rssi) → strength bars. wifi_click.sh toggles Wi-Fi power on click
 - ram.sh outputs raw GB used (not %); ethernet.sh collapses the icon (icon.drawing=off + zero pad) when disconnected while keeping the item drawing=on so the poller still runs. Bracket lesson (historical): a SketchyBar bracket paints via TWO independent layers — the fill (`background.drawing`) AND the drop shadow (`background.shadow.drawing`) — and the item-level `drawing` flag controls NEITHER; `drawing=off` only FREEZES the bracket geometry at its last width while both layers keep painting (= an empty pill). To hide a bracket, keep it `drawing=on` and toggle BOTH paint layers together (verified via `--query`/`bounding_rects`; learned from the since-removed traffic divisions)
 - Edit for: logic of what's displayed, data sources, formatting
+
+`./configs/sketchybar/items/pomodoro.sh`, `./configs/sketchybar/plugins/pomodoro.sh`, `./configs/sketchybar/tests/pomodoro_test.sh`
+- Self-contained Pomodoro division: preset-cycle (`45/15` ↔ `60/20`), visible countdown, one play/pause control, one reset control. Only explicit left clicks mutate state
+- Controller actions are `sync`, `cycle`, `toggle`, `reset`. Cycle selects the other preset and resets to full work paused; reset preserves the preset and resets to full work paused; toggle starts the current remainder, pauses to `deadline-now`, or performs one paused rollover when clicked at/after expiry
+- Runtime state is generated outside the repo at `${XDG_STATE_HOME:-$HOME/.local/state}/sketchybar/pomodoro.state`; its adjacent `.lock` is advisory, not a daemon. State is parsed as data (never sourced): `version=1`, `preset=45_15|60_20`, `phase=work|break`, `status=paused|running`, integer `remaining`, integer absolute Unix `deadline`. Malformed/missing state safely becomes 45/15 full work paused
+- State directory is mode 0700; state/lock are 0600. Writes use a same-directory temporary file + atomic `mv`. macOS `/usr/bin/lockf` holds a persistent FD across load → transition → save → one batched four-item render; user actions wait up to two seconds, routine ticks are nonblocking. Notifications run only after lock release
+- Running ticks derive display from the absolute deadline and do not rewrite valid state. SketchyBar owns the only 1 Hz scheduling via dynamic `update_freq=1`; paused state sets `update_freq=0`. No Node/Python, LaunchAgent, daemon, or AeroSpace polling is involved
+- Boundary policy is deliberately one rollover: work completion → full break paused; break completion → full work paused, including wake/startup after a long sleep. The committed state prevents duplicate notifications; `/usr/bin/osascript` notifications are nonfatal and have no third-party/sound dependency
+- Deterministic Bash 3.2 test uses isolated temp state, fake epoch, and SketchyBar/notification stubs. Run: `bash configs/sketchybar/tests/pomodoro_test.sh`
 
 `./configs/vscode/settings.json`
 - VSCode editor settings

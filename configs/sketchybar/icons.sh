@@ -48,6 +48,13 @@ export VOLUME_0=󰝟
 # Calendar Icons
 export CALENDAR=󰃭
 
+# Pomodoro Icons
+export POMODORO_WORK=󰔛
+export POMODORO_BREAK=󰅶
+export POMODORO_PLAY=󰐊
+export POMODORO_PAUSE=󰏤
+export POMODORO_RESET=󰜉
+
 # Wifi Icons
 export WIFI_CONNECTED=󰖩
 export WIFI_DISCONNECTED=󰖪

@@ -3,9 +3,9 @@
 # SketchyBar visual TEMPLATE — single source of truth for "division" styling.
 #
 # A *division* is any grouped pill on the bar: spaces 1-6, spaces 7-9, space 0,
-# calendar, resources, connectivity. Every division on BOTH the left and
-# right of the bar pulls its geometry from the tokens below — so the whole bar
-# stays uniform and a restyle is a single edit here.
+# calendar, Pomodoro, resources, connectivity. Every division on BOTH the left
+# and right of the bar pulls its geometry from the tokens below — so the whole
+# bar stays uniform and a restyle is a single edit here.
 #
 # Sourced by sketchybarrc BEFORE any item is added; items/*.sh are sourced in the
 # same shell so they inherit these without re-sourcing. (Geometry only; the colour

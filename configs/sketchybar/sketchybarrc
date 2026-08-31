@@ -76,8 +76,8 @@ defaults=(
 
 sketchybar --default "${defaults[@]}"
 
-# Shared bracket style for the right-side groups (calendar, resources,
-# connectivity). One definition so a theme change is a single edit.
+# Shared bracket style for the right-side groups (calendar, Pomodoro,
+# resources, connectivity). One definition so a theme change is a single edit.
 # NOTE: the left spaces brackets use a DISTINCT spaces_bracket_style in
 # items/spaces.sh (without the background.padding_left/right=0 lines) to keep
 # the left-group spacing unchanged. Defined before the first item source so
@@ -122,8 +122,18 @@ source "$ITEM_DIR/calendar.sh"
 sketchybar --add bracket calendar_group time date \
            --set calendar_group "${bracket_style[@]}"
 
-# Spacer between calendar and resources
+# Spacer between calendar and Pomodoro
 sketchybar --add item spacer0 right --set spacer0 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
+
+# Pomodoro group (L->R: preset, countdown, play/pause, reset). Its item file
+# adds right-side items in reverse so the controls read naturally.
+source "$ITEM_DIR/pomodoro.sh"
+
+sketchybar --add bracket pomodoro_group pomodoro_preset pomodoro_countdown pomodoro_toggle pomodoro_reset \
+           --set pomodoro_group "${bracket_style[@]}"
+
+# Spacer between Pomodoro and resources
+sketchybar --add item spacer1 right --set spacer1 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
 # System resources group (L->R: cpu, ram, battery). Right items are added
 # right-most first, so source battery (rightmost/last), then ram, then cpu.
@@ -132,7 +142,7 @@ source "$ITEM_DIR/ram.sh"
 source "$ITEM_DIR/cpu.sh"
 
 # Spacer between resources and connectivity
-sketchybar --add item spacer1 right --set spacer1 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
+sketchybar --add item spacer2 right --set spacer2 width=$GROUP_GAP background.drawing=off icon.drawing=off label.drawing=off
 
 # Network connectivity group (L->R: wifi, ethernet, vpn_be, vpn_sn). Right items are
 # added right-most first, so source vpn.sh first (it adds vpn_sn then vpn_be
@@ -150,6 +160,10 @@ sketchybar --add bracket resources ram cpu battery \
 # Bracket for network connectivity group (wifi + ethernet + vpn_be + vpn_sn)
 sketchybar --add bracket connectivity vpn_be vpn_sn wifi ethernet \
            --set connectivity "${bracket_style[@]}"
+
+# Reconcile persisted Pomodoro state only after every item and bracket exists.
+# A running timer resumes from its absolute deadline; a paused timer stays idle.
+"$PLUGIN_DIR/pomodoro.sh" sync
 
 # Paint the spaces strip once at startup. Run the coordinator plugin DIRECTLY
 # instead of `sketchybar --trigger aerospace_workspace_change`: a custom-event
