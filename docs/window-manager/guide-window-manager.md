@@ -23,6 +23,8 @@
 - ./features.aerospace.md
 - ./configs/aerospace/lib-paths.sh
 - ./configs/aerospace/open-dock-app.sh
+- ./configs/aerospace/swap-workspaces.sh
+- ./configs/aerospace/tests/swap-workspaces_test.sh
 - ./scripts/aerospace-restart.sh
 - ./configs/borders/bordersrc
 - ./configs/sketchybar/sketchybarrc
@@ -95,6 +97,14 @@
 - Bash 3.2 compatible (no associative arrays / mapfile)
 - Edit for: the placement-cap constant
 - NOTE: the empty-workspace-watcher daemon, its plist, track-workspace-mru.sh, the grace-marker contract and the `aero()` timeout wrapper were REMOVED (2026-07): closing the last focused window is handled natively by AeroSpace (macOS refocuses another window and AeroSpace reveals its workspace); the watcher only covered rare cases (focus falling to a windowless app, background self-closes on a non-focused monitor) judged not worth its constant polling cost. If a long-running aerospace-polling loop is ever reintroduced, resurrect `aero()` from git history — a bare `$(aerospace …)` can hang forever on a wedged server socket
+
+`./configs/aerospace/swap-workspaces.sh`
+- Transactional workspace-content swap invoked by **service mode + `0`–`9`** (`alt-shift-semicolon`, then a digit). It exchanges every AeroSpace-managed window in the focused workspace with the target workspace, including floating windows, and leaves the original workspace focused.
+- Uses explicit window IDs and one stable, collision-checked staging workspace (`aerospace-swap-staging`, test-overridable with `SWAP_TEMP_WORKSPACE`) under an atomic `mkdir` lock. The name deliberately does not begin with `_`, which AeroSpace reserves. An occupied staging workspace is refused so crash leftovers remain discoverable. Window IDs are moved source → temporary → target, so neither destination ever receives a mixture that can collide with the other set. Saved fullscreen state is suspended before the first move and restored after rebuilding; if a command fails after mutation begins, every captured ID is attempted during best-effort rollback.
+- Preserves AeroSpace fullscreen state and captures the real depth-first order of **tiled** leaves by walking `focus --dfs-index`; floating windows are moved/restored explicitly but are not in AeroSpace's DFS index space. **Do not** substitute `list-windows` ordering, which is app/title ordered. On restoration it uses adjacent `swap dfs-prev` operations to deterministically recover tiled order.
+- Supported tiling shapes are exact flat `h_tiles`/`v_tiles` roots and the service-mode `/` balanced 2×2 (`h_tiles` root with `v_tiles` child columns), plus its rotated counterpart. Accordion, mixed, or deeper custom nesting is refused before any mutation instead of being flattened. Parent IDs are not exposed by AeroSpace, so arbitrary nested trees cannot be reconstructed safely.
+- On success it issues one SketchyBar workspace repaint and follows the repository's deliberate keyboard-focus mouse policy: `move-mouse window-lazy-center`, with `monitor-lazy-center` fallback for an empty workspace or a focus/warp race. A same-workspace digit is an AeroSpace no-op (no temporary workspace, reflow, repaint, or cursor move).
+- Bash 3.2-compatible and command-boundary mockable via `AEROSPACE_BIN` / `SKETCHYBAR_BIN`. Run `bash configs/aerospace/tests/swap-workspaces_test.sh` for deterministic state-machine coverage of no-op, argument validation, stable-temp refusal, fullscreen timing, flat, normal/rotated grid, unsupported-layout, and rollback paths.
 
 `./scripts/aerospace-restart.sh`
 - Full restart of the whole window-manager stack — wired to the `aerospace-restart` shell alias (`zsh/alias/osx.zsh`)
