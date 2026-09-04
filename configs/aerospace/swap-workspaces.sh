@@ -695,20 +695,21 @@ restore_preflight_focus() {
 
 finish_success() {
     # The script changes workspaces while taking DFS snapshots/rebuilding. Put
-    # focus back on the original physical workspace, repaint the bar once with
-    # that final state, then apply the repository's keyboard-focus mouse policy.
-    local incoming_window=''
+    # focus back on the original physical workspace, select the first window now
+    # listed there, repaint the bar, then apply the keyboard-focus mouse policy.
+    local incoming_window='' listed_windows candidate
     aero workspace "$ORIGINAL_WORKSPACE" || return 1
-    if [ "${#target_dfs[@]}" -gt 0 ]; then
-        incoming_window="${target_dfs[0]}"
-    elif [ "${#target_ids[@]}" -gt 0 ]; then
-        # A workspace containing only floating windows has no DFS entry, but a
-        # floating window can still be explicitly focused by its ID.
-        incoming_window="${target_ids[0]}"
-    fi
-    if [ -n "$incoming_window" ]; then
-        aero focus --window-id "$incoming_window" >/dev/null 2>&1 || incoming_window=''
-    fi
+    listed_windows=$(aero list-windows --workspace "$ORIGINAL_WORKSPACE" \
+        --format '%{window-id}') || return 1
+    while IFS= read -r candidate; do
+        [ -n "$candidate" ] || continue
+        if aero focus --window-id "$candidate" >/dev/null 2>&1; then
+            incoming_window="$candidate"
+            break
+        fi
+    done <<EOF
+$listed_windows
+EOF
     "$SKETCHYBAR_BIN" --trigger aerospace_workspace_change \
         "FOCUSED_WORKSPACE=$ORIGINAL_WORKSPACE" >/dev/null 2>&1 || true
     if [ -n "$incoming_window" ]; then
