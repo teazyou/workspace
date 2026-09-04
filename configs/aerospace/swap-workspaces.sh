@@ -615,7 +615,9 @@ suspend_borders() {
 resume_borders() {
     [ "$BORDERS_SUSPENDED" = true ] || return 0
     BORDERS_SUSPENDED=false
-    "$BORDERS_START_BIN" >/dev/null 2>&1 &
+    # Detach the relaunched process from this short-lived helper shell; without
+    # nohup it can receive SIGHUP and disappear as soon as the swap exits.
+    /usr/bin/nohup "$BORDERS_START_BIN" </dev/null >/dev/null 2>&1 &
     log 'borders restarted'
 }
 
