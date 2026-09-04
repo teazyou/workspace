@@ -6,7 +6,9 @@
 # This deliberately uses explicit window IDs throughout. AeroSpace's
 # list-windows output is application/title ordered, not tree ordered, so the
 # layout snapshot gets its tiled window order by walking focus --dfs-index; that
-# index intentionally excludes floating windows.
+# index intentionally excludes floating windows. Focus walks and related tree
+# mutations are sent through `aerospace eval` batches: AeroSpace performs each
+# batch in one refresh session and publishes only its final focus/layout state.
 #
 # Supported tiling shapes:
 #   * a flat h_tiles or v_tiles root
@@ -47,6 +49,62 @@ warn() {
 
 aero() {
     "$AEROSPACE_BIN" "$@"
+}
+
+is_eval_workspace() {
+    # Values interpolated into AeroSpace's shell expression must be single,
+    # operator-free atoms. This repository's workspaces and reserved staging
+    # workspace all fit this deliberately narrow alphabet.
+    case "$1" in
+        ''|*[!A-Za-z0-9._-]*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+is_window_id() {
+    case "$1" in
+        ''|*[!0-9]*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+EVAL_EXPRESSION=''
+
+eval_batch_reset() {
+    EVAL_EXPRESSION=''
+}
+
+eval_batch_add() {
+    # Commands in a transactional batch short-circuit at the first failure.
+    local command="$1"
+    if [ -z "$EVAL_EXPRESSION" ]; then
+        EVAL_EXPRESSION="$command"
+    else
+        EVAL_EXPRESSION="$EVAL_EXPRESSION && $command"
+    fi
+}
+
+eval_batch_run() {
+    [ -z "$EVAL_EXPRESSION" ] && return 0
+    aero eval -- "$EVAL_EXPRESSION"
+}
+
+# Every focus-walking eval ends here. During preflight this is the precise
+# original focus. Once mutation starts it becomes the first incoming window on
+# the original workspace (or just the workspace when that incoming set is
+# empty). `focus ... || true` tolerates a window closing during rollback.
+FOCUS_RESTORE_WORKSPACE=''
+FOCUS_RESTORE_WINDOW=''
+
+append_focus_restore() {
+    local expression="$1"
+    is_eval_workspace "$FOCUS_RESTORE_WORKSPACE" || return 1
+    expression="$expression; workspace -- $FOCUS_RESTORE_WORKSPACE"
+    if [ -n "$FOCUS_RESTORE_WINDOW" ]; then
+        is_window_id "$FOCUS_RESTORE_WINDOW" || return 1
+        expression="$expression && (focus --window-id $FOCUS_RESTORE_WINDOW || true)"
+    fi
+    printf '%s\n' "$expression"
 }
 
 contains_id() {
@@ -162,7 +220,11 @@ metadata_for_id() {
 
 snapshot_dfs_order() {
     local workspace="$1"
-    local i=0 id meta parent tiled_count=0 leaf_index=0
+    local i=0 id meta parent tiled_count=0 leaf_index=0 output row
+    local completed=false expression
+    local marker='aerospace-swap-dfs:'
+    local complete_marker='aerospace-swap-dfs-complete'
+    local captured_ids=()
 
     SNAP_DFS=()
     SNAP_TILED_DFS=()
@@ -178,15 +240,44 @@ snapshot_dfs_order() {
     done
     [ "$tiled_count" -eq 0 ] && return 0
 
-    # list-windows is not usable for this: it sorts by app/title. The sequence
-    # of focus --dfs-index calls is the authoritative tiled-tree order.
-    aero workspace "$workspace" || return 1
+    # list-windows is not usable for this: it sorts by app/title. Build one
+    # AeroSpace-shell expression for the authoritative focus walk, tagging each
+    # emitted ID so command output can be parsed unambiguously. The expression
+    # after `;` is unconditional and restores the desired final focus even when
+    # the short-circuited walk fails; the completion marker preserves the walk's
+    # success status in that case.
+    is_eval_workspace "$workspace" || return 1
+    eval_batch_reset
+    eval_batch_add "workspace -- $workspace"
     while [ "$i" -lt "$tiled_count" ]; do
-        aero focus --dfs-index "$i" || return 1
-        id=$(aero list-windows --focused --format '%{window-id}') || return 1
-        [ -n "$id" ] || return 1
+        eval_batch_add "focus --dfs-index $i"
+        eval_batch_add "echo -- $marker%{window-id}"
+        i=$((i + 1))
+    done
+    eval_batch_add "echo -- $complete_marker"
+    expression=$(append_focus_restore "$EVAL_EXPRESSION") || return 1
+    output=$(aero eval -- "$expression") || return 1
+
+    while IFS= read -r row; do
+        case "$row" in
+            "$complete_marker") completed=true ;;
+            "$marker"*)
+                id=${row#"$marker"}
+                is_window_id "$id" || return 1
+                contains_id "$id" "${captured_ids[@]}" && return 1
+                captured_ids+=("$id")
+                ;;
+        esac
+    done <<EOF
+$output
+EOF
+    [ "$completed" = true ] || return 1
+    [ "${#captured_ids[@]}" -eq "$tiled_count" ] || return 1
+
+    i=0
+    while [ "$i" -lt "${#captured_ids[@]}" ]; do
+        id="${captured_ids[$i]}"
         contains_id "$id" "${SNAP_IDS[@]}" || return 1
-        contains_id "$id" "${SNAP_DFS[@]}" && return 1
         meta=$(metadata_for_id "$id") || return 1
         parent=${meta%%|*}
         [ "$parent" != 'floating' ] || return 1
@@ -363,7 +454,10 @@ select_snapshot() {
 capture_current_dfs() {
     # capture_current_dfs <workspace>; results in tiled-only CURRENT_DFS.
     local workspace="$1"
-    local rows row id parent tiled_count=0 i=0
+    local rows row id parent tiled_count=0 i=0 output expression
+    local completed=false
+    local marker='aerospace-swap-current-dfs:'
+    local complete_marker='aerospace-swap-current-dfs-complete'
     CURRENT_DFS=()
     rows=$(aero list-windows --workspace "$workspace" \
         --format '%{window-id}|%{window-parent-container-layout}') || return 1
@@ -378,15 +472,34 @@ EOF
 $rows
 EOF
     [ "$tiled_count" -eq 0 ] && return 0
-    aero workspace "$workspace" || return 1
+
+    is_eval_workspace "$workspace" || return 1
+    eval_batch_reset
+    eval_batch_add "workspace -- $workspace"
     while [ "$i" -lt "$tiled_count" ]; do
-        aero focus --dfs-index "$i" || return 1
-        id=$(aero list-windows --focused --format '%{window-id}') || return 1
-        [ -n "$id" ] || return 1
-        contains_id "$id" "${CURRENT_DFS[@]}" && return 1
-        CURRENT_DFS+=("$id")
+        eval_batch_add "focus --dfs-index $i"
+        eval_batch_add "echo -- $marker%{window-id}"
         i=$((i + 1))
     done
+    eval_batch_add "echo -- $complete_marker"
+    expression=$(append_focus_restore "$EVAL_EXPRESSION") || return 1
+    output=$(aero eval -- "$expression") || return 1
+
+    while IFS= read -r row; do
+        case "$row" in
+            "$complete_marker") completed=true ;;
+            "$marker"*)
+                id=${row#"$marker"}
+                is_window_id "$id" || return 1
+                contains_id "$id" "${CURRENT_DFS[@]}" && return 1
+                CURRENT_DFS+=("$id")
+                ;;
+        esac
+    done <<EOF
+$output
+EOF
+    [ "$completed" = true ] || return 1
+    [ "${#CURRENT_DFS[@]}" -eq "$tiled_count" ] || return 1
     return 0
 }
 
@@ -401,13 +514,15 @@ reorder_by_dfs() {
     capture_current_dfs "$workspace" || return 1
     same_id_sets CURRENT_DFS RESTORE_DFS || return 1
 
+    eval_batch_reset
     i=0
     while [ "$i" -lt "${#RESTORE_DFS[@]}" ]; do
         wanted="${RESTORE_DFS[$i]}"
+        is_window_id "$wanted" || return 1
         position=$(index_of_id "$wanted" "${CURRENT_DFS[@]}") || return 1
         j="$position"
         while [ "$j" -gt "$i" ]; do
-            aero swap --window-id "$wanted" dfs-prev || return 1
+            eval_batch_add "swap --window-id $wanted dfs-prev"
             previous="${CURRENT_DFS[$((j - 1))]}"
             CURRENT_DFS[$j]="$previous"
             CURRENT_DFS[$((j - 1))]="$wanted"
@@ -416,20 +531,23 @@ reorder_by_dfs() {
         i=$((i + 1))
     done
 
+    eval_batch_run || return 1
     capture_current_dfs "$workspace" || return 1
     same_id_lists CURRENT_DFS RESTORE_DFS
 }
 
 restore_fullscreen_state() {
     local i
+    eval_batch_reset
     i=0
     while [ "$i" -lt "${#RESTORE_IDS[@]}" ]; do
         if [ "${RESTORE_FULLSCREEN[$i]}" = 'true' ]; then
-            aero fullscreen on --window-id "${RESTORE_IDS[$i]}" || return 1
+            is_window_id "${RESTORE_IDS[$i]}" || return 1
+            eval_batch_add "fullscreen on --window-id ${RESTORE_IDS[$i]}"
         fi
         i=$((i + 1))
     done
-    return 0
+    eval_batch_run
 }
 
 disable_fullscreen_state() {
@@ -444,7 +562,7 @@ disable_fullscreen_state() {
     return 0
 }
 
-restore_floating_state() {
+append_floating_state() {
     # AeroSpace normally keeps a moved floating node floating. Set it
     # explicitly nevertheless: a version-specific move regression must not
     # silently turn a manually positioned window into a grid tile.
@@ -452,7 +570,8 @@ restore_floating_state() {
     i=0
     while [ "$i" -lt "${#RESTORE_IDS[@]}" ]; do
         if [ "${RESTORE_PARENTS[$i]}" = 'floating' ]; then
-            aero layout --window-id "${RESTORE_IDS[$i]}" floating || return 1
+            is_window_id "${RESTORE_IDS[$i]}" || return 1
+            eval_batch_add "layout --window-id ${RESTORE_IDS[$i]} floating"
         fi
         i=$((i + 1))
     done
@@ -500,44 +619,88 @@ restore_workspace() {
 
     # Saved fullscreen state was suspended for both workspaces before the first
     # move. Restore it only after the root/tree and DFS sequence are rebuilt.
-    restore_floating_state || return 1
-    aero flatten-workspace-tree --workspace "$workspace" || return 1
+    # Floating correction, flattening, and root orientation form one published
+    # layout change instead of a sequence of intermediate refreshes.
+    is_eval_workspace "$workspace" || return 1
     case "$RESTORE_ROOT" in
         h_tiles) orientation='horizontal' ;;
         v_tiles) orientation='vertical' ;;
         *) return 1 ;;
     esac
-    aero layout --workspace "$workspace" --root tiles "$orientation" || return 1
+    eval_batch_reset
+    append_floating_state || return 1
+    eval_batch_add "flatten-workspace-tree --workspace $workspace"
+    eval_batch_add "layout --workspace $workspace --root tiles $orientation"
+    eval_batch_run || return 1
     reorder_by_dfs "$workspace" || return 1
 
     if [ "$RESTORE_KIND" = 'grid' ]; then
         [ "${#RESTORE_TILED_DFS[@]}" -eq 4 ] || return 1
+        is_window_id "${RESTORE_TILED_DFS[1]}" || return 1
+        is_window_id "${RESTORE_TILED_DFS[3]}" || return 1
+        eval_batch_reset
         if [ "$RESTORE_ROOT" = 'h_tiles' ]; then
             # Pair each adjacent DFS pair into a vertical column under the
             # horizontal root. Normalization supplies the opposite orientation.
-            aero join-with --window-id "${RESTORE_TILED_DFS[1]}" left || return 1
-            aero join-with --window-id "${RESTORE_TILED_DFS[3]}" left || return 1
+            eval_batch_add "join-with --window-id ${RESTORE_TILED_DFS[1]} left"
+            eval_batch_add "join-with --window-id ${RESTORE_TILED_DFS[3]} left"
         else
             # Rotated 2x2: horizontal rows beneath a vertical root.
-            aero join-with --window-id "${RESTORE_TILED_DFS[1]}" up || return 1
-            aero join-with --window-id "${RESTORE_TILED_DFS[3]}" up || return 1
+            eval_batch_add "join-with --window-id ${RESTORE_TILED_DFS[1]} up"
+            eval_batch_add "join-with --window-id ${RESTORE_TILED_DFS[3]} up"
         fi
-        aero balance-sizes --workspace "$workspace" || return 1
+        eval_batch_add "balance-sizes --workspace $workspace"
+        eval_batch_run || return 1
     fi
 
     verify_restored_layout "$workspace" || return 1
     restore_fullscreen_state
 }
 
-move_windows() {
-    # move_windows <destination> <window ids...>
-    local destination="$1"
-    shift
-    local id
-    for id in "$@"; do
-        aero move-node-to-workspace --window-id "$id" -- "$destination" || return 1
+perform_swap_moves() {
+    # Fullscreen suspension plus source -> staging -> target movement is one
+    # short-circuiting refresh session. A failure still enters the ordinary
+    # best-effort rollback, which works from the captured explicit IDs.
+    local i id
+    is_eval_workspace "$TEMPORARY_WORKSPACE" || return 1
+    is_eval_workspace "$ORIGINAL_WORKSPACE" || return 1
+    is_eval_workspace "$TARGET_WORKSPACE" || return 1
+
+    eval_batch_reset
+    i=0
+    while [ "$i" -lt "${#source_ids[@]}" ]; do
+        id="${source_ids[$i]}"
+        is_window_id "$id" || return 1
+        if [ "${source_fullscreen[$i]}" = 'true' ]; then
+            eval_batch_add "fullscreen off --window-id $id"
+        fi
+        i=$((i + 1))
     done
-    return 0
+    i=0
+    while [ "$i" -lt "${#target_ids[@]}" ]; do
+        id="${target_ids[$i]}"
+        is_window_id "$id" || return 1
+        if [ "${target_fullscreen[$i]}" = 'true' ]; then
+            eval_batch_add "fullscreen off --window-id $id"
+        fi
+        i=$((i + 1))
+    done
+    for id in "${source_ids[@]}"; do
+        eval_batch_add "move-node-to-workspace --window-id $id -- $TEMPORARY_WORKSPACE"
+    done
+    for id in "${target_ids[@]}"; do
+        eval_batch_add "move-node-to-workspace --window-id $id -- $ORIGINAL_WORKSPACE"
+    done
+    for id in "${source_ids[@]}"; do
+        eval_batch_add "move-node-to-workspace --window-id $id -- $TARGET_WORKSPACE"
+    done
+    # Publish the completed movement batch on the workspace where the shortcut
+    # started, with an incoming window focused when one still exists.
+    eval_batch_add "workspace -- $ORIGINAL_WORKSPACE"
+    if [ "${#target_ids[@]}" -gt 0 ]; then
+        eval_batch_add "(focus --window-id ${target_ids[0]} || true)"
+    fi
+    eval_batch_run
 }
 
 move_windows_best_effort() {
@@ -651,6 +814,8 @@ rollback() {
     suspend_snapshot_fullscreen target || warn 'could not suspend every target fullscreen window'
     move_windows_best_effort "$ORIGINAL_WORKSPACE" "${source_ids[@]}" || warn 'could not return every source window'
     move_windows_best_effort "$TARGET_WORKSPACE" "${target_ids[@]}" || warn 'could not return every target window'
+    FOCUS_RESTORE_WORKSPACE="$ORIGINAL_WORKSPACE"
+    FOCUS_RESTORE_WINDOW="$ORIGINAL_FOCUSED_WINDOW"
     restore_workspace "$ORIGINAL_WORKSPACE" source || warn 'could not fully restore source layout'
     restore_workspace "$TARGET_WORKSPACE" target || warn 'could not fully restore target layout'
     aero workspace "$ORIGINAL_WORKSPACE" >/dev/null 2>&1 || true
@@ -671,30 +836,38 @@ restore_preflight_focus() {
 finish_success() {
     # The script changes workspaces while taking DFS snapshots/rebuilding. Put
     # focus back on the original physical workspace, select the first window now
-    # listed there, repaint the bar, then apply the keyboard-focus mouse policy.
-    local incoming_window='' listed_windows candidate
-    aero workspace "$ORIGINAL_WORKSPACE" || return 1
+    # listed there, and apply the keyboard-focus mouse policy in one last refresh
+    # session. Repaint the bar only after AeroSpace publishes that final state.
+    local listed_windows candidate focus_expression=''
+    is_eval_workspace "$ORIGINAL_WORKSPACE" || return 1
     listed_windows=$(aero list-windows --workspace "$ORIGINAL_WORKSPACE" \
         --format '%{window-id}') || return 1
     while IFS= read -r candidate; do
         [ -n "$candidate" ] || continue
-        if aero focus --window-id "$candidate" >/dev/null 2>&1; then
-            incoming_window="$candidate"
-            break
+        is_window_id "$candidate" || return 1
+        if [ -z "$focus_expression" ]; then
+            focus_expression="focus --window-id $candidate"
+        else
+            focus_expression="$focus_expression || focus --window-id $candidate"
         fi
     done <<EOF
 $listed_windows
 EOF
+
+    eval_batch_reset
+    eval_batch_add "workspace -- $ORIGINAL_WORKSPACE"
+    if [ -n "$focus_expression" ]; then
+        # A window may close between list and focus. Try each listed ID in order,
+        # but let an emptied workspace complete via the monitor mouse fallback.
+        eval_batch_add "($focus_expression || true)"
+        eval_batch_add "(move-mouse window-lazy-center || move-mouse monitor-lazy-center || true)"
+    else
+        eval_batch_add "(move-mouse monitor-lazy-center || true)"
+    fi
+    eval_batch_run >/dev/null 2>&1 || return 1
+
     "$SKETCHYBAR_BIN" --trigger aerospace_workspace_change \
         "FOCUSED_WORKSPACE=$ORIGINAL_WORKSPACE" >/dev/null 2>&1 || true
-    if [ -n "$incoming_window" ]; then
-        if ! aero move-mouse window-lazy-center >/dev/null 2>&1; then
-            aero move-mouse monitor-lazy-center >/dev/null 2>&1 || true
-        fi
-    else
-        # An empty incoming workspace has no focused window to center on.
-        aero move-mouse monitor-lazy-center >/dev/null 2>&1 || true
-    fi
     return 0
 }
 
@@ -727,11 +900,20 @@ main() {
     if [ "$ORIGINAL_WORKSPACE" = "$TARGET_WORKSPACE" ]; then
         return 0
     fi
+    if ! is_eval_workspace "$ORIGINAL_WORKSPACE"; then
+        warn "workspace name cannot be represented safely in an eval batch: $ORIGINAL_WORKSPACE"
+        return 1
+    fi
 
     # Snapshot focus metadata before the DFS walks intentionally change focus.
     # AeroSpace has no per-unfocused-workspace focused-window query; the contract
     # here is to restore the originally focused *workspace* at completion.
     ORIGINAL_FOCUSED_WINDOW=$(aero list-windows --focused --format '%{window-id}' 2>/dev/null || true)
+    if [ -n "$ORIGINAL_FOCUSED_WINDOW" ] && ! is_window_id "$ORIGINAL_FOCUSED_WINDOW"; then
+        return 1
+    fi
+    FOCUS_RESTORE_WORKSPACE="$ORIGINAL_WORKSPACE"
+    FOCUS_RESTORE_WINDOW="$ORIGINAL_FOCUSED_WINDOW"
     log "source=$ORIGINAL_WORKSPACE target=$TARGET_WORKSPACE focused-window=$ORIGINAL_FOCUSED_WINDOW"
 
     if ! snapshot_workspace "$ORIGINAL_WORKSPACE"; then
@@ -768,6 +950,11 @@ main() {
         restore_preflight_focus
         return 1
     fi
+    if ! is_eval_workspace "$SWAP_TEMP_WORKSPACE"; then
+        warn 'reserved temporary workspace cannot be represented safely in an eval batch'
+        restore_preflight_focus
+        return 1
+    fi
     if ! TEMPORARY_WORKSPACE=$(reserve_temporary_workspace); then
         restore_preflight_focus
         return 1
@@ -779,18 +966,17 @@ main() {
     # so every failure from here enters the rollback path.
     MUTATED=false
     MUTATED=true
-    if ! suspend_snapshot_fullscreen source; then
-        :
-    elif ! suspend_snapshot_fullscreen target; then
-        :
-    elif ! move_windows "$TEMPORARY_WORKSPACE" "${source_ids[@]}"; then
+    if ! perform_swap_moves; then
         :
     else
-        if ! move_windows "$ORIGINAL_WORKSPACE" "${target_ids[@]}"; then
-            :
-        elif ! move_windows "$TARGET_WORKSPACE" "${source_ids[@]}"; then
-            :
-        elif ! restore_workspace "$ORIGINAL_WORKSPACE" target; then
+        # All later focus-walking batches publish the original workspace with
+        # an incoming window focused, never their intermediate DFS traversal.
+        FOCUS_RESTORE_WORKSPACE="$ORIGINAL_WORKSPACE"
+        FOCUS_RESTORE_WINDOW=''
+        if [ "${#target_ids[@]}" -gt 0 ]; then
+            FOCUS_RESTORE_WINDOW="${target_ids[0]}"
+        fi
+        if ! restore_workspace "$ORIGINAL_WORKSPACE" target; then
             :
         elif ! restore_workspace "$TARGET_WORKSPACE" source; then
             :
