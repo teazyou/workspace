@@ -8,7 +8,6 @@ TEST_DIR=$(cd "$(dirname "$0")" && pwd)
 SWAP_SCRIPT=$(cd "$TEST_DIR/.." && pwd)/swap-workspaces.sh
 MOCK_AEROSPACE="$TEST_DIR/mock-aerospace.sh"
 MOCK_SKETCHYBAR="$TEST_DIR/mock-sketchybar.sh"
-MOCK_BORDERS="$TEST_DIR/mock-borders.sh"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/aerospace-swap-test.XXXXXX")
 trap 'rm -rf "$TMP_ROOT"' EXIT HUP INT TERM
 
@@ -66,11 +65,9 @@ prepare_case() {
     STATE="$TMP_ROOT/$name.state"
     LOG="$TMP_ROOT/$name.commands"
     SKETCHY_LOG="$TMP_ROOT/$name.sketchy"
-    BORDERS_LOG="$TMP_ROOT/$name.borders"
     : > "$STATE"
     : > "$LOG"
     : > "$SKETCHY_LOG"
-    : > "$BORDERS_LOG"
     LOCK="$TMP_ROOT/$name.lock"
     SWAP_TEMP_WORKSPACE='aerospace-swap-staging'
 }
@@ -79,8 +76,6 @@ run_swap() {
     AEROSPACE_BIN="$MOCK_AEROSPACE" \
     SKETCHYBAR_BIN="$MOCK_SKETCHYBAR" \
     MOCK_STATE="$STATE" MOCK_LOG="$LOG" MOCK_SKETCHY_LOG="$SKETCHY_LOG" \
-    MOCK_BORDERS_LOG="$BORDERS_LOG" \
-    BORDERS_STOP_BIN="$MOCK_BORDERS" BORDERS_START_BIN="$MOCK_BORDERS" \
     SWAP_LOCK_DIR="$LOCK" SWAP_TEMP_WORKSPACE="$SWAP_TEMP_WORKSPACE" \
     "$SWAP_SCRIPT" "$1"
 }
@@ -102,7 +97,6 @@ if /usr/bin/grep -E '^(workspace|focus|move-node-to-workspace|flatten-workspace-
     fail 'same-workspace swap issued a mutating AeroSpace command'
 fi
 [ ! -s "$SKETCHY_LOG" ] || fail 'same-workspace swap repainted SketchyBar'
-[ ! -s "$BORDERS_LOG" ] || fail 'same-workspace swap restarted borders'
 ok 'same digit is an AeroSpace no-op'
 
 prepare_case extra_argument
@@ -192,9 +186,6 @@ if /usr/bin/grep -F -- 'swap --window-id 103 dfs-prev' "$LOG" >/dev/null || \
     fail 'floating windows entered tiled DFS swap order'
 fi
 expect_eq "$(cat "$SKETCHY_LOG")" '--trigger aerospace_workspace_change FOCUSED_WORKSPACE=1' 'success repainted SketchyBar once'
-expect_eq "$(sed -n '1p' "$BORDERS_LOG")" 'stop borders' 'borders stopped before the focus scan'
-expect_eq "$(sed -n '2p' "$BORDERS_LOG")" 'start' 'borders restarted after the swap'
-[ "$(wc -l < "$BORDERS_LOG" | tr -d ' ')" -eq 2 ] || fail 'borders were not toggled exactly once'
 ok 'flat roots, DFS, floating windows, fullscreen, bar and mouse policy swap'
 
 prepare_case grid
@@ -290,8 +281,6 @@ expect_eq "$(focused_workspace)" 1 'rollback restored original workspace focus'
 expect_log 'move-node-to-workspace --window-id 801 -- 1'
 expect_log 'move-node-to-workspace --window-id 802 -- 1'
 [ ! -s "$SKETCHY_LOG" ] || fail 'failed swap repainted SketchyBar as success'
-expect_eq "$(sed -n '1p' "$BORDERS_LOG")" 'stop borders' 'failed swap suspended borders'
-expect_eq "$(sed -n '2p' "$BORDERS_LOG")" 'start' 'failed swap restarted borders'
 ok 'mid-transfer failure performs best-effort rollback'
 
 printf 'all swap-workspaces tests passed\n'

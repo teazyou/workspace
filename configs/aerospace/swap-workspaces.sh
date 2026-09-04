@@ -24,8 +24,6 @@
 SCRIPT_NAME=${0##*/}
 AEROSPACE_BIN=${AEROSPACE_BIN:-aerospace}
 SKETCHYBAR_BIN=${SKETCHYBAR_BIN:-sketchybar}
-BORDERS_STOP_BIN=${BORDERS_STOP_BIN:-/usr/bin/killall}
-BORDERS_START_BIN=${BORDERS_START_BIN:-"${HOME:-}/.config/borders/bordersrc"}
 SWAP_LOCK_DIR=${SWAP_LOCK_DIR:-"${TMPDIR:-/tmp}/aerospace-workspace-swap.lock"}
 # Deliberately stable rather than PID-derived: if an interrupted transaction
 # leaves windows here, the next invocation refuses and makes the condition
@@ -597,32 +595,9 @@ suspend_snapshot_fullscreen() {
     disable_fullscreen_state
 }
 
-BORDERS_SUSPENDED=false
 LOCK_HELD=false
 
-suspend_borders() {
-    # Avoid flashing the active border while focus --dfs-index walks the grid.
-    # Only promise a restart when the configured launcher exists and killall
-    # confirms that a borders process was actually running.
-    [ -x "$BORDERS_START_BIN" ] || return 0
-    if "$BORDERS_STOP_BIN" borders >/dev/null 2>&1; then
-        BORDERS_SUSPENDED=true
-        log 'borders suspended'
-    fi
-    return 0
-}
-
-resume_borders() {
-    [ "$BORDERS_SUSPENDED" = true ] || return 0
-    BORDERS_SUSPENDED=false
-    # Detach the relaunched process from this short-lived helper shell; without
-    # nohup it can receive SIGHUP and disappear as soon as the swap exits.
-    /usr/bin/nohup "$BORDERS_START_BIN" </dev/null >/dev/null 2>&1 &
-    log 'borders restarted'
-}
-
 cleanup() {
-    resume_borders
     if [ "$LOCK_HELD" = true ]; then
         rm -f "$SWAP_LOCK_DIR/pid" 2>/dev/null || true
         rmdir "$SWAP_LOCK_DIR" 2>/dev/null || true
@@ -752,8 +727,6 @@ main() {
     if [ "$ORIGINAL_WORKSPACE" = "$TARGET_WORKSPACE" ]; then
         return 0
     fi
-
-    suspend_borders
 
     # Snapshot focus metadata before the DFS walks intentionally change focus.
     # AeroSpace has no per-unfocused-workspace focused-window query; the contract
