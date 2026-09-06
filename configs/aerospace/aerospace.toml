@@ -125,7 +125,7 @@ on-mode-changed = []
     outer.left =       5
     outer.bottom =     5
     # Top gap for SketchyBar on all monitors
-    outer.top =        [{ monitor."built-in.*" = 9 }, { monitor.main = 12 }, 5]
+    outer.top =        10
     outer.right =      5
 
 # 'main' binding mode declaration
