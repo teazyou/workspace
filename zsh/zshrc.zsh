@@ -38,3 +38,6 @@ source $ZSH_ALIAS/vpn.zsh
 source $ZSH_ALIAS/tiktoken.zsh
 
 echo Workspace Loaded!
+
+# Added by cua-driver-rs installer — see https://github.com/trycua/cua
+export PATH="/Users/teazyou/.local/bin:$PATH"
