@@ -10,7 +10,6 @@ __icon_map() {
     "Google Chrome"|"Chrome") icon_result=":google_chrome:" ;;
     "Firefox"|"firefox") icon_result=":firefox:" ;;
     "Arc") icon_result=":arc:" ;;
-    "Brave Browser") icon_result=":brave_browser:" ;;
     "Microsoft Edge") icon_result=":microsoft_edge:" ;;
     "Vivaldi") icon_result=":vivaldi:" ;;
     "Code"|"Visual Studio Code") icon_result=":code:" ;;
@@ -132,7 +131,6 @@ shorten_app_name() {
         "IntelliJ IDEA")          SHORT_APP_NAME="IDEA" ;;
         "Android Studio")         SHORT_APP_NAME="Android" ;;
         "Docker Desktop")         SHORT_APP_NAME="Docker" ;;
-        "Brave Browser")          SHORT_APP_NAME="Brave" ;;
         *)                        SHORT_APP_NAME="$app" ;;
     esac
 }

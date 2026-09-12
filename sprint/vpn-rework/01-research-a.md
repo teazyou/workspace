@@ -7,10 +7,7 @@ tool-verified findings.
 
 Verified live (read-only): `sketchybar --query {bar,vpn,connectivity,wifi,ethernet,time,date}`,
 `vpnutil list`, `cat ~/.config/nordvpn-native/{country,enabled,refresh-needed,boot-id,fail-stamp}`,
-`man sketchybar(1)/sketchybar-events(5)/sketchybar-items(5)`, whole-repo greps (scoped to avoid
-`configs/dot-claude/` — that dir is Claude Code's own runtime/session cache, symlinked from
-`~/.claude`; grepping into it just re-discovers earlier tool output, not repo config — excluded
-throughout). No state mutated, no file edited, no git touched, no lint run.
+`man sketchybar(1)/sketchybar-events(5)/sketchybar-items(5)`, repo-config greps. No state mutated, no file edited, no git touched, no lint run.
 
 Live snapshot: `country=be enabled=1 refresh-needed=ABSENT`. `vpnutil list`: Nord-BE=Connected,
 FR/MY/SG/US/VN=Disconnected. No `/tmp/nordvpn-native.{click,lock}` present. Matches brief + B.
@@ -101,7 +98,7 @@ ethernet, i.e. at the division's outer/right end, exactly where the single `vpn`
 
 ## Q2 — every hardcoded `vpn` reference (complete, file:line)
 
-Grepped `configs/`, `scripts/`, `zsh/`, `docs/`, `_index.md` (dot-claude excluded — see header).
+Grepped `configs/`, `scripts/`, `zsh/`, `docs/`, `_index.md`.
 
 **Must become TWO (one call/name per item), or be reworked to stop hardcoding a single name:**
 | File:line | Current | Required change |

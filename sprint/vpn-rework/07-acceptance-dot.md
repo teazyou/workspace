@@ -260,17 +260,14 @@ recorded live: `vpn_be` width **30**, `vpn_sn` width **31**, `connectivity` widt
     `configs/sketchybar/theme.sh`, `configs/sketchybar/items/vpn.sh`,
     `configs/sketchybar/plugins/vpn.sh`, `configs/sketchybar/plugins/vpn_click.sh`,
     `docs/vpn/guide-nordvpn-native.md`, `docs/window-manager/guide-window-manager.md`,
-    `_index.md` (+ the untracked/modified `sprint/vpn-rework/*.md`, + a possibly-modified
-    `configs/dot-claude` submodule pointer, which is pre-existing). Anything else = fail.
+    `_index.md` (+ the untracked/modified `sprint/vpn-rework/*.md`). Anything else = fail.
 41. **Untouched, verify empty diffs:** `scripts/vpn/`, `zsh/alias/vpn.zsh`, `configs/nordvpn/`,
     `configs/sketchybar/colors.sh`, `configs/sketchybar/icons.sh`,
     `configs/sketchybar/sketchybarrc`, `configs/aerospace/*` (incl. `performance-mode.sh`,
     `aerospace.toml`, `lib-paths.sh`), `configs/sketchybar/plugins/wifi_click.sh`.
 42. **No git operation was performed by the implementer.** `git diff --cached` → empty (nothing
-    staged); `git log -1 --format='%H %an %s'` → either `db1f3df` or a **later automatic
-    `checkpoint`** commit authored by the hourly LaunchAgent (`scripts/checkpoint_cronjob.sh`);
-    **no** commit with a hand-written message exists (`git log --oneline -5` shows only
-    `checkpoint`/pre-existing subjects), and `git reflog -3` shows no
+    staged); the baseline commit is `db1f3df`. Verify that `git log --oneline -5` shows no
+    commit written by the implementer, and `git reflog -3` shows no
     `commit (amend)`/`reset`/`checkout`/`stash` entries from this session.
 43. **No linting / no formatter config.** No new `.shellcheckrc`/`.editorconfig`/prettier file;
     `git diff --summary` → empty (no mode/rename churn); the diff of each touched file contains

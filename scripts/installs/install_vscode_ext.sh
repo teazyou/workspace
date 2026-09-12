@@ -12,7 +12,6 @@
 # Extension list:
 #   - bracketpaircolordlw.bracket-pair-color-dlw  (colored bracket pairs)
 #   - chunsen.bracket-select                       (bracket selection helper)
-#   - eamodio.gitlens                              (git blame/history overlay)
 #
 # Idempotent: `code --install-extension` is a no-op when the extension
 # is already present.
@@ -45,7 +44,6 @@ log_wait "Using VSCode CLI: $CODE_BIN"
 EXTENSIONS=(
     "bracketpaircolordlw.bracket-pair-color-dlw"
     "chunsen.bracket-select"
-    "eamodio.gitlens"
 )
 
 for ext in "${EXTENSIONS[@]}"; do

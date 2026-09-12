@@ -4,14 +4,14 @@
 # Purpose:
 #   Applies system-wide macOS defaults to match the workspace setup.
 #
-#   These are all reversible (`defaults delete`) and only affect the
-#   current user. They roughly match what's already configured on the
-#   source machine.
+#   These affect only the current user. Captured keys have scoped backups;
+#   the existing baseline settings below retain their original behavior.
 #
 # Categories:
-#   - Finder    : show path bar, status bar, hidden files
+#   - Finder    : path/status/hidden files, list view, Recents for new windows
 #   - Keyboard  : fast key repeat, disable press-and-hold accents
-#   - Dock      : auto-hide, smaller tile size
+#   - Dock      : captured size 52, behavior, ordered portable apps + Downloads
+#   - Shortcuts/input sources: see configs/macos/preferences.json and its guide
 #   - Screenshots: ~/Pictures/Screenshots, png format
 #   - Appearance: dark mode
 #   - Save panels: expanded by default (so you see the full file picker)
@@ -22,15 +22,17 @@
 set -e
 
 # shellcheck source=/dev/null
+INSTALLS="${INSTALLS:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 source "$INSTALLS/helper_prompt.sh"
 
 log_step "macOS defaults"
 
-# --- Finder -------------------------------------------------------------
-log_wait "Finder: show path bar, status bar, hidden files"
-defaults write com.apple.finder ShowPathbar       -bool true
-defaults write com.apple.finder ShowStatusBar     -bool true
-defaults write com.apple.finder AppleShowAllFiles -bool true
+# --- Captured portable preferences --------------------------------------
+# CFPreferences merges only managed keys; the Swift helper keeps private,
+# scoped before-values and uses public TIS APIs for enabled input sources.
+# CLT (from bootstrap) supplies Swift. This stage runs after app installation.
+log_wait "Restore captured Finder, Dock (52), shortcuts, and input sources"
+xcrun swift "$INSTALLS/apply_macos.swift" "$APP_CONFIGS/macos/preferences.json"
 
 # --- Keyboard -----------------------------------------------------------
 # KeyRepeat=2 is the fastest non-zero rate; InitialKeyRepeat=15 is the
@@ -46,12 +48,6 @@ log_wait "Screenshots: location → ~/Pictures/Screenshots, format → png"
 mkdir -p "$HOME/Pictures/Screenshots"
 defaults write com.apple.screencapture location "$HOME/Pictures/Screenshots"
 defaults write com.apple.screencapture type     -string "png"
-
-# --- Dock ---------------------------------------------------------------
-# AeroSpace tiles your windows, so the Dock is mostly out of the way.
-log_wait "Dock: auto-hide, tile size 36"
-defaults write com.apple.dock autohide -bool true
-defaults write com.apple.dock tilesize -int  36
 
 # --- Appearance ---------------------------------------------------------
 log_wait "Appearance: dark mode"

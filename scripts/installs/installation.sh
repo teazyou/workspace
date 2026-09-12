@@ -7,8 +7,8 @@
 #   into this script which runs every other install step in order.
 #
 #   Each step lives in its own sub-script under scripts/installs/. They
-#   are all idempotent — re-running this orchestrator after a partial
-#   install will skip finished work and resume from wherever it left off.
+#   support repeat runs — finished installs usually skip while defaults
+#   reapply. See the bootstrap guide for failure limits.
 #
 # Run manually:
 #   bash ~/workspace/scripts/installs/installation.sh
@@ -77,23 +77,11 @@ bash "$INSTALLS/install_window_manager.sh"
 next_step "Node LTS via NVM"
 bash "$INSTALLS/install_node.sh"
 
-next_step "MySQL + PostgreSQL initial setup"
-bash "$INSTALLS/install_database.sh"
-
 next_step "Xcode via mas"
 bash "$INSTALLS/install_xcode_mas.sh"
 
-next_step "Clone secondbrain + create ~/dev"
-bash "$INSTALLS/clone_repos.sh"
-
-next_step "dot-claude submodule + ~/.claude symlink"
-bash "$INSTALLS/setup_dot_claude.sh"
-
-next_step "6-hourly checkpoint LaunchAgent"
-bash "$INSTALLS/install_checkpoint_launchd.sh"
-
-next_step "Docling CLI (uv tool + ML models)"
-bash "$INSTALLS/install_docling.sh"
+next_step "Create ~/dev"
+bash "$INSTALLS/setup_dev.sh"
 
 log_info "All done"
 log_ok "Workspace install complete. Open a new iTerm2 window to load the new shell."

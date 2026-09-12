@@ -1,0 +1,166 @@
+{
+  "captured_macos": "26.5.2",
+  "preferences": {
+    "com.apple.finder": {
+      "ShowPathbar": true,
+      "ShowStatusBar": true,
+      "AppleShowAllFiles": true,
+      "FXPreferredViewStyle": "Nlsv",
+      "NewWindowTarget": "PfAF"
+    },
+    "com.apple.dock": {
+      "autohide": true,
+      "tilesize": 52,
+      "show-recents": false,
+      "launchanim": false,
+      "minimize-to-application": true
+    }
+  },
+  "menu_shortcuts": {},
+  "symbolic_hotkeys": {
+    "15": {
+      "enabled": false
+    },
+    "16": {
+      "enabled": false
+    },
+    "17": {
+      "enabled": false
+    },
+    "18": {
+      "enabled": false
+    },
+    "19": {
+      "enabled": false
+    },
+    "20": {
+      "enabled": false
+    },
+    "21": {
+      "enabled": false
+    },
+    "22": {
+      "enabled": false
+    },
+    "23": {
+      "enabled": false
+    },
+    "24": {
+      "enabled": false
+    },
+    "25": {
+      "enabled": false
+    },
+    "26": {
+      "enabled": false
+    },
+    "60": {
+      "enabled": false,
+      "value": {
+        "parameters": [
+          32,
+          49,
+          262144
+        ],
+        "type": "standard"
+      }
+    },
+    "61": {
+      "enabled": false,
+      "value": {
+        "parameters": [
+          32,
+          49,
+          786432
+        ],
+        "type": "standard"
+      }
+    },
+    "64": {
+      "enabled": true,
+      "value": {
+        "parameters": [
+          32,
+          49,
+          1048576
+        ],
+        "type": "standard"
+      }
+    },
+    "65": {
+      "enabled": false,
+      "value": {
+        "parameters": [
+          32,
+          49,
+          1572864
+        ],
+        "type": "standard"
+      }
+    },
+    "79": {
+      "enabled": true
+    },
+    "80": {
+      "enabled": true
+    },
+    "81": {
+      "enabled": true
+    },
+    "82": {
+      "enabled": true
+    }
+  },
+  "manual_symbolic_hotkeys": {
+    "164": {
+      "enabled": true,
+      "type": "modifier",
+      "modifier": "Control",
+      "restoration": "System Settings > Keyboard > Dictation > Shortcut: press Control twice"
+    }
+  },
+  "input_sources": {
+    "enabled": [
+      "com.apple.keylayout.ABC"
+    ],
+    "selected": "com.apple.keylayout.ABC"
+  },
+  "dock_apps": [
+    {
+      "path": "/Applications/iTerm.app",
+      "bundle_id": "com.googlecode.iterm2"
+    },
+    {
+      "path": "/Applications/Visual Studio Code.app",
+      "bundle_id": "com.microsoft.VSCode"
+    },
+    {
+      "path": "/Applications/Obsidian.app",
+      "bundle_id": "md.obsidian"
+    },
+    {
+      "path": "/Applications/ChatGPT.app",
+      "bundle_id": "com.openai.codex"
+    },
+    {
+      "path": "/System/Applications/Calendar.app",
+      "bundle_id": "com.apple.iCal"
+    },
+    {
+      "path": "/Applications/Spotify.app",
+      "bundle_id": "com.spotify.client"
+    }
+  ],
+  "dock_folders": [
+    {
+      "path": "~/Downloads",
+      "arrangement": 2,
+      "displayas": 0,
+      "showas": 1
+    }
+  ],
+  "sidebar": {
+    "automatic_favorites": [],
+    "manual": "Finder > Settings > Sidebar; add local folders via Go > Go to Folder, then drag into Favorites."
+  }
+}

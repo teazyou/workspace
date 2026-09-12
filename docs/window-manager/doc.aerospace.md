@@ -783,7 +783,6 @@ alt-shift-right = 'move right'
 [mode.main.binding]
 # Application launchers
 alt-return = 'exec-and-forget open -a Terminal'
-alt-b = 'exec-and-forget open -a "Brave Browser"'
 alt-shift-b = 'exec-and-forget open -a Safari'
 alt-e = 'exec-and-forget open -a Finder'
 ```

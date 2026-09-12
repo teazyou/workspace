@@ -136,13 +136,11 @@ Stub confirmed rewritten (`CFG_DIR`/`VPNUTIL` → `$D/stub`). No `nord`, no `vpn
 
 ## F. Guardrails — PASS
 
-- 40 changed set = exactly the 7 planned tracked files + `configs/dot-claude` (**pointer NOT moved** —
-  same sha `f650322`, only `-dirty`, pre-existing) + 2 untracked sprint docs. Nothing else.
+- 40 planned changes = exactly the 7 planned tracked files + 2 untracked sprint docs.
 - 41 empty diffs confirmed: `scripts/vpn/`, `zsh/alias/vpn.zsh`, `configs/nordvpn/`, `colors.sh`,
   `icons.sh`, `sketchybarrc`, all of `configs/aerospace/`, `wifi_click.sh`.
-- 42 `git diff --cached` empty. HEAD = `db1f3df` "checkpoint" (the hourly LaunchAgent, committed
-  04:00:03 — before the 04:35 edits). `git log --oneline -5` = only `checkpoint` + pre-existing
-  subjects. `git reflog -5` = plain `commit:` entries only, no amend/reset/checkout/stash. **No git
+- 42 `git diff --cached` empty. HEAD = `db1f3df` (committed
+  04:00:03 — before the 04:35 edits). `git log --oneline -5` shows no commit from this session. `git reflog -5` = plain `commit:` entries only, no amend/reset/checkout/stash. **No git
   write by implementer or reviewer.**
 - 43 `git diff --summary` empty (no mode/rename churn). No `.shellcheckrc`/`.editorconfig`/prettier.
   All 4 code files `-rwxr-xr-x` + "Bourne-Again shell script, UTF-8". `●` = `e2 97 8f`, `…` = `e2 80 a6`

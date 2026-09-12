@@ -39,7 +39,7 @@ brewInstall() {
     short=$(_brew_basename "$formula")
 
     # Match either the exact name (e.g. ripgrep) or any versioned variant
-    # (e.g. python → python@3.13, postgresql → postgresql@17). The latter
+    # (e.g. python → python@3.13). The latter
     # is needed because `brew install python` resolves to python@3.X but
     # `brew list python` then returns nothing.
     if brew list --formula -1 2>/dev/null | grep -Eq "^${short}(@.+)?$"; then

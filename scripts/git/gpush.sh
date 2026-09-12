@@ -13,18 +13,6 @@ run_repo_specific_cleanup() {
 
   echo $CW8"Detected repository: $repo_id"$CWH
 
-  # --- teazyou/secondbrain ------------------------------------
-  # Disabled on purpose: the checkpoint job pushes this repo on every idle
-  # 6-hourly run, so an aggressive gc here would keep running on the vault --
-  # git's built-in auto-gc is enough. Kept as a working template for
-  # re-enabling it, or for adding a cleanup for another repository.
-  # if [[ "$repo_id" == "teazyou/secondbrain" ]]; then
-  #   echo $CW8"Target repository detected. Running aggressive cleanup..."$CWH
-  #   git gc --prune=now --aggressive
-  #   echo $COK"Cleanup complete."$CWH
-  #   return 0
-  # fi
-
   echo $CW8"No repository-specific tasks detected."$CWH
 }
 

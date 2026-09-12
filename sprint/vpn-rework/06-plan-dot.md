@@ -18,10 +18,9 @@ editing the repo file IS the live change.
 - Docs + `_index.md` edits (steps 5-7) are **part of this change**, not follow-up.
 
 > **HEAD note (read before checking guardrails):** the round-1 work is **already committed** —
-> the hourly checkpoint LaunchAgent swept it into `db1f3df checkpoint` (`git diff --stat
-> 8e82bc7..db1f3df` = exactly the 9 round-1 files + the sprint docs). Working tree is clean
-> except the `configs/dot-claude` submodule pointer. So the guardrail is **"the implementer
-> ran no git command"**, not "HEAD == 8e82bc7". See checklist §F.
+> it is included in `db1f3df` (`git diff --stat
+> 8e82bc7..db1f3df` = exactly the 9 round-1 files + the sprint docs). So the guardrail is **"the implementer ran no git command"**,
+> not "HEAD == 8e82bc7". See checklist §F.
 
 ---
 

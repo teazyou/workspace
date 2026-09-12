@@ -195,11 +195,6 @@ This setup creates a keyboard-driven window management workflow for macOS, simil
 - AeroSpace `exec-and-forget` command
 - Custom keybindings
 
-**Configuration Example:**
-```toml
-alt-b = 'exec-and-forget open -a Brave'
-```
-
 ---
 
 ### 11. Fullscreen Modes

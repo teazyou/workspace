@@ -8,9 +8,7 @@
 #
 # Notes:
 #   - We always pin to LATEST (no @<version>) so this script keeps working
-#     for years without manual version bumps. PostgreSQL is the one
-#     exception — Homebrew has no unversioned formula, so we detect the
-#     highest postgresql@N at runtime.
+#     for years without manual version bumps.
 #   - Reordering this list is fine. Each line is independent.
 
 set -e
@@ -31,65 +29,27 @@ log_step "Brew formulae"
 
 brewInstall "PYTHON"     "python"      # python3 + pip (system Python is locked to 3.9)
 brewInstall "NVM"        "nvm"         # Node Version Manager — Node itself is installed in install_node.sh
-brewInstall "MYSQL"      "mysql"       # initial setup runs in install_database.sh
 brewInstall "SKETCHYBAR" "sketchybar"  # custom status bar (window-manager stack)
 brewInstall "BORDERS"    "borders"     # JankyBorders — colored window borders
 brewInstall "RIPGREP"    "ripgrep"     # fast grep replacement, used by Claude Code
-brewInstall "OLLAMA"     "ollama"      # local LLM runner
-brewInstall "GEMINI-CLI" "gemini-cli"  # Google Gemini CLI
-brewInstall "OPENCODE"   "opencode"    # opencode AI tool
 brewInstall "MAS"        "mas"         # Mac App Store CLI (used by install_xcode_mas.sh)
-brewInstall "GH"         "gh"          # GitHub CLI (used by clone_repos.sh for private repo auth)
-
-# PostgreSQL: Homebrew only ships versioned formulae. We pick the highest
-# postgresql@N so this works in 2026, 2027, ... — but in three steps so a
-# re-run never spuriously fails:
-#   1. If a postgresql@N is already installed, just reuse it.
-#   2. Otherwise ask `brew search` for the highest available @N.
-#      (`brew formulae` is unreliable here — its output format varies
-#      between brew versions and sometimes returns nothing in piped use.)
-#   3. Last-ditch fallback to a hardcoded recent version.
-log_wait "Resolving postgresql@N formula..."
-PG_LATEST=$(brew list --formula -1 2>/dev/null \
-    | grep -E '^postgresql@[0-9]+$' \
-    | sort -t '@' -k 2 -n \
-    | tail -1)
-
-if [[ -z "$PG_LATEST" ]]; then
-    PG_LATEST=$(brew search --formula '/^postgresql@[0-9]+$/' 2>/dev/null \
-        | grep -E '^postgresql@[0-9]+$' \
-        | sort -t '@' -k 2 -n \
-        | tail -1)
-fi
-
-if [[ -n "$PG_LATEST" ]]; then
-    log_ok "Using $PG_LATEST"
-    brewInstall "POSTGRESQL" "$PG_LATEST"
-else
-    log_err "Could not detect any postgresql@N — falling back to postgresql@17"
-    brewInstall "POSTGRESQL" "postgresql@17"
-fi
+brewInstall "GH"         "gh"          # GitHub CLI (also used by the optional SketchyBar GitHub plugin)
 
 # --- CASKS -----------------------------------------------------------------
 log_step "Brew casks"
 
 caskInstall "ITERM"             "iterm2"
 caskInstall "VSCODE"            "visual-studio-code"
-caskInstall "BRAVE"             "brave-browser"
+caskInstall "GOOGLE-CHROME"     "google-chrome"
+caskInstall "CHATGPT"           "chatgpt"  # ChatGPT.app desktop; retained internal identity com.openai.codex
+caskInstall "CODEX-CLI"         "codex"    # terminal command (bin/codex)
 caskInstall "SPOTIFY"           "spotify"
-caskInstall "DBEAVER"           "dbeaver-community"
-caskInstall "KEEPING-YOU-AWAKE" "keepingyouawake"
-caskInstall "TRANSMISSION"      "transmission"
-caskInstall "VLC"               "vlc"
-caskInstall "NORDVPN"           "nordvpn"
 caskInstall "BITWARDEN"         "bitwarden"
-caskInstall "ONYX"              "onyx"
 caskInstall "AEROSPACE"         "nikitabobko/tap/aerospace"  # tiling window manager (lives in its own tap)
 caskInstall "FONT-NERD"         "font-hack-nerd-font"  # required by sketchybar icons
 caskInstall "FONT-SKETCHYBAR"   "font-sketchybar-app-font"  # app icons in the spaces strip (plugins/icon_map.sh)
-caskInstall "CLEANMYMAC"        "cleanmymac"
 caskInstall "DISCORD"           "discord"
-caskInstall "OBSIDIAN"          "obsidian"             # used by ~/secondbrain workflow
+caskInstall "OBSIDIAN"          "obsidian"             # central configuration and the obsi vault launcher
 
 # --- CLEANUP ---------------------------------------------------------------
 # These three commands are nice-to-have, not critical. A single broken
