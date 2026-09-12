@@ -20,15 +20,7 @@ ROOT = Path(__file__).resolve().parents[3]
 BASH = '/bin/bash'
 BOOT = ROOT / 'scripts/installs/bootstrap.sh'
 GUIDE = ROOT / 'docs/install/bootstrap-flow.md'
-EXPECTED_PROMPT = '''Continue recovery in ~/workspace. Step 1 is complete.
-
-Read AGENTS.md and docs/install/bootstrap-flow.md. Start the remaining setup with:
-
-bash ~/workspace/scripts/installs/installation.sh
-
-Work directly in this session; no agents. Verify results; fix failing scripts, rerun the affected step, and continue.
-
-Preserve existing work. Involve me only when needed for authentication, approvals, or disruptive actions. Report results and remaining blockers.'''
+PROMPT_FILE = ROOT / 'docs/install/recovery-prompt.md'
 ORIGIN = 'https://github.com/teazyou/workspace.git'
 q = shlex.quote
 
@@ -149,22 +141,20 @@ class RecoveryTests(unittest.TestCase):
         guide = workspace / 'docs/install/bootstrap-flow.md'
         guide.parent.mkdir(parents=True, exist_ok=True)
         guide.write_text(content if content is not None else GUIDE.read_text())
+        shutil.copyfile(PROMPT_FILE, workspace/'docs/install/recovery-prompt.md')
         return f'''source {q(str(ROOT/'scripts/installs/recovery_checks.sh'))}
         render_recovery_prompt {q(str(guide))} {q(str(workspace))} {q(ORIGIN)} {'a'*40} /native/claude /brew/codex
         '''
 
     def test_prompt_complete_neutral_and_guide_required(self):
         r = self.shell(self.prompt())
-        self.assertIn('Continue recovery in ~/workspace. Step 1 is complete.', r.stdout)
-        self.assertIn('bash ~/workspace/scripts/installs/installation.sh', r.stdout)
-        self.assertIn('Work directly in this session; no agents.', r.stdout)
-        self.assertLess(len(r.stdout.split()), 80)
-        self.assertNotIn('{{', r.stdout)
-        self.assertIn('docs/install/bootstrap-flow.md', r.stdout)
-        self.assertNotIn('gpt-', r.stdout)
-        self.assertEqual(r.stdout.strip(), EXPECTED_PROMPT)
-        # Process prose carries no runtime template or status/header contract.
-        self.assertEqual(self.shell(self.prompt('# Process overview\n')).stdout.strip(), EXPECTED_PROMPT)
+        expected = f'Read and execute {self.base}/workspace/docs/install/recovery-prompt.md'
+        self.assertEqual(r.stdout.strip(), expected)
+        self.assertEqual(len(r.stdout.splitlines()), 1)
+        self.assertEqual(self.shell(self.prompt('# Process overview\n')).stdout.strip(), expected)
+        missing_prompt = self.prompt()
+        (self.base/'workspace/docs/install/recovery-prompt.md').unlink()
+        self.shell(missing_prompt, ok=False)
         self.shell(self.prompt(''), ok=False)
         missing = self.prompt()
         (self.base / 'workspace/docs/install/bootstrap-flow.md').unlink()
@@ -179,7 +169,7 @@ class RecoveryTests(unittest.TestCase):
         def git(*args):
             return subprocess.check_output(['/usr/bin/git','-C',str(repo),'-c','core.hooksPath=/dev/null',*args],env=self.env,stderr=subprocess.DEVNULL).decode().strip()
         git('init','-q')
-        for name in ('AGENTS.md','_index.md','docs/install/bootstrap-flow.md','scripts/installs/install_brew.sh','scripts/installs/install_claude.sh','scripts/installs/recovery_checks.sh'):
+        for name in ('AGENTS.md','_index.md','docs/install/bootstrap-flow.md','docs/install/recovery-prompt.md','scripts/installs/install_brew.sh','scripts/installs/install_claude.sh','scripts/installs/recovery_checks.sh'):
             dest=repo/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text('fixture\n')
         (repo/'notes.txt').write_text('user\n')
         git('add','.')
@@ -375,6 +365,7 @@ class RecoveryTests(unittest.TestCase):
         # fixture scripts, and validation is separately covered by Git fixtures.
         workspace=self.home/'workspace';inst=workspace/'scripts/installs';inst.mkdir(parents=True)
         guide=workspace/'docs/install/bootstrap-flow.md';guide.parent.mkdir(parents=True);guide.write_text(GUIDE.read_text())
+        shutil.copyfile(PROMPT_FILE, workspace/'docs/install/recovery-prompt.md')
         shutil.copyfile(ROOT/'scripts/installs/recovery_checks.sh',inst/'recovery_checks.sh')
         log=self.base/'stages.log'
         for name in ('install_brew.sh','install_claude.sh'):
@@ -388,13 +379,12 @@ class RecoveryTests(unittest.TestCase):
         '''
         r=self.shell(common)
         self.assertEqual(r.stdout.count('Step1done'),1)
-        self.assertEqual(r.stdout.count('----- BEGIN RECOVERY PROMPT -----'),1)
-        context, prompt = r.stdout.split('----- BEGIN RECOVERY PROMPT -----')
-        prompt = prompt.split('----- END RECOVERY PROMPT -----')[0].strip()
+        handoff = f'Read and execute {workspace}/docs/install/recovery-prompt.md'
+        self.assertEqual(r.stdout.splitlines()[-1], handoff)
+        self.assertEqual(r.stdout.count(handoff), 1)
+        self.assertNotIn('----- BEGIN RECOVERY PROMPT -----', r.stdout)
         for value in (str(workspace), str(guide), ORIGIN, 'a'*40, str(self.home/'.local/bin/claude'), str(prefix/'bin/codex')):
-            self.assertIn(value, context)
-            self.assertNotIn(value, prompt)
-        self.assertEqual(prompt, EXPECTED_PROMPT)
+            self.assertIn(value, r.stdout)
         self.assertNotIn('FULL_INSTALL_FORBIDDEN',r.stdout)
         self.assertEqual(log.read_text().splitlines(),['install_brew.sh --phase minimal','install_claude.sh --cli-only','install_brew.sh --phase minimal --verify-only'])
         self.script(prefix/'bin/codex','exit 1');self.shell(common,ok=False)

@@ -5,6 +5,7 @@ Purpose: restore the managed environment from `~/workspace`. Scripts and saved c
 ## Main paths
 
 - `AGENTS.md`, `_index.md`: workspace rules, source map, domain guides.
+- `docs/install/recovery-prompt.md`: instructions referenced by the terminal handoff.
 - `scripts/installs/bootstrap.sh`: minimum preparation; authentication handoff.
 - `scripts/installs/installation.sh`: main installer; runs the setup sequence under AI supervision or manually.
 - `scripts/`: executable setup and system operations.
@@ -20,9 +21,9 @@ Purpose: restore the managed environment from `~/workspace`. Scripts and saved c
    curl -fsSL https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh | bash
    ```
 
-2. **Bootstrap — minimum readiness.** Check prerequisites; install required foundations; obtain and validate one published revision at `~/workspace`; install minimum tools; verify readiness. Print `Step1done`, authentication/launch instructions, revision context, and a short prompt. Exit. Remaining installation waits.
+2. **Bootstrap — minimum readiness.** Check prerequisites; install required foundations; obtain and validate one published revision at `~/workspace`; install minimum tools; verify readiness. Print `Step1done`, authentication/launch instructions, revision context, and `Read and execute <absolute prompt-file path>`. Exit. Remaining installation waits.
 
-3. **User — handoff.** Choose either installed local AI CLI/provider; authenticate; open the workspace; paste the printed prompt. One provider sufficient; no model requirement. Session must have local file and command access.
+3. **User — handoff.** Choose either installed local AI CLI/provider; authenticate; open the workspace; paste the printed instruction. The AI reads `docs/install/recovery-prompt.md`. One provider sufficient; no model requirement. Session must have local file and command access.
 
 4. **AI + scripts — remaining setup.** Work directly in the main session; no delegation. Read workspace rules, index, relevant sources and domain guides. Retain bootstrap context; reconcile existing changes. Start with `bash ~/workspace/scripts/installs/installation.sh`; it initializes the environment and runs the setup scripts in dependency order. Observe output; on failure, repair and rerun the affected step, then continue unfinished steps using the same environment. Scripts install dependencies and apply/link saved configuration. Follow script notices and domain guides for additional manual setup. Verify actual outcomes and required reloads after each step.
 

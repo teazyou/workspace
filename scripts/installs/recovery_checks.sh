@@ -28,16 +28,8 @@ render_recovery_prompt() {
     [[ "$origin" == https://github.com/teazyou/workspace.git && "$revision" =~ ^[0-9a-f]{40}$ ]] || return 1
     [[ -f "$guide" && -s "$guide" && ! -L "$guide" ]] || return 1
     # Bootstrap validates the published guide bytes and prints context separately.
-    # Keep executable handoff text here; the guide describes the process only.
-    cat <<'PROMPT'
-Continue recovery in ~/workspace. Step 1 is complete.
-
-Read AGENTS.md and docs/install/bootstrap-flow.md. Start the remaining setup with:
-
-bash ~/workspace/scripts/installs/installation.sh
-
-Work directly in this session; no agents. Verify results; fix failing scripts, rerun the affected step, and continue.
-
-Preserve existing work. Involve me only when needed for authentication, approvals, or disruptive actions. Report results and remaining blockers.
-PROMPT
+    # The prompt file contains the instructions; terminal output points to it.
+    local prompt_file="$workspace/docs/install/recovery-prompt.md"
+    [[ -f "$prompt_file" && -s "$prompt_file" && ! -L "$prompt_file" ]] || return 1
+    printf 'Read and execute %s\n' "$prompt_file"
 }
