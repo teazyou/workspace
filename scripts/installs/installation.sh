@@ -3,14 +3,14 @@
 #
 # Purpose:
 #   Main orchestrator for the workspace install on a fresh macOS system.
-#   Explicit manual route only. bootstrap.sh stops at minimum readiness;
-#   supervised recovery invokes scoped scripts using the recovery guide.
+#   Run under AI supervision or manually after bootstrap minimum readiness.
+#   On failure, repair/rerun the affected step and continue unfinished steps.
 #
 #   Each step lives in its own sub-script under scripts/installs/. They
 #   support repeat runs — finished installs usually skip while defaults
 #   reapply. See docs/install/bootstrap-flow.md for the recovery process.
 #
-# Run manually:
+# Start phase 2:
 #   bash ~/workspace/scripts/installs/installation.sh
 
 set -e

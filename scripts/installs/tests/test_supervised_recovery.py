@@ -22,7 +22,11 @@ BOOT = ROOT / 'scripts/installs/bootstrap.sh'
 GUIDE = ROOT / 'docs/install/bootstrap-flow.md'
 EXPECTED_PROMPT = '''Continue recovery in ~/workspace. Step 1 is complete.
 
-Read AGENTS.md and docs/install/bootstrap-flow.md. Run the existing setup scripts directly in this session; do not delegate to agents. Verify results; fix failing scripts and rerun them.
+Read AGENTS.md and docs/install/bootstrap-flow.md. Start the remaining setup with:
+
+bash ~/workspace/scripts/installs/installation.sh
+
+Work directly in this session; no agents. Verify results; fix failing scripts, rerun the affected step, and continue.
 
 Preserve existing work. Involve me only when needed for authentication, approvals, or disruptive actions. Report results and remaining blockers.'''
 ORIGIN = 'https://github.com/teazyou/workspace.git'
@@ -152,7 +156,8 @@ class RecoveryTests(unittest.TestCase):
     def test_prompt_complete_neutral_and_guide_required(self):
         r = self.shell(self.prompt())
         self.assertIn('Continue recovery in ~/workspace. Step 1 is complete.', r.stdout)
-        self.assertIn('Run the existing setup scripts directly in this session; do not delegate to agents.', r.stdout)
+        self.assertIn('bash ~/workspace/scripts/installs/installation.sh', r.stdout)
+        self.assertIn('Work directly in this session; no agents.', r.stdout)
         self.assertLess(len(r.stdout.split()), 80)
         self.assertNotIn('{{', r.stdout)
         self.assertIn('docs/install/bootstrap-flow.md', r.stdout)
