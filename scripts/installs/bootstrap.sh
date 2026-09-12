@@ -131,7 +131,7 @@ validate_checkout() {
     repo_git -C "$WORKSPACE" diff --cached --quiet "$REVISION" -- "${scope[@]}" || { fail 'Staged recovery source changes require review.'; return 1; }
     repo_git -C "$WORKSPACE" ls-files --others -- "${scope[@]}" > "$BOOTSTRAP_TEMP/untracked" || return 1
     [[ ! -s "$BOOTSTRAP_TEMP/untracked" ]] || { fail 'Untracked recovery source may shadow trusted files; preserve and review it.'; return 1; }
-    for relative in AGENTS.md _index.md docs/install/supervised-recovery-plan.md docs/install/bootstrap-flow.md scripts/installs/install_brew.sh scripts/installs/install_claude.sh scripts/installs/recovery_checks.sh; do
+    for relative in AGENTS.md _index.md docs/install/bootstrap-flow.md scripts/installs/install_brew.sh scripts/installs/install_claude.sh scripts/installs/recovery_checks.sh; do
         repo_git -C "$WORKSPACE" cat-file -e "$REVISION:$relative" || { fail "Required published file missing: $relative"; return 1; }
     done
 }
@@ -147,9 +147,9 @@ minimum_handoff() {
     export WORKSPACE SCRIPTS="$WORKSPACE/scripts" INSTALLS="$WORKSPACE/scripts/installs" FUNCTIONS="$WORKSPACE/functions" APP_CONFIGS="$WORKSPACE/configs"
     export PATH="$HOME/.local/bin:$PATH"
     source "$INSTALLS/recovery_checks.sh"
-    local guide="$WORKSPACE/docs/install/supervised-recovery-plan.md" claude="$HOME/.local/bin/claude" codex="$BREW_PREFIX/bin/codex" prompt
-    # Validate the entire output contract before installing minimum applications.
-    prompt=$(render_recovery_prompt "$guide" "$WORKSPACE" "$REPO_URL" "$REVISION" "$claude" "$codex") || { fail 'Recovery guide/prompt absent, proposed, incompatible or incomplete.'; return 1; }
+    local guide="$WORKSPACE/docs/install/bootstrap-flow.md" claude="$HOME/.local/bin/claude" codex="$BREW_PREFIX/bin/codex" prompt
+    # Require the process guide and valid handoff context before minimum installs.
+    prompt=$(render_recovery_prompt "$guide" "$WORKSPACE" "$REPO_URL" "$REVISION" "$claude" "$codex") || { fail 'Recovery process guide missing/empty or handoff context invalid.'; return 1; }
     /bin/bash "$INSTALLS/install_brew.sh" --phase minimal || return 1
     /bin/bash "$INSTALLS/install_claude.sh" --cli-only || return 1
     /bin/bash "$INSTALLS/install_brew.sh" --phase minimal --verify-only || return 1

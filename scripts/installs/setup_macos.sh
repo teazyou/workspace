@@ -11,7 +11,7 @@
 #   - Finder    : path/status/hidden files, list view, Recents for new windows
 #   - Keyboard  : fast key repeat, disable press-and-hold accents
 #   - Dock      : captured size 52, behavior, ordered portable apps + Downloads
-#   - Shortcuts/input sources: see configs/macos/preferences.json and its guide
+#   - Shortcuts/input sources: see configs/macos/preferences.json and helper notices
 #   - Screenshots: ~/Pictures/Screenshots, png format
 #   - Appearance: dark mode
 #   - Save panels: expanded by default (so you see the full file picker)

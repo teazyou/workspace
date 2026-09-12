@@ -151,7 +151,7 @@ let sourceMajor = Int((config["captured_macos"] as! String).split(separator: "."
 if fixture != nil || ProcessInfo.processInfo.operatingSystemVersion.majorVersion == sourceMajor {
     let current = try read("com.apple.symbolichotkeys", "AppleSymbolicHotKeys") as? [String: Any] ?? [:]
     try write("com.apple.symbolichotkeys", "AppleSymbolicHotKeys", merge(current, config["symbolic_hotkeys"] as! [String: Any]))
-} else { manual("System shortcut IDs were captured on macOS \(sourceMajor). Restore them using the guide; automatic shortcut writes skipped on this major version.") }
+} else { manual("System shortcut IDs were captured on macOS \(sourceMajor). Review the saved symbolic_hotkeys in \(args[0]) and restore intended shortcuts in System Settings > Keyboard > Keyboard Shortcuts; automatic shortcut writes skipped on this major version.") }
 var apps: [[String: Any]] = []
 for app in config["dock_apps"] as! [[String: String]] {
     if let path = appPath(app) { apps.append(["path": path, "bundle_id": app["bundle_id"]!]) }
@@ -166,6 +166,6 @@ for var folder in config["dock_folders"] as! [[String: Any]] {
 }
 if !folders.isEmpty { try restoreDock("persistent-others", folders) }
 try restoreInputs()
-manual("Check Dictation's Control modifier shortcut and restore Finder sidebar favorites: docs/install/macos-preferences.md.")
+manual("Check System Settings > Keyboard > Dictation > Shortcut: select Press Control Key Twice if offered. Restore favorites in Finder > Settings > Sidebar; add and order custom folders manually.")
 print("\(dryRun ? "Planned" : "Applied") \(changeCount) preference changes; \(manualCount) manual notices.")
 if fm.fileExists(atPath: backupDir) { print("Private scoped backup: " + backupDir) }

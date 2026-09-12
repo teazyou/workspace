@@ -8,7 +8,7 @@
 #
 #   Each step lives in its own sub-script under scripts/installs/. They
 #   support repeat runs — finished installs usually skip while defaults
-#   reapply. See the bootstrap guide for failure limits.
+#   reapply. See docs/install/bootstrap-flow.md for the recovery process.
 #
 # Run manually:
 #   bash ~/workspace/scripts/installs/installation.sh
@@ -93,6 +93,6 @@ next_step "Create ~/dev"
 bash "$INSTALLS/setup_dev.sh"
 
 log_info "Manual scripts finished"
-log_ok "Script exits are not full restoration proof. Verify outcomes using docs/install/supervised-recovery-plan.md."
+log_ok "Script exits are not full restoration proof. Follow the closeout process in docs/install/bootstrap-flow.md."
 log_wait "Native VPN, manual macOS extras, application first-open, and logout/login validation remain outside this manual route."
 log_wait "Review managed Git identity and startup hooks before opening a new interactive shell."

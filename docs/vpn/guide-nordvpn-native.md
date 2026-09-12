@@ -52,7 +52,7 @@ User contract:
 
 ## Fresh-Mac setup (manual, outside the main installer)
 
-The [bootstrap flow](../install/bootstrap-flow.md) deliberately does not install or activate this stack. Follow these steps after the repository is present; the NordVPN GUI app and the separate VPNStatus GUI are not required. An AI helper can guide the public setup and verify non-secret results. The human completes Nord sign-in/email verification, edits credentials locally, and approves the profile. Do not read credentials or the rendered profile into a chat, log, or repository.
+Phase 1 of the [reinstallation process](../install/bootstrap-flow.md) stops before installing or activating this stack. Follow these steps during supervised phase 2 or standalone setup after the repository is present; the NordVPN GUI app and the separate VPNStatus GUI are not required. An AI helper can guide the public setup and verify non-secret results. The human completes Nord sign-in/email verification, edits credentials locally, and approves the profile. Do not read credentials or the rendered profile into a chat, log, or repository.
 
 ### 1. Prerequisites and supported paths
 

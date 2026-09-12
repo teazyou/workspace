@@ -24,20 +24,16 @@ render_recovery_prompt() {
     for value in "$guide" "$workspace" "$origin" "$revision" "$claude" "$codex"; do
         [[ -n "$value" && "$value" != *'{{'* && "$value" != *$'\n'* && "$value" != *$'\r'* ]] || return 1
     done
-    [[ "$guide" == "$workspace/docs/install/supervised-recovery-plan.md" && "$workspace" == /* && "$claude" == /* && "$codex" == /* ]] || return 1
+    [[ "$guide" == "$workspace/docs/install/bootstrap-flow.md" && "$workspace" == /* && "$claude" == /* && "$codex" == /* ]] || return 1
     [[ "$origin" == https://github.com/teazyou/workspace.git && "$revision" =~ ^[0-9a-f]{40}$ ]] || return 1
-    # Declarations are fixed header lines, never a quoted mention in a draft.
-    [[ "$(sed -n '3p' "$guide")" == 'Status: implemented candidate' ]] || return 1
-    [[ "$(sed -n '4p' "$guide")" == 'Recovery contract: supervised-v1' ]] || return 1
-    # Context is printed separately by bootstrap; copy only the short prompt.
-    awk '
-      /^<!-- recovery-prompt:start -->$/ { starts++; inside=1; next }
-      /^<!-- recovery-prompt:end -->$/ { ends++; inside=0; next }
-      inside {
-        s=$0;
-        if (index(s,"{{")) bad=1;
-        if (s !~ /^```/) { output=output s "\n"; if (s ~ /[^[:space:]]/) lines++ }
-      }
-      END { if(starts!=1 || ends!=1 || inside || bad || !lines) exit 1; printf "%s",output }
-    ' "$guide"
+    [[ -f "$guide" && -s "$guide" && ! -L "$guide" ]] || return 1
+    # Bootstrap validates the published guide bytes and prints context separately.
+    # Keep executable handoff text here; the guide describes the process only.
+    cat <<'PROMPT'
+Continue recovery in ~/workspace. Step 1 is complete.
+
+Read AGENTS.md and docs/install/bootstrap-flow.md. Run the existing setup scripts directly in this session; do not delegate to agents. Verify results; fix failing scripts and rerun them.
+
+Preserve existing work. Involve me only when needed for authentication, approvals, or disruptive actions. Report results and remaining blockers.
+PROMPT
 }

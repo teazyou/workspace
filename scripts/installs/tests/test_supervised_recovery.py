@@ -19,7 +19,12 @@ import unittest
 ROOT = Path(__file__).resolve().parents[3]
 BASH = '/bin/bash'
 BOOT = ROOT / 'scripts/installs/bootstrap.sh'
-GUIDE = ROOT / 'docs/install/supervised-recovery-plan.md'
+GUIDE = ROOT / 'docs/install/bootstrap-flow.md'
+EXPECTED_PROMPT = '''Continue recovery in ~/workspace. Step 1 is complete.
+
+Read AGENTS.md and docs/install/bootstrap-flow.md. Run the existing setup scripts directly in this session; do not delegate to agents. Verify results; fix failing scripts and rerun them.
+
+Preserve existing work. Involve me only when needed for authentication, approvals, or disruptive actions. Report results and remaining blockers.'''
 ORIGIN = 'https://github.com/teazyou/workspace.git'
 q = shlex.quote
 
@@ -137,26 +142,29 @@ class RecoveryTests(unittest.TestCase):
 
     def prompt(self, content=None):
         workspace = self.base / 'workspace'
-        guide = workspace / 'docs/install/supervised-recovery-plan.md'
+        guide = workspace / 'docs/install/bootstrap-flow.md'
         guide.parent.mkdir(parents=True, exist_ok=True)
         guide.write_text(content if content is not None else GUIDE.read_text())
         return f'''source {q(str(ROOT/'scripts/installs/recovery_checks.sh'))}
         render_recovery_prompt {q(str(guide))} {q(str(workspace))} {q(ORIGIN)} {'a'*40} /native/claude /brew/codex
         '''
 
-    def test_prompt_complete_neutral_and_draft_rejection(self):
+    def test_prompt_complete_neutral_and_guide_required(self):
         r = self.shell(self.prompt())
         self.assertIn('Continue recovery in ~/workspace. Step 1 is complete.', r.stdout)
         self.assertIn('Run the existing setup scripts directly in this session; do not delegate to agents.', r.stdout)
         self.assertLess(len(r.stdout.split()), 80)
         self.assertNotIn('{{', r.stdout)
-        self.assertIn('docs/install/supervised-recovery-plan.md', r.stdout)
+        self.assertIn('docs/install/bootstrap-flow.md', r.stdout)
         self.assertNotIn('gpt-', r.stdout)
-        for content in (GUIDE.read_text().replace('Status: implemented candidate','Status: proposed'),
-                        GUIDE.read_text().replace('<!-- recovery-prompt:end -->',''),
-                        GUIDE.read_text().replace('Continue recovery in ~/workspace.', '{{UNKNOWN}}'),
-                        re.sub(r'(?s)(<!-- recovery-prompt:start -->).*?(<!-- recovery-prompt:end -->)', r'\1\n\2', GUIDE.read_text())):
-            self.shell(self.prompt(content), ok=False)
+        self.assertEqual(r.stdout.strip(), EXPECTED_PROMPT)
+        # Process prose carries no runtime template or status/header contract.
+        self.assertEqual(self.shell(self.prompt('# Process overview\n')).stdout.strip(), EXPECTED_PROMPT)
+        self.shell(self.prompt(''), ok=False)
+        missing = self.prompt()
+        (self.base / 'workspace/docs/install/bootstrap-flow.md').unlink()
+        self.shell(missing, ok=False)
+        self.shell(self.prompt().replace('bootstrap-flow.md', 'other.md'), ok=False)
         self.shell(self.prompt().replace(ORIGIN, 'https://example.invalid/repo.git'), ok=False)
         self.shell(self.prompt().replace('a'*40, 'short-revision'), ok=False)
 
@@ -166,7 +174,7 @@ class RecoveryTests(unittest.TestCase):
         def git(*args):
             return subprocess.check_output(['/usr/bin/git','-C',str(repo),'-c','core.hooksPath=/dev/null',*args],env=self.env,stderr=subprocess.DEVNULL).decode().strip()
         git('init','-q')
-        for name in ('AGENTS.md','_index.md','docs/install/supervised-recovery-plan.md','docs/install/bootstrap-flow.md','scripts/installs/install_brew.sh','scripts/installs/install_claude.sh','scripts/installs/recovery_checks.sh'):
+        for name in ('AGENTS.md','_index.md','docs/install/bootstrap-flow.md','scripts/installs/install_brew.sh','scripts/installs/install_claude.sh','scripts/installs/recovery_checks.sh'):
             dest=repo/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_text('fixture\n')
         (repo/'notes.txt').write_text('user\n')
         git('add','.')
@@ -361,7 +369,7 @@ class RecoveryTests(unittest.TestCase):
         # Actual minimum_handoff + renderer, but child installers are explicit
         # fixture scripts, and validation is separately covered by Git fixtures.
         workspace=self.home/'workspace';inst=workspace/'scripts/installs';inst.mkdir(parents=True)
-        guide=workspace/'docs/install/supervised-recovery-plan.md';guide.parent.mkdir(parents=True);guide.write_text(GUIDE.read_text())
+        guide=workspace/'docs/install/bootstrap-flow.md';guide.parent.mkdir(parents=True);guide.write_text(GUIDE.read_text())
         shutil.copyfile(ROOT/'scripts/installs/recovery_checks.sh',inst/'recovery_checks.sh')
         log=self.base/'stages.log'
         for name in ('install_brew.sh','install_claude.sh'):
@@ -381,7 +389,7 @@ class RecoveryTests(unittest.TestCase):
         for value in (str(workspace), str(guide), ORIGIN, 'a'*40, str(self.home/'.local/bin/claude'), str(prefix/'bin/codex')):
             self.assertIn(value, context)
             self.assertNotIn(value, prompt)
-        self.assertEqual(prompt, GUIDE.read_text().split('<!-- recovery-prompt:start -->\n```text\n')[1].split('\n```\n<!-- recovery-prompt:end -->')[0])
+        self.assertEqual(prompt, EXPECTED_PROMPT)
         self.assertNotIn('FULL_INSTALL_FORBIDDEN',r.stdout)
         self.assertEqual(log.read_text().splitlines(),['install_brew.sh --phase minimal','install_claude.sh --cli-only','install_brew.sh --phase minimal --verify-only'])
         self.script(prefix/'bin/codex','exit 1');self.shell(common,ok=False)
@@ -436,7 +444,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(r.stdout.splitlines(),stages)
 
     def test_document_links_and_runtime_boundaries(self):
-        for name in ('docs/install/bootstrap-flow.md','docs/install/supervised-recovery-plan.md'):
+        for name in ('docs/install/bootstrap-flow.md',):
             path=ROOT/name
             for link in re.findall(r'\]\(([^)]+)\)',path.read_text()):
                 if '://' not in link and not link.startswith('#'):
