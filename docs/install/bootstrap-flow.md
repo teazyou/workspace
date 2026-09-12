@@ -1,152 +1,103 @@
-# Fresh-Mac install & bootstrap flow
+# Fresh-Mac bootstrap and supervised recovery
 
-How a brand-new macOS machine goes from nothing to this fully-wired workspace, via `scripts/installs/**`.
+The [recovery guide](supervised-recovery-plan.md) is the authoritative operational sequence and the sole handoff prompt template. Read it alongside this guide before changing any installer. The implementation is an **implemented candidate**. The user explicitly authorized committing and pushing all repository changes on 2026-09-12; public availability must be verified against the remote revision. Clean-Mac validation remains pending even after publication.
 
-**Read this when:** doing a fresh-Mac setup, adding/removing/reordering an install step, debugging why something didn't get installed or wired after bootstrap, or changing a symlink target. If you're touching anything under [`scripts/installs/`](../../scripts/installs/), the ordering constraints in this doc are load-bearing and live nowhere else.
+## Phase 1 and its stop boundary
 
----
+The public command remains source-compatible and selects the version currently published on `master`:
 
-## Overview: the two-stage handoff
+```sh
+curl -fsSL https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh | bash
+```
 
-Setup is split in two because of a chicken-and-egg problem: the real installer lives *inside* the repo, but the repo isn't on disk yet.
+[`bootstrap.sh`](../../scripts/installs/bootstrap.sh) ensures macOS/architecture compatibility, at least 12 GiB free for the minimum toolset, bounded HTTPS connectivity, working CLT clang/Swift, native Homebrew and Git, and a safe `~/workspace` checkout. It selects only the five minimum casks from the inventory below and the native Claude CLI. It independently verifies minimum receipts, application structure/signatures, both CLI versions, and the active guide contract, then prints `Step1done`, authentication instructions, two concrete CLI launch commands, and the **complete prompt** with workspace, guide, trusted origin, full revision, and both executable paths. It then exits. Authentication, first-open UI validation, and the remaining setup are explicitly pending.
 
-1. **[`bootstrap.sh`](../../scripts/installs/bootstrap.sh)** — the curl one-liner entry point. Gets the machine to the bare minimum needed to clone the repo (CLT → Rosetta → Homebrew → brew git → `git clone`), then `exec`s into the main installer. Run remotely:
-   ```
-   curl -fsSL https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh | bash
-   ```
-2. **[`installation.sh`](../../scripts/installs/installation.sh)** — the orchestrator. Runs 13 numbered steps, each a self-contained `install_*` / `setup_*` sub-script, designed for repeat runs; see the checks and limits below.
+One authenticated local AI provider is sufficient. Either installed CLI can supervise recovery; there is no required model or provider-specific agent configuration. A desktop session must actually offer local project execution and workers. Ordinary chat or a cloud container does not prove those capabilities. The prompt requires a harmless read-only worker to demonstrate access on this Mac; failing that, move the same prompt to an installed local CLI. If no accessible frontend supports delegation, remain in guidance mode until the user decides whether to enable it or permit direct sequential execution.
 
-**Why bootstrap re-execs itself from a tempfile.** When invoked as `curl … | bash`, the script's stdin *is* the pipe still carrying the rest of its own source. Any child process that reads stdin (parts of the brew installer do) consumes that source; bash then hits EOF and exits silently mid-install. To avoid this, bootstrap detects the piped case (`[[ ! -t 0 ]]` and `WORKSPACE_BOOTSTRAP_REEXEC` unset), downloads a fresh copy to `mktemp /tmp/workspace-bootstrap.XXXXXX.sh`, sets `WORKSPACE_BOOTSTRAP_REEXEC=1`, and re-execs it with stdin reattached to `/dev/tty`. The same `< /dev/tty` trick is applied at the final handoff (`exec bash "$WORKSPACE/scripts/installs/installation.sh" < /dev/tty`) so that interactive prompts work even under the pipe.
+Brave is installed solely as an application for human account sign-in. Bootstrap does not change the default browser, open/quit apps, restore browser data, configure its Dock entry, or touch account state. Managed shell links, iTerm preferences, Node/NVM, fonts, window management, and macOS preferences are phase 2 work. Rosetta is not installed unconditionally: selected minimum artifacts are native/universal. Apple Silicon/macOS 26 is the acceptance target; Intel and other OS releases remain separately unverified compatibility paths.
 
-**State before vs. after.**
-- *Before bootstrap:* a stock Mac, nothing assumed except an Administrator account.
-- *After bootstrap, before installation.sh:* CLT, Rosetta (Apple Silicon only), Homebrew on PATH, brew's `git`, and `~/workspace` cloned over HTTPS.
-- *After installation.sh:* everything below, minus the known gaps (see [Known limitations](#known-limitations--what-the-flow-does-not-wire)).
+### Entry safety, source validation, and reruns
 
-Bootstrap hard-fails early if the user isn't in the `admin` group (`dseditgroup -o checkmember -m "$(whoami)" admin`) — the Homebrew install can't chown its prefix otherwise. It pre-caches sudo (`sudo -v`) and runs a 60s background keepalive (`while kill -0 "$$"…; sudo -n true`) so a long brew download doesn't time out the 5-minute sudo window under `NONINTERACTIVE=1`. The `ensure_brew_on_path` helper sources `brew shellenv` from `/opt/homebrew/bin/brew` (Apple Silicon) or `/usr/local/bin/brew` (Intel) **on every run**, not just right after install — fixing the historical "had to run it 2-3 times" flakiness where brew existed but wasn't yet on the child shell's PATH.
+Piped source is downloaded into a private temporary directory and run as a file with `/dev/tty` as stdin, so installers cannot consume the script pipe. Missing TTY, failed/invalid download, and interruption stop with a concrete rerun message. CLT waits visibly for at most 30 minutes; Control-C cancels. Homebrew installation checks administrator membership and obtains sudo interactively; its temporary sudo refresher is stopped on exit. Download requests have connection/total timeouts; Git HTTPS transfers stop after 60 seconds below one byte/second. There is no automatic retry loop. Full Xcode and App Store sign-in are deferred.
 
----
+Homebrew is resolved at `/opt/homebrew/bin/brew` on native arm64 or `/usr/local/bin/brew` on Intel; unexpected PATH shadowing/prefix and translated execution stop. `shellenv` is initialized even when Brew was already installed but absent from PATH. No login shell is sourced.
 
-## The 13-step orchestration
+After Git is ready, bootstrap resolves trusted HTTPS `master` once to a full commit, re-downloads **that immutable bootstrap**, and compares its bytes with the executing source before sourcing repository helpers. Branch movement or unpublished local code stops instead of mixing revisions. For an authorized published staging candidate, download the script from its immutable full revision and invoke `bash bootstrap.sh --revision FULL_COMMIT_ID`; clone and handoff use the same revision. The command is a trust decision in the publisher’s HTTPS source, not independent cryptographic release authentication.
 
-[`installation.sh`](../../scripts/installs/installation.sh) auto-numbers its steps: `TOTAL_STEPS=$(grep -c '^next_step ' "${BASH_SOURCE[0]}")`, and a `next_step()` wrapper prints `"N/TOTAL — title"`. Adding or removing a step means editing only its own line — no other numbers need updating. All sub-scripts are invoked via `bash "$INSTALLS/<script>"` (a fresh subshell so a `set -e` failure bubbles up without poisoning the orchestrator's environment). `installation.sh` first exports the path vars every sub-script relies on: `WORKSPACE`, `SCRIPTS`, `FUNCTIONS`, `INSTALLS`, `APP_CONFIGS`.
+An absent workspace is cloned without checkout before the resolved commit is selected. Existing checkouts/worktrees must have the exact root, trusted origin, revision, and unchanged recovery sources. Git-byte hashes check recovery roots (`scripts`, `functions`, `configs`, `zsh`, `docs`, `AGENTS.md`, `_index.md`, `.gitignore`), including actual file bytes even with index skip flags; Git replacement objects are disabled so local replacement refs cannot substitute another tree; redirected components, staged recovery edits, and untracked/ignored shadow files within those roots stop. Unrelated changes outside those roots are preserved. Nothing resets, cleans, stashes, pulls over, or unstages existing work. A failed partial clone remains for explicit diagnosis. A phase-1 rerun can legitimately reject phase-2 repairs or generated display/iTerm changes: resume the reviewed phase-2 session and reconcile its recorded diffs instead of discarding them.
 
-| # | Step title | Sub-script |
-|---|-----------|-----------|
-| 1 | Homebrew taps + formulae + casks | [`install_brew.sh`](../../scripts/installs/install_brew.sh) |
-| 2 | Oh-My-Zsh | [`install_oh_my_zsh.sh`](../../scripts/installs/install_oh_my_zsh.sh) |
-| 3 | Symlinks (zshrc, aerospace, borders, sketchybar, vscode) | [`setup_symlinks.sh`](../../scripts/installs/setup_symlinks.sh) |
-| 4 | iTerm2 preferences (custom-folder mode) | [`install_iterm2.sh`](../../scripts/installs/install_iterm2.sh) |
-| 5 | Claude Desktop + Claude Code (native install) | [`install_claude.sh`](../../scripts/installs/install_claude.sh) |
-| 6 | VSCode extensions | [`install_vscode_ext.sh`](../../scripts/installs/install_vscode_ext.sh) |
-| 7 | Touch ID for sudo | [`install_touch_id_sudo.sh`](../../scripts/installs/install_touch_id_sudo.sh) |
-| 8 | macOS defaults | [`setup_macos.sh`](../../scripts/installs/setup_macos.sh) |
-| 9 | Wallpaper (solid black) | [`setup_wallpaper.sh`](../../scripts/installs/setup_wallpaper.sh) |
-| 10 | Window manager services (aerospace → sketchybar, borders) | [`install_window_manager.sh`](../../scripts/installs/install_window_manager.sh) |
-| 11 | Node LTS via NVM | [`install_node.sh`](../../scripts/installs/install_node.sh) |
-| 12 | Xcode via mas | [`install_xcode_mas.sh`](../../scripts/installs/install_xcode_mas.sh) |
-| 13 | Create ~/dev | [`setup_dev.sh`](../../scripts/installs/setup_dev.sh) |
+[`recovery_checks.sh`](../../scripts/installs/recovery_checks.sh) shares read-only app/CLI checks and renders the one template. The guide’s exact active status/contract header and one marked template section must pass before printing success. A draft that merely mentions the marker fails. Application first-open/authentication remain human checks; damaged apps with receipts require diagnosis, never forced replacement or quarantine stripping.
 
-All sub-scripts source [`helper_prompt.sh`](../../scripts/installs/helper_prompt.sh) for the `log_ok` / `log_err` / `log_wait` / `log_info` / `log_step` output helpers and the `prompt_continue` / `prompt_command` manual-pause helpers. `helper_prompt.sh` defaults the path vars (`: "${INSTALLS:=…}"`) once sourced; older standalone sub-scripts need `INSTALLS` set before that source line (see rerun instructions below). It normalises the `\033[…m` color strings from `zsh/configs/colors.zsh` into real escapes via `printf %b` (zsh's `echo` interprets them, bash's doesn't).
+## Single package inventory
 
----
+[`install_brew.sh`](../../scripts/installs/install_brew.sh) is the sole inventory, reused for installation, `--list`, and `--verify-only`:
 
-## Ordering / dependency graph (the load-bearing constraints)
-
-The step order is **not** arbitrary. These two constraints are the reason it is what it is, and none of them is documented anywhere else in prose:
-
-1. **`install_brew` runs first** because it provides Python (→ Claude), `nvm` (→ step 11), `mas` (→ step 12), the window-manager formulae/cask (→ step 10), and the applications used by the Dock capture (→ step 8).
-2. **`install_touch_id_sudo` (step 7) runs before `install_xcode_mas` (step 12).** The Xcode step needs `sudo` for `xcodebuild -license accept` and `-runFirstLaunch`; with Touch ID already wired, those prompts can use a fingerprint. A password remains the fallback.
-
-`oh_my_zsh` (2) runs **before** `setup_symlinks` (3): the OMZ installer uses `KEEP_ZSHRC=yes RUNZSH=no CHSH=no`, leaving `~/.zshrc` for the workspace link. macOS setup (8) uses Swift from bootstrap's CLT and applies captured Dock entries after Homebrew has supplied the selected apps, including ChatGPT Desktop at managed Dock position 4. Native VPN dependencies and activation remain separate manual work.
-
----
-
-## Per-step cheat-sheet (idempotency check + gotchas)
-
-Each value below is read from the sub-script's actual source. The "idempotency check" is what makes a re-run skip finished work.
-
-| Step | Idempotency check (skip condition) | Notes |
+| Selection | Formulae | Casks |
 |---|---|---|
-| 1 install_brew | per-formula/cask short-circuit inside `brewInstall`/`caskInstall` ([`functions/brew.sh`](../../functions/brew.sh)) | full list below. `brew upgrade`/`cleanup`/`services cleanup` at the end are wrapped with `|| log_err` so one broken cask can't abort the run. |
-| 2 oh_my_zsh | `[[ -d "$HOME/.oh-my-zsh" ]]` | installs with `KEEP_ZSHRC=yes RUNZSH=no CHSH=no`. |
-| 3 setup_symlinks | per-link: already correct `-L` link → no-op | real files moved aside to `<name>.bak.$(date +%s)`; see [symlink targets](#symlink-targets-created). |
-| 4 install_iterm2 | `PrefsCustomFolder == $CONFIGS/iterm2 && LoadPrefsFromCustomFolder == 1` (via `defaults read`) | **interactive:** if iTerm2 is running it pauses (`prompt_command`) to have you quit it — otherwise iTerm2 overwrites the repo plist on quit. |
-| 5 install_claude | Desktop: `[[ -d /Applications/Claude.app ]]`; Code: `[[ -x "$HOME/.local/bin/claude" ]]` | native installs (not brew cask). Desktop pulled from `downloads.claude.ai/releases/darwin/universal/RELEASES.json` (first entry, parsed with `python3`, extracted with `ditto`, quarantine stripped via `xattr -dr`). Code via `curl -fsSL https://claude.ai/install.sh | bash`. The binary-path check (not `command -v`) matters because this subshell doesn't source `~/.zshrc`, so `~/.local/bin` isn't on PATH. |
-| 6 install_vscode_ext | `code --install-extension … --force` is itself a no-op when present | resolves the `code` CLI from PATH, else the in-bundle absolute path. **interactive fallback:** if `code` is missing it prompts you to open VSCode once. Installs `bracketpaircolordlw.bracket-pair-color-dlw`, `chunsen.bracket-select`. |
-| 7 install_touch_id_sudo | uncommented `auth sufficient pam_tid.so` already present in `/etc/pam.d/sudo_local` | copies Apple's `sudo_local.template` (needs Sonoma+), `sed`-uncomments the `pam_tid.so` line, and **appends** it directly if the template format isn't recognised. **requires sudo once.** |
-| 8 setup_macos | captured helper compares managed values; unchanged reruns skip writes/backups; baseline defaults reapply | [Portable source and manual gaps](macos-preferences.md): Finder, Dock size **52**/ordered apps/Downloads, 20 selected symbolic shortcut entries (automatic only on macOS 26), ABC as the sole desired input source, enabled and selected; existing destination sources remain intact. ChatGPT Desktop (`/Applications/ChatGPT.app`) occupies managed Dock position 4. Swift merges managed keys and uses public input-source APIs; scoped private backups. Existing keyboard, screenshots, dark mode, save-panel and `.DS_Store` setup stays; Finder/Dock restart on a real setup run. |
-| 9 setup_wallpaper | none — re-applies each run | uses `/System/Library/Desktop Pictures/Solid Colors/Black.png`, falls back to a generated 1×1 black PNG. Sets via `osascript … every desktop`, then deletes `~/Library/Application Support/Dock/desktoppicture.db` to bust the Sonoma+ cache. |
-| 10 install_window_manager | `pgrep -xq AeroSpace` | launches `AeroSpace.app` once (its `after-startup-command` brings up sketchybar + borders, then generates the per-monitor gaps via `apply-display-profile.sh --force` — the script only *sanity-checks* sketchybar/borders with `pgrep`, deliberately **not** `brew services start`, to avoid racing AeroSpace). No LaunchAgent involved — the WM stack has none. |
-| 11 install_node | `nvm install --lts` is a no-op when LTS present | sources `nvm.sh` from `$(brew --prefix)/opt/nvm/nvm.sh`; `nvm alias default 'lts/*'`. |
-| 12 install_xcode_mas | `[[ -d /Applications/Xcode.app ]]` (install step only) | App Store ID `497799835` via `mas install`. **interactive:** must be signed into the App Store first (`mas account` check; Apple removed `mas signin`). Always runs `sudo xcodebuild -license accept` + `-runFirstLaunch` even on re-runs. |
-| 13 setup_dev | `[[ -d "$HOME/dev" ]]` | Creates `~/dev` for the `dev` zsh function. Existing projects are preserved; a conflicting non-directory stops the stage. |
+| `--phase minimal` | None; Git is a bootstrap prerequisite | `iterm2`, `chatgpt`, `claude`, `codex`, `brave-browser` |
+| `--phase remaining` | `python`, `nvm`, `sketchybar`, `borders`, `ripgrep`, `mas`, `gh` | `visual-studio-code`, `google-chrome`, `spotify`, `bitwarden`, `nikitabobko/tap/aerospace`, `font-hack-nerd-font`, `font-sketchybar-app-font`, `discord`, `obsidian` |
+| `--phase all` or no arguments | Both groups | Both groups |
 
-### Full `install_brew.sh` formula + cask lists (read from source)
+The only explicit normal tap is `felixkratz/formulae`, added for remaining/all. VPN-only dependencies remain in the [VPN guide](../vpn/guide-nordvpn-native.md). Homebrew resolves required dependencies. The inventory preserves all earlier targets and adds only Brave.
 
-This is the **complete** list — do not trust partial audits.
+[`functions/brew.sh`](../../functions/brew.sh) has one caller, the inventory script, and performs no work when sourced. Helpers check receipts, show dry-run diagnostics for missing targets, propagate failures, and verify receipts after installs. The caller collects failures and independently checks commands, app bundles, and font file artifacts. A zero receipt check alone is insufficient. Required dependency changes must be reviewed by the supervising worker **before** running the package row; the script’s own dry-run output is diagnostic, not a substitute for that review.
 
-**Taps:** `felixkratz/formulae` (provides `sketchybar` + `borders`).
+Normal phases export `HOMEBREW_NO_INSTALL_CLEANUP`, `HOMEBREW_NO_INSTALL_UPGRADE`, and `HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK`. They never explicitly upgrade or clean packages. Required dependencies may still need changes; protect the active AI/terminal host and defer disruptive work until a safe handoff exists. Blanket maintenance is a separate `install_brew.sh --maintenance` manual operation after that safety review. These controls are documented by [Homebrew](https://docs.brew.sh/Manpage).
 
-**Formulae:** `python`, `nvm`, `sketchybar`, `borders`, `ripgrep`, `mas`, `gh`. **Bootstrap separately installs `git`.** These are the complete explicitly requested formula targets; Homebrew resolves their dependencies.
+Current mapping was rechecked against Homebrew API metadata on 2026-09-12: [`chatgpt`](https://formulae.brew.sh/cask/chatgpt) supplies `/Applications/ChatGPT.app` with retained identity `com.openai.codex`; [`codex`](https://formulae.brew.sh/cask/codex) supplies Homebrew’s `bin/codex`. [`claude`](https://formulae.brew.sh/cask/claude) supplies `/Applications/Claude.app`; native Claude Code remains `~/.local/bin/claude` and requires no Node installation. Existing Homebrew Claude Code receipts or another Claude executable on PATH stop native CLI setup for diagnosis. Neither a second Claude CLI distribution nor the deprecated separate Codex desktop cask is included. [`brave-browser`](https://formulae.brew.sh/cask/brave-browser) supplies `/Applications/Brave Browser.app` only.
 
-**Casks:** `iterm2`, `visual-studio-code`, `google-chrome`, `chatgpt`, `codex`, `spotify`, `bitwarden`, `nikitabobko/tap/aerospace`, `font-hack-nerd-font`, `font-sketchybar-app-font`, `discord`, `obsidian`.
+## Explicit manual installer and dependencies
 
-**OpenAI package mapping:** [`chatgpt`](https://formulae.brew.sh/cask/chatgpt) supplies `/Applications/ChatGPT.app` (its retained internal quit/bundle identifier is `com.openai.codex`); [`codex`](https://formulae.brew.sh/cask/codex) supplies `bin/codex` to Homebrew's binary directory for the terminal command. These are one desktop application and one CLI. The [deprecated separate desktop cask](https://formulae.brew.sh/cask/codex-app) is excluded. This mapping was checked against Homebrew metadata on 2026-09-12.
+[`installation.sh`](../../scripts/installs/installation.sh) remains an explicit **manual** route. Bootstrap never invokes it, and the supervised prompt uses individual scripts. It initializes Brew/native Claude PATH and exports `WORKSPACE`, `SCRIPTS`, `INSTALLS`, `FUNCTIONS`, `APP_CONFIGS`. It auto-numbers these 13 stages:
 
-> Note: `aerospace` lives in its own tap (`nikitabobko/tap/aerospace`); the two `font-*` casks are required by sketchybar (nerd-font glyphs + the app-icon font used by `plugins/icon_map.sh`).
+| # | Script | Acceptance / important limits |
+|---|---|---|
+| 1 | `install_brew.sh` | Full inventory receipts and artifacts; no default maintenance. |
+| 2 | `install_oh_my_zsh.sh` | Verify `~/.oh-my-zsh/oh-my-zsh.sh`; legacy directory-only skip can mask an incomplete installation. Uses `KEEP_ZSHRC=yes RUNZSH=no CHSH=no`. |
+| 3 | `install_node.sh` | Sources `$HOMEBREW_PREFIX/opt/nvm/nvm.sh`; install/select LTS, set default `lts/*`; verify Node **and npm**. |
+| 4 | `setup_symlinks.sh` | Verify all five links below; unique backups preserve wrong links and real files. |
+| 5 | `install_iterm2.sh` | Custom folder + load flag skip check; if iTerm is running or process inspection fails, stops without writes. Transfer the active session first, human quits iTerm, then rerun. |
+| 6 | `install_claude.sh` | Normally verifies Brew Desktop and native CLI. `--cli-only` omits Desktop work; `--desktop-fallback` is a diagnosed missing-app repair after Python. |
+| 7 | `install_vscode_ext.sh` | Verify `bracketpaircolordlw.bracket-pair-color-dlw` and `chunsen.bracket-select` in `code --list-extensions`. In-bundle CLI fallback; first-open may be human work. |
+| 8 | `install_touch_id_sudo.sh` | Human sudo/Touch ID; intended `pam_tid.so` line only. Review unexpected existing PAM contents before mutation. |
+| 9 | `setup_macos.sh` | Captured preference helper and baseline defaults; normal Finder/Dock restart. Follow [macOS guide](macos-preferences.md), including dry-run, private backups, exact values, and manual gaps. |
+| 10 | `setup_wallpaper.sh` | Solid black on every available desktop; Python fallback and declared Dock wallpaper-cache reset. Verify visually. |
+| 11 | `install_window_manager.sh` | AeroSpace owns SketchyBar/Borders startup; verify all three processes and UI. No duplicate Brew services or WM LaunchAgent. Generated display config diffs are legitimate. |
+| 12 | `install_xcode_mas.sh` | App Store sign-in, disk, human sudo/license; verify the actual Xcode developer directory and first-launch components. Legacy script may mask first-launch errors/select CLT. |
+| 13 | `setup_dev.sh` | Creates `~/dev`, preserving projects; non-directory conflict fails. |
 
----
+Brew precedes every dependency consumer. **Oh My Zsh and Node precede managed shell links**; Touch ID precedes Xcode; Dock apps precede macOS settings. Phase 2’s exact A–P worker table and acceptance criteria live only in [the recovery guide](supervised-recovery-plan.md#exact-remaining-sequence-and-acceptance).
+
+Managed shell correction: [`path.zsh`](../../zsh/configs/path.zsh) initializes native Homebrew and prepends `~/.local/bin`; [`nvm.zsh`](../../zsh/configs/nvm.zsh) loads the same Brew NVM source as the installer. [`zshrc.zsh`](../../zsh/zshrc.zsh) no longer appends another account’s hardcoded CLI path. First test these loaders in `zsh -f`; before a normal new interactive shell, review `git.zsh` (writes global identity), OMZ update behavior, and iTerm hooks. Activation is a new shell after dependencies and links, not phase 1. No unrelated shell policy changed.
+
+The iTerm installer retains exactly `PrefsCustomFolder=$APP_CONFIGS/iterm2` and `LoadPrefsFromCustomFolder=1`. It does not set the **Always** save-back choice; explain that choice and let the human decide. Existing custom-folder preferences are a two-way live file, not a symlink. Preserve any legitimate save-back diff. CLI and safe Desktop fallback downloads use checked HTTPS transfers and private temporary directories; existing broken files/apps are diagnosed, never deleted or force-replaced. The Desktop fallback requires confirmed process absence (a process-inspection error stops without repair), verifies signature and Gatekeeper assessment, and retains first-open quarantine handling.
 
 ## Symlink targets created
 
-[`setup_symlinks.sh`](../../scripts/installs/setup_symlinks.sh) (step 3) creates exactly **5** links. Its `make_link` helper: already-correct link → no-op; wrong link → `rm`; real file/folder → moved to `<name>.bak.$(date +%s)` (never deleted).
+The five ordinary links are created by [`setup_symlinks.sh`](../../scripts/installs/setup_symlinks.sh). Already-correct links are no-ops. Wrong links and real files/directories move into a unique private `<target>.bak.XXXXXX/original` directory; the old link destination and backup location are printed. No existing backup is overwritten.
 
-| System path (link) | → repo source |
+| System path | Repository source |
 |---|---|
 | `~/.zshrc` | `zsh/zshrc.zsh` |
 | `~/.aerospace.toml` | `configs/aerospace/aerospace.toml` |
-| `~/.config/borders` | `configs/borders` (whole dir) |
-| `~/.config/sketchybar` | `configs/sketchybar` (whole dir) |
+| `~/.config/borders` | `configs/borders` |
+| `~/.config/sketchybar` | `configs/sketchybar` |
 | `~/Library/Application Support/Code/User/settings.json` | `configs/vscode/settings.json` |
 
-> **`setup_symlinks.sh` is *a* map, not *the* map.** Its 5 links are everything this flow wires. Other symlinks documented in `_index.md` (e.g. the nordvpn LaunchAgent plist) are wired out-of-band — see [Known limitations](#known-limitations--what-the-flow-does-not-wire).
+The sixth documented link is the separate native VPN LaunchAgent, wired only after its guide’s checks and human approval.
 
----
+## Additional setup and honest completion
 
-## Known limitations — what the flow does NOT wire
+The supervised recovery includes the entire [native VPN procedure](../vpn/guide-nordvpn-native.md#fresh-mac-setup-manual-outside-the-main-installer): fixed-path/minimal-PATH verification, narrowly trusted `vpnutil`, Python/jq checks, human-only credentials, verified Root CA, generated six-country profile with manual approval, durable off before the exact LaunchAgent link/load, and scheduled-with-the-human connection interruption tests. No live secrets enter AI context. Runtime VPN limitations remain visible in its guide; no polling or automatic profile removal is added.
 
-The WM stack (AeroSpace + SketchyBar + JankyBorders) is fully wired by the flow: step 3 symlinks all three configs and step 10 launches the stack — no LaunchAgent involved anywhere (`AeroSpace` starts at login via `start-at-login`; its after-startup-command spawns sketchybar + borders and runs `apply-display-profile.sh`). What the flow deliberately leaves out:
+The [manual macOS extras](macos-preferences.md#manual-post-reset-items) remain: Dictation double-Control if offered, sidebar favorites/order, ABC/input menu review, version-gated shortcut handling, and safe logout/login verification. Existing macOS configuration is preserved: Dock size 52, six managed apps with ChatGPT at position 4 plus Downloads, ABC-only desired input while retaining destination sources, selected shortcuts gated to macOS 26, existing baseline preferences and scoped backups. Brave has no managed Dock entry.
 
-### 1. Native NordVPN IKEv2 (deliberately not wired)
+Human authentication, system/administrator/privacy permissions, App Store sign-in, credentials, profile approval, iTerm shutdown, VPN timing, and logout/reboot are explicit gates. Workers execute one mutating row at a time, inspect source, verify actual outcomes, diagnose and make bounded source repairs, retry at most once after justified repair, and continue only independent work when blocked. The coordinator reviews returned evidence. The final report marks each item verified, blocked, user-deferred, or pending human validation; script exits alone never establish complete restoration.
 
-The VPN stack (`scripts/vpn/`, `configs/nordvpn/`) is **intentionally absent** from `installation.sh`/`setup_symlinks.sh`. Follow the standalone [fresh-Mac VPN procedure](../vpn/guide-nordvpn-native.md#fresh-mac-setup-manual-outside-the-main-installer): check its `/opt/homebrew` and `/Users/teazyou/workspace` layout assumptions, tap/trust/install `vpnutil`, verify Python and `jq` under the agent's minimal PATH (use the documented manual fallback only if needed), obtain email-gated Nord service credentials and the officially verified Root CA, generate and manually approve the profile, then create the exact LaunchAgent symlink and bootstrap it. The current Mac's system `jq` passes; this is a target preflight, not an unconditional missing dependency. Credentials, profiles, pins, and runtime state remain outside the repository.
+## Focused local verification and reruns
 
-### 2. macOS manual restoration
+Implementation verification on 2026-09-12: `python3 scripts/installs/tests/test_supervised_recovery.py` passed all **24 tests**, including Bash/zsh parsing checks and independent review regressions for Git replacement objects and indeterminate Desktop process checks. Run that command for isolated fixtures/mocks. Every host-affecting command is stubbed or replaced by an isolated fixture; a temporary HOME alone is not treated as isolation. No lint, live bootstrap/recovery, package/app operation, preferences, or VPN setup is used for implementation tests. The unchanged macOS preference suite is not rerun merely for this split.
 
-[macOS's focused guide](macos-preferences.md) records the captured keys and exact manual steps. No menu-shortcut overrides were present. Dictation's double-Control shortcut (ID 164) and Finder sidebar favorites remain manual. The six portable Dock applications (with ChatGPT Desktop at managed position 4) and Downloads are managed, and ABC is enabled/selected, while unrelated existing pins and input sources are preserved; missing apps or unavailable input sources produce notices. Symbolic-shortcut writes are gated to macOS 26; on other major versions follow the manual shortcut table. Review shortcuts/input sources after logging out/in because macOS caches some preferences. Do not treat raw preference-file equality as proof every target macOS version applies the same UI behavior.
+For a scoped rerun, initialize the recovery guide’s environment and invoke `/bin/bash "$INSTALLS/<exact script from the table>"`. Some older scripts need `INSTALLS` set before their helper can initialize defaults. Preserve failed evidence and existing data; never delete state to force success. The explicit manual full command remains `bash ~/workspace/scripts/installs/installation.sh`; it can prompt, restart Finder/Dock, launch WM, and reapply defaults, so it is not the supervised resume method.
 
-### 3. Existing installer failure limits
-
-The Brew helpers deliberately log install/tap failures and return success so later targets still run; upgrade/cleanup also tolerate errors. Window-manager process checks can report missing processes without failing the stage. Consequently the final “complete” line does not verify every package or process. Review failed log lines and confirm the selected casks/apps, both VS Code extensions, and window-manager processes on the target. Native Claude installs, App Store Xcode, and Node LTS are separate steps, not extra Brew casks/formulae. No full clean-Mac bootstrap was run during the reset-preparation implementation.
-
----
-
-## Interactive pause points (why an unattended run is impossible)
-
-Several steps stop and wait for a human; you cannot fully automate this end-to-end:
-
-- **iTerm2 must be quit** before `defaults write` (step 4) — else it clobbers the repo plist on quit.
-- **VS Code first-open** if the `code` CLI isn't found yet (step 6).
-- **App Store sign-in** before `mas install` (step 12) — Apple removed `mas signin`.
-- **sudo / Touch ID prompts** for `pam_tid.so` (step 7) and the Xcode license accept (step 12). Homebrew's one sudo prompt is handled earlier, in bootstrap.
-
----
-
-## How to change things safely
-
-- **Add/remove/reorder a step:** edit only the relevant `next_step "…"` + `bash "$INSTALLS/…"` pair in [`installation.sh`](../../scripts/installs/installation.sh). The `N/TOTAL` numbering recomputes itself from the `grep -c '^next_step '` count — don't hand-number anything. But **re-check the ordering constraints above** before moving a step; the dependency graph is the real contract.
-- **Add a brew formula/cask:** add a `brewInstall`/`caskInstall` line in [`install_brew.sh`](../../scripts/installs/install_brew.sh) (order within the file is irrelevant — each line is independent) **and** update the formula/cask list in this doc and in [`_index.md`](../../_index.md).
-- **Add a symlink:** add a `make_link` call in [`setup_symlinks.sh`](../../scripts/installs/setup_symlinks.sh), then update the symlink table here and the map in [`_index.md`](../../_index.md) (keep all three in sync — this is exactly the kind of drift that produced the "canonical map" overclaim).
-- **Re-run a finished step:** use the relevant standalone command in its guide. Several older scripts source `"$INSTALLS/helper_prompt.sh"` before the helper can initialize paths, so supply `INSTALLS="$HOME/workspace/scripts/installs"` when invoking those directly, for example `INSTALLS="$HOME/workspace/scripts/installs" bash "$HOME/workspace/scripts/installs/install_vscode_ext.sh"`. A rerun can launch the window manager, reapply baseline preferences, or upgrade packages; read the cheat-sheet first. Do not delete application data to force a rerun.
-- **Re-run the whole orchestrator:** `bash ~/workspace/scripts/installs/installation.sh`. It resumes from wherever a partial install left off.
+Fresh-machine candidate testing, human first-open/authentication, both provider paths independently, interruptions/reruns, real app/CLT signatures, fresh-shell startup, UI permissions, native VPN, and logout/login/wake behavior remain unperformed until separately authorized on a compatible test machine. Publication was separately authorized for this change; local changes alone do not update the GitHub command, so verify the pushed revision and raw source before reporting public availability. Publishing the candidate does not replace clean-Mac trials.

@@ -15,8 +15,8 @@
 #                                                  → workspace/configs/vscode/settings.json
 #
 # Safety:
-#   - If the target is already a symlink, we replace it.
-#   - If the target is a real file/folder, we move it aside to <name>.bak.<ts>.
+#   - If the target is already a symlink, we preserve it before replacement.
+#   - If the target is a real file/folder, we move it into a unique <name>.bak.XXXXXX directory.
 
 set -e
 
@@ -24,7 +24,7 @@ set -e
 source "$INSTALLS/helper_prompt.sh"
 
 # Replace whatever currently lives at $target with a symlink to $source.
-# Pre-existing real files/folders are backed up to <name>.bak.<unix-ts>.
+# Pre-existing real files/folders are backed up to <name>.bak.XXXXXX/original.
 make_link() {
     local source=$1
     local target=$2
@@ -41,15 +41,13 @@ make_link() {
         return 0
     fi
 
-    # Wrong link → just remove it
-    if [[ -L "$target" ]]; then
-        log_wait "$name: replacing existing symlink"
-        rm "$target"
-    # Real file/folder → back up
-    elif [[ -e "$target" ]]; then
-        local backup="$target.bak.$(date +%s)"
-        log_wait "$name: backing up existing file → $backup"
-        mv "$target" "$backup"
+    # Retain both wrong links and real files in a unique private directory.
+    if [[ -e "$target" || -L "$target" ]]; then
+        local backup
+        backup=$(mktemp -d "$target.bak.XXXXXX")
+        log_wait "$name: preserving existing target → $backup/original"
+        if [[ -L "$target" ]]; then log_wait "$name: prior link → $(readlink "$target")"; fi
+        mv "$target" "$backup/original"
     fi
 
     mkdir -p "$(dirname "$target")"

@@ -17,8 +17,8 @@
 #
 # Important:
 #   iTerm2 must NOT be running when these defaults are written, otherwise
-#   it will overwrite the file on quit. The script will pause and ask the
-#   user to quit iTerm2 if it's currently open.
+#   it will overwrite the file on quit. The script stops without writes so
+#   the user can hand off the active session, quit iTerm2, and rerun.
 #
 # Idempotent: if the custom-folder setting is already set correctly, skip.
 
@@ -52,10 +52,16 @@ fi
 # 3. Make sure iTerm2 is not running ------------------------------------
 # When iTerm2 quits it writes its current in-memory state back to the
 # plist — this would clobber the version in the repo.
-if pgrep -xq "iTerm2"; then
-    log_wait "iTerm2 is currently running. We need it closed before configuring custom prefs."
-    prompt_command "Please quit iTerm2 (⌘Q) so the new prefs path takes effect cleanly." \
-                   "osascript -e 'quit app \"iTerm2\"'"
+iterm_status=0
+pgrep -x "iTerm2" >/dev/null || iterm_status=$?
+if [[ "$iterm_status" == 0 ]]; then
+    log_err "iTerm2 is running. First transfer this AI session to stock Terminal or another working local host; then quit iTerm2 yourself and rerun this step. No preferences were written."
+    exit 1
+fi
+
+if [[ "$iterm_status" != 1 ]]; then
+    log_err "Could not establish that iTerm2 is stopped (pgrep status $iterm_status). No preferences were written."
+    exit 1
 fi
 
 # 4. Write the defaults --------------------------------------------------

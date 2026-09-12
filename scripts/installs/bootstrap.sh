@@ -1,192 +1,196 @@
 #!/bin/bash
-# scripts/installs/bootstrap.sh
-#
-# Purpose:
-#   Brings a brand-new macOS install up to the bare minimum required to
-#   clone the workspace repo. Once the workspace is on disk, it hands off
-#   to installation.sh which does everything else.
-#
-# Steps:
-#   1. Xcode Command Line Tools (provides git, gcc, make, ...)
-#   2. Rosetta 2 (Apple Silicon only)
-#   3. Homebrew  (+ ensure it's on PATH for the rest of this script and
-#                 for the installation.sh handoff)
-#   4. Latest git from brew (CLT git is fine but brew tracks newer)
-#   5. Clone teazyou/workspace via HTTPS (public repo, no auth needed)
-#   6. Hand off to ~/workspace/scripts/installs/installation.sh
-#
-# Usage — one-line remote install on a fresh Mac:
-#   curl -fsSL https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh | bash
-#
-# Idempotent: re-running on a partially-set-up system skips finished steps.
-#
-# Note on previous flakiness:
-#   This script used to have to be run two or three times. Two root causes:
-#     (a) Homebrew's shellenv was only eval'd inside the "just installed
-#         brew" branch. If brew was already installed but its shellenv
-#         hadn't been added to the current shell yet (which is the case on
-#         the very first run after install_brew.sh dies mid-way), brew
-#         wasn't on PATH for the next steps.
-#     (b) The handoff `exec bash installation.sh` relied on $PATH being
-#         exported, but on a fresh Mac the user's shell hasn't been
-#         restarted yet so /opt/homebrew/bin wasn't visible to children.
-#   Both are now fixed by ALWAYS sourcing brew shellenv once brew exists,
-#   regardless of whether we just installed it.
-
+# Phase 1 only. Public entry (clean-Mac validation is still separate):
+# curl -fsSL https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh | bash
+# Candidate testing: download this file from an authorized immutable revision,
+# then run: bash bootstrap.sh --revision <full-40-character-commit>
+# Bash 3.2; no login-shell sourcing, full installer, app launch, or auth automation.
 set -e
+REPO_URL=https://github.com/teazyou/workspace.git
+RAW_ROOT=https://raw.githubusercontent.com/teazyou/workspace
+BOOTSTRAP_SOURCE=${BASH_SOURCE[0]:-}
+BOOTSTRAP_TEMP=
+SUDO_KEEPALIVE_PID=
 
-# --- Self re-exec when piped (curl | bash) ----------------------------------
-# When invoked as `curl ... | bash`, this script's stdin is the pipe carrying
-# the remaining script source. Any child process that reads from stdin (some
-# parts of brew install do) consumes our script, after which bash hits EOF
-# and exits silently mid-install. Detect this case, download a fresh copy to
-# a temp file, and re-exec from there with stdin attached to /dev/tty.
-BOOTSTRAP_URL="https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh"
-if [[ -z "$WORKSPACE_BOOTSTRAP_REEXEC" ]] && [[ ! -t 0 ]]; then
-    TMP_SCRIPT=$(mktemp /tmp/workspace-bootstrap.XXXXXX.sh)
-    if curl -fsSL "$BOOTSTRAP_URL" -o "$TMP_SCRIPT"; then
-        export WORKSPACE_BOOTSTRAP_REEXEC=1
-        exec bash "$TMP_SCRIPT" < /dev/tty
-    fi
-    # Couldn't re-exec — carry on with fingers crossed; print a warning.
-    printf '\033[0;33m[ W8 ] Could not self-re-exec from %s — continuing with piped stdin (sub-process may steal script)\033[0;38m\n' "$BOOTSTRAP_URL" >&2
-fi
-
-# Colours are inlined here because the workspace repo isn't on disk yet,
-# so we can't source zsh/configs/colors.zsh. After installation.sh takes
-# over, the proper helpers from scripts/installs/helper_prompt.sh take care of output.
-CRE=$(printf '\033[0;31m')
-CGR=$(printf '\033[0;32m')
-CYE=$(printf '\033[0;33m')
-CBL=$(printf '\033[0;34m')
-CWH=$(printf '\033[0;38m')
-
-log()  { printf "%s[ BOOTSTRAP ]%s %s\n" "$CBL" "$CWH" "$1"; }
-ok()   { printf "%s[ OK ]%s %s\n"        "$CGR" "$CWH" "$1"; }
-warn() { printf "%s[ W8 ]%s %s\n"        "$CYE" "$CWH" "$1"; }
-err()  { printf "%s[ KO ]%s %s\n"        "$CRE" "$CWH" "$1"; }
-
-REPO_URL="https://github.com/teazyou/workspace.git"
-WORKSPACE="$HOME/workspace"
-
-# Ensure brew is on PATH for the current bash process.
-# Apple Silicon installs brew in /opt/homebrew, Intel in /usr/local. We
-# call this both right after a fresh brew install AND defensively on
-# re-runs where brew already exists but hasn't been eval'd yet.
-ensure_brew_on_path() {
-    if command -v brew &>/dev/null; then
-        return 0
-    fi
-    if [[ -x /opt/homebrew/bin/brew ]]; then
-        eval "$(/opt/homebrew/bin/brew shellenv)"
-    elif [[ -x /usr/local/bin/brew ]]; then
-        eval "$(/usr/local/bin/brew shellenv)"
-    fi
+fail() { printf '[ STOP ] %s\n' "$*" >&2; return 1; }
+download() { curl --proto '=https' --proto-redir '=https' -fSL --connect-timeout 30 --max-time 300 "$1" -o "$2"; }
+cleanup() {
+    local result=$?
+    trap - EXIT
+    if [[ -n "$SUDO_KEEPALIVE_PID" ]]; then kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true; wait "$SUDO_KEEPALIVE_PID" 2>/dev/null || true; fi
+    if [[ -n "$BOOTSTRAP_TEMP" && -d "$BOOTSTRAP_TEMP" ]]; then rm -rf "$BOOTSTRAP_TEMP"; fi
+    if [[ $result != 0 ]]; then echo 'Recovery preparation stopped. Preserve the workspace; diagnose the message, then rerun the same bootstrap command. If phase 2 already made reviewed changes, resume that session instead.' >&2; fi
+    exit "$result"
 }
-
-# 1. Xcode Command Line Tools --------------------------------------------
-# CLT install is a GUI dialog. We trigger it then poll until it finishes.
-log "Checking Xcode Command Line Tools..."
-if xcode-select -p &>/dev/null; then
-    ok "Xcode Command Line Tools already installed"
-else
-    warn "Triggering Xcode CLT installer (a GUI dialog will pop up)..."
-    xcode-select --install || true
-    warn "Waiting for Xcode CLT install to complete (polls every 5s)..."
-    until xcode-select -p &>/dev/null; do sleep 5; done
-    ok "Xcode Command Line Tools installed"
-fi
-
-# 2. Rosetta 2 (Apple Silicon only) --------------------------------------
-# Some apps still ship x86_64 only; Rosetta lets them run on arm64 Macs.
-if [[ "$(uname -m)" == "arm64" ]]; then
-    log "Checking Rosetta 2..."
-    if /usr/bin/pgrep -q oahd; then
-        ok "Rosetta 2 already installed"
-    else
-        warn "Installing Rosetta 2..."
-        softwareupdate --install-rosetta --agree-to-license
-        ok "Rosetta 2 installed"
+# No imported Git aliases, hooks, global filters, or credential helpers are needed
+# for this public source check. Existing repository config is never rewritten.
+repo_git() { GIT_NO_REPLACE_OBJECTS=1 GIT_CONFIG_NOSYSTEM=1 GIT_CONFIG_GLOBAL=/dev/null git -c core.hooksPath=/dev/null -c http.lowSpeedLimit=1 -c http.lowSpeedTime=60 "$@"; }
+clt_ready() {
+    xcode-select -p >/dev/null 2>&1 && xcrun --find clang >/dev/null 2>&1 && xcrun --find swift >/dev/null 2>&1
+}
+ensure_clt() {
+    local elapsed=0
+    if clt_ready; then return 0; fi
+    echo 'Complete the Command Line Tools dialog. Waiting up to 30 minutes; Control-C cancels safely.'
+    xcode-select --install || { fail 'CLT request failed. Complete or repair the system installation, then rerun.'; return 1; }
+    until clt_ready; do
+        [[ $elapsed -lt 1800 ]] || { fail 'CLT timed out after 30 minutes.'; return 1; }
+        printf 'Waiting for CLT: %s / 1800 seconds\n' "$elapsed"
+        sleep 10
+        elapsed=$((elapsed + 10))
+    done
+}
+platform_preflight() {
+    [[ "$(uname -s)" == Darwin ]] || { fail 'This bootstrap requires macOS.'; return 1; }
+    local arch major free translated
+    arch=$(uname -m)
+    translated=$(sysctl -in sysctl.proc_translated 2>/dev/null || true)
+    [[ "$translated" != 1 ]] || { fail 'Use a native terminal, not Rosetta translation.'; return 1; }
+    case "$arch" in
+        arm64) BREW_PREFIX=/opt/homebrew ;;
+        x86_64) BREW_PREFIX=/usr/local; echo 'Intel is a separately unverified compatibility path; native VPN acceptance is not established.' ;;
+        *) fail "Unsupported architecture: $arch"; return 1 ;;
+    esac
+    major=$(sw_vers -productVersion); major=${major%%.*}
+    [[ "$major" =~ ^[0-9]+$ && $major -ge 15 ]] || { fail 'Homebrew minimum supported baseline is macOS 15.'; return 1; }
+    [[ "$major" == 26 ]] || echo 'Acceptance target is macOS 26; manual shortcut restoration and compatibility checks remain required.'
+    free=$(df -Pk "$HOME" | awk 'END {print $4}')
+    [[ "$free" =~ ^[0-9]+$ && $free -ge 12582912 ]] || { fail 'At least 12 GiB free is required for minimum preparation; full Xcode needs additional space.'; return 1; }
+    BREW_BIN="$BREW_PREFIX/bin/brew"
+    # Also performs the network preflight with a bounded HTTPS request.
+    download "$RAW_ROOT/master/AGENTS.md" "$BOOTSTRAP_TEMP/network-check" || return 1
+}
+ensure_brew() {
+    local current environment
+    current=$(command -v brew || true)
+    [[ -z "$current" || "$current" == "$BREW_BIN" ]] || { fail "Unexpected Homebrew executable: $current (expected $BREW_BIN)"; return 1; }
+    if [[ ! -x "$BREW_BIN" ]]; then
+        dseditgroup -o checkmember -m "$(whoami)" admin >/dev/null || { fail 'Homebrew installation requires an administrator account.'; return 1; }
+        sudo -v || return 1
+        # No sudo refresher survives this operation; parent traps cover interruption.
+        ( while kill -0 "$$" 2>/dev/null; do sudo -n true || exit; sleep 30; done ) &
+        SUDO_KEEPALIVE_PID=$!
+        download https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh "$BOOTSTRAP_TEMP/homebrew.sh" || return 1
+        /bin/bash -n "$BOOTSTRAP_TEMP/homebrew.sh" || return 1
+        NONINTERACTIVE=1 /bin/bash "$BOOTSTRAP_TEMP/homebrew.sh" || return 1
+        kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+        wait "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
+        SUDO_KEEPALIVE_PID=
     fi
-else
-    log "Skipping Rosetta 2 (not Apple Silicon)"
-fi
-
-# 3. Homebrew -------------------------------------------------------------
-log "Checking Homebrew..."
-ensure_brew_on_path
-if command -v brew &>/dev/null; then
-    ok "Homebrew already installed"
-else
-    # The Homebrew installer needs sudo ONCE to chown /opt/homebrew (or
-    # /usr/local on Intel). After install, `brew` itself runs without
-    # sudo — that's the "don't use sudo" guidance you've heard. So:
-    #   - The user has to be an Administrator (in the macOS admin group).
-    #   - Sudo credentials must be cached before NONINTERACTIVE=1 kicks
-    #     in, because in non-interactive mode brew won't prompt and just
-    #     errors out with "Need sudo access on macOS" (which is what you
-    #     hit). We pre-cache with `sudo -v` and keep the timestamp warm
-    #     in the background so the install doesn't trip on a long
-    #     download timing out the 5-min sudo window.
-
-    # Hard-fail early if the user isn't an admin — the install can't
-    # succeed at all in that case and there's no point pretending.
-    if ! dseditgroup -o checkmember -m "$(whoami)" admin &>/dev/null; then
-        err "User '$(whoami)' is not an Administrator on this Mac."
-        err "Add this account to the admin group (System Settings → Users & Groups → Administrator) and re-run."
-        exit 1
+    [[ -x "$BREW_BIN" && "$("$BREW_BIN" --prefix)" == "$BREW_PREFIX" ]] || { fail 'Homebrew executable/prefix verification failed.'; return 1; }
+    "$BREW_BIN" --version || return 1
+    environment=$("$BREW_BIN" shellenv) || return 1
+    eval "$environment"
+    [[ "$(command -v brew)" == "$BREW_BIN" ]] || return 1
+    export HOMEBREW_NO_INSTALL_CLEANUP=1 HOMEBREW_NO_INSTALL_UPGRADE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
+    if ! "$BREW_BIN" list --formula git >/dev/null 2>&1; then
+        "$BREW_BIN" install --dry-run --formula git || return 1
+        "$BREW_BIN" install --formula git || return 1
     fi
-
-    warn "Homebrew install needs your password ONCE (to chown /opt/homebrew). brew itself runs without sudo afterwards."
-    sudo -v
-    # Background refresher: re-prime the sudo timestamp every 60s while
-    # this script's PID is still alive. Dies automatically when we exit.
-    ( while kill -0 "$$" 2>/dev/null; do sudo -n true; sleep 60; done ) &
-    SUDO_KEEPALIVE_PID=$!
-
-    warn "Installing Homebrew..."
-    NONINTERACTIVE=1 /bin/bash -c \
-        "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-    # Stop the keepalive — brew is on disk now and the rest of the
-    # script doesn't need sudo.
-    kill "$SUDO_KEEPALIVE_PID" 2>/dev/null || true
-
-    ensure_brew_on_path
-    if ! command -v brew &>/dev/null; then
-        err "Homebrew install finished but 'brew' is still not on PATH"
-        exit 1
+    [[ -x "$BREW_PREFIX/bin/git" ]] || return 1
+    "$BREW_PREFIX/bin/git" --version || return 1
+}
+resolve_source() {
+    if [[ -z "$REVISION" ]]; then
+        REVISION=$(repo_git ls-remote "$REPO_URL" refs/heads/master | awk 'NF==2 && $2=="refs/heads/master" {print $1}') || return 1
     fi
-    ok "Homebrew installed"
-fi
-
-# 4. Git (latest, via brew) ----------------------------------------------
-# CLT already provides git — but we install brew's git for newer releases.
-log "Checking git..."
-if brew list git &>/dev/null; then
-    ok "git (brew) already installed"
-else
-    warn "Installing git via brew..."
-    brew install git
-    ok "git installed"
-fi
-
-# 5. Clone the workspace repo --------------------------------------------
-# Workspace is a public repo so HTTPS clone needs no credentials.
-log "Cloning $REPO_URL into $WORKSPACE ..."
-if [[ -d "$WORKSPACE/.git" ]]; then
-    ok "Workspace already cloned at $WORKSPACE"
-else
-    git clone "$REPO_URL" "$WORKSPACE"
-    ok "Workspace cloned"
-fi
-
-# 6. Hand off to the main installer --------------------------------------
-log "Bootstrap done — handing off to installation.sh"
-# `exec` replaces this bash process with the installer.
-# stdin is redirected from /dev/tty so prompts work even when bootstrap.sh
-# was started via `curl ... | bash` (where stdin is the consumed pipe).
-# We re-source brew shellenv one more time so it's exported into the
-# environment that installation.sh inherits.
-ensure_brew_on_path
-exec bash "$WORKSPACE/scripts/installs/installation.sh" < /dev/tty
+    [[ "$REVISION" =~ ^[0-9a-f]{40}$ ]] || { fail 'Expected one full published commit ID.'; return 1; }
+    download "$RAW_ROOT/$REVISION/scripts/installs/bootstrap.sh" "$BOOTSTRAP_TEMP/immutable-bootstrap.sh" || return 1
+    cmp -s "$BOOTSTRAP_SOURCE" "$BOOTSTRAP_TEMP/immutable-bootstrap.sh" || {
+        fail 'Executing bootstrap differs from the resolved revision (branch moved, unpublished edits, or wrong candidate). Rerun without mixing versions.'; return 1;
+    }
+}
+validate_checkout() {
+    local top origins entry mode type oid relative component path actual
+    [[ -d "$WORKSPACE" && ! -L "$WORKSPACE" ]] || { fail 'Workspace is missing, redirected, or a conflicting file.'; return 1; }
+    top=$(repo_git -C "$WORKSPACE" rev-parse --show-toplevel) || return 1
+    [[ "$top" == "$WORKSPACE" && "$(cd "$WORKSPACE" && pwd -P)" == "$WORKSPACE" ]] || { fail 'Workspace path is redirected or inside another checkout.'; return 1; }
+    origins=$(repo_git -C "$WORKSPACE" config --get-all remote.origin.url) || return 1
+    [[ "$origins" == "$REPO_URL" ]] || { fail 'Workspace origin mismatch; preserved existing checkout.'; return 1; }
+    [[ "$(repo_git -C "$WORKSPACE" rev-parse HEAD)" == "$REVISION" ]] || { fail 'Workspace revision is stale/different; no automatic pull/reset is allowed.'; return 1; }
+    local scope=(AGENTS.md _index.md .gitignore scripts functions configs zsh docs)
+    repo_git -C "$WORKSPACE" ls-tree -r "$REVISION" -- "${scope[@]}" > "$BOOTSTRAP_TEMP/tree" || return 1
+    [[ -s "$BOOTSTRAP_TEMP/tree" ]] || return 1
+    # Hash actual bytes, independent of assume-unchanged/skip-worktree, index
+    # contents, timestamps or diff filters. Reject redirected source components.
+    while IFS=$'\t' read -r entry relative; do
+        read -r mode type oid <<< "$entry"
+        [[ "$relative" != *'"'* && "$type" == blob && "$mode" != 120000 ]] || { fail "Unsupported recovery source: $relative"; return 1; }
+        path="$WORKSPACE"
+        local rest="$relative"
+        while [[ "$rest" == */* ]]; do
+            component=${rest%%/*}; rest=${rest#*/}; path="$path/$component"
+            [[ -d "$path" && ! -L "$path" ]] || { fail "Redirected recovery source: $relative"; return 1; }
+        done
+        path="$WORKSPACE/$relative"
+        [[ -f "$path" && ! -L "$path" ]] || { fail "Missing/redirected recovery source: $relative"; return 1; }
+        actual=$(repo_git hash-object --no-filters "$path") || return 1
+        [[ "$actual" == "$oid" ]] || { fail "Recovery source differs: $relative. Preserve reviewed phase-2 changes and resume that session."; return 1; }
+        if [[ "$mode" == 100755 ]]; then [[ -x "$path" ]] || return 1; else [[ ! -x "$path" ]] || return 1; fi
+    done < "$BOOTSTRAP_TEMP/tree"
+    # Index changes count too, including staged-only recovery edits.
+    repo_git -C "$WORKSPACE" diff --cached --quiet "$REVISION" -- "${scope[@]}" || { fail 'Staged recovery source changes require review.'; return 1; }
+    repo_git -C "$WORKSPACE" ls-files --others -- "${scope[@]}" > "$BOOTSTRAP_TEMP/untracked" || return 1
+    [[ ! -s "$BOOTSTRAP_TEMP/untracked" ]] || { fail 'Untracked recovery source may shadow trusted files; preserve and review it.'; return 1; }
+    for relative in AGENTS.md _index.md docs/install/supervised-recovery-plan.md docs/install/bootstrap-flow.md scripts/installs/install_brew.sh scripts/installs/install_claude.sh scripts/installs/recovery_checks.sh; do
+        repo_git -C "$WORKSPACE" cat-file -e "$REVISION:$relative" || { fail "Required published file missing: $relative"; return 1; }
+    done
+}
+prepare_checkout() {
+    if [[ ! -e "$WORKSPACE" && ! -L "$WORKSPACE" ]]; then
+        repo_git clone --no-checkout --template= "$REPO_URL" "$WORKSPACE" || return 1
+        repo_git -C "$WORKSPACE" fetch origin "$REVISION" || return 1
+        repo_git -C "$WORKSPACE" checkout --detach "$REVISION" || return 1
+    fi
+    validate_checkout
+}
+minimum_handoff() {
+    export WORKSPACE SCRIPTS="$WORKSPACE/scripts" INSTALLS="$WORKSPACE/scripts/installs" FUNCTIONS="$WORKSPACE/functions" APP_CONFIGS="$WORKSPACE/configs"
+    export PATH="$HOME/.local/bin:$PATH"
+    source "$INSTALLS/recovery_checks.sh"
+    local guide="$WORKSPACE/docs/install/supervised-recovery-plan.md" claude="$HOME/.local/bin/claude" codex="$BREW_PREFIX/bin/codex" prompt
+    # Validate the entire output contract before installing minimum applications.
+    prompt=$(render_recovery_prompt "$guide" "$WORKSPACE" "$REPO_URL" "$REVISION" "$claude" "$codex") || { fail 'Recovery guide/prompt absent, proposed, incompatible or incomplete.'; return 1; }
+    /bin/bash "$INSTALLS/install_brew.sh" --phase minimal || return 1
+    /bin/bash "$INSTALLS/install_claude.sh" --cli-only || return 1
+    /bin/bash "$INSTALLS/install_brew.sh" --phase minimal --verify-only || return 1
+    verify_cli "$claude" && verify_cli "$codex" || return 1
+    validate_checkout || return 1
+    printf '\nStep1done: minimum applications and terminal agents are installed. Sign in to either Claude Code or a local Codex-capable ChatGPT session, then paste the prompt below.\n'
+    echo 'Authentication, human first-open checks, and remaining setup are pending. No full installer was started.'
+    echo 'Open Brave Browser yourself for account sign-in; choose/open an auth URL there if needed. No default-browser or browser-data changes are made.'
+    echo 'Desktop: Claude Code tab with Local selected, or a local Codex-capable ChatGPT project at the workspace. Ordinary chat/cloud does not prove local execution or delegation.'
+    echo 'Alternatively, run ONE of these in stock Terminal or iTerm, sign in, and paste the same prompt. One provider is sufficient:'
+    printf 'cd %q && %q\n' "$WORKSPACE" "$claude"
+    printf 'cd %q && %q\n' "$WORKSPACE" "$codex"
+    echo 'If the selected session lacks local workers, move the prompt to an installed CLI. If no accessible session supports delegation, remain in guidance mode and ask about enabling it or authorizing sequential direct execution.'
+    printf '\n----- BEGIN RECOVERY PROMPT -----\n%s\n----- END RECOVERY PROMPT -----\n' "$prompt"
+}
+bootstrap_main() {
+    REVISION=
+    if [[ $# -gt 0 ]]; then
+        [[ $# == 2 && "$1" == --revision && "$2" =~ ^[0-9a-f]{40}$ ]] || { fail 'Usage: bootstrap.sh [--revision FULL_COMMIT_ID]'; return 1; }
+        REVISION=$2
+    fi
+    trap cleanup EXIT
+    trap 'exit 130' INT
+    trap 'exit 143' TERM
+    BOOTSTRAP_TEMP=$(mktemp -d /tmp/workspace-bootstrap.XXXXXX) || return 1
+    if [[ -z "$BOOTSTRAP_SOURCE" || ! -f "$BOOTSTRAP_SOURCE" ]]; then
+        # The initial stdin is source code: no child installer can consume it.
+        ( : < /dev/tty ) 2>/dev/null || { fail 'No controlling terminal. Download to a file, then run it in stock Terminal.'; return 1; }
+        download "$RAW_ROOT/${REVISION:-master}/scripts/installs/bootstrap.sh" "$BOOTSTRAP_TEMP/bootstrap.sh" || return 1
+        /bin/bash -n "$BOOTSTRAP_TEMP/bootstrap.sh" || return 1
+        /bin/bash "$BOOTSTRAP_TEMP/bootstrap.sh" "$@" < /dev/tty
+        return
+    fi
+    [[ -t 0 ]] || { fail 'Run the downloaded bootstrap from an interactive terminal.'; return 1; }
+    WORKSPACE="$HOME/workspace"
+    platform_preflight
+    ensure_clt
+    ensure_brew
+    resolve_source
+    prepare_checkout
+    minimum_handoff
+}
+# Functions may be sourced by isolated tests; sourcing never installs anything.
+if [[ -z "${BASH_SOURCE[0]:-}" || "${BASH_SOURCE[0]}" == "$0" ]]; then bootstrap_main "$@"; fi

@@ -1,3 +1,5 @@
+# Match install_node.sh: Homebrew owns nvm.sh; NVM_DIR stores user Node versions.
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+if [[ -n "${HOMEBREW_PREFIX:-}" && -s "$HOMEBREW_PREFIX/opt/nvm/nvm.sh" ]]; then
+    source "$HOMEBREW_PREFIX/opt/nvm/nvm.sh"
+fi

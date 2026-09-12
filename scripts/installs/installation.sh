@@ -3,8 +3,8 @@
 #
 # Purpose:
 #   Main orchestrator for the workspace install on a fresh macOS system.
-#   bootstrap.sh prepares git/brew and clones the workspace, then `exec`s
-#   into this script which runs every other install step in order.
+#   Explicit manual route only. bootstrap.sh stops at minimum readiness;
+#   supervised recovery invokes scoped scripts using the recovery guide.
 #
 #   Each step lives in its own sub-script under scripts/installs/. They
 #   support repeat runs — finished installs usually skip while defaults
@@ -22,6 +22,15 @@ export SCRIPTS="$WORKSPACE/scripts"
 export FUNCTIONS="$WORKSPACE/functions"
 export INSTALLS="$SCRIPTS/installs"
 export APP_CONFIGS="$WORKSPACE/configs"
+
+case "$(uname -m)" in
+    arm64) _brew=/opt/homebrew/bin/brew ;;
+    x86_64) _brew=/usr/local/bin/brew ;;
+    *) exit 1 ;;
+esac
+[[ -x "$_brew" ]] || { echo 'Run minimum bootstrap first.' >&2; exit 1; }
+eval "$("$_brew" shellenv)"
+export PATH="$HOME/.local/bin:$PATH"
 
 # Source helper functions (colors + prompts).
 # shellcheck source=/dev/null
@@ -50,6 +59,9 @@ bash "$INSTALLS/install_brew.sh"
 next_step "Oh-My-Zsh"
 bash "$INSTALLS/install_oh_my_zsh.sh"
 
+next_step "Node LTS via NVM"
+bash "$INSTALLS/install_node.sh"
+
 next_step "Symlinks (zshrc, aerospace, borders, sketchybar, vscode)"
 bash "$INSTALLS/setup_symlinks.sh"
 
@@ -74,15 +86,13 @@ bash "$INSTALLS/setup_wallpaper.sh"
 next_step "Window manager services (aerospace -> sketchybar, borders)"
 bash "$INSTALLS/install_window_manager.sh"
 
-next_step "Node LTS via NVM"
-bash "$INSTALLS/install_node.sh"
-
 next_step "Xcode via mas"
 bash "$INSTALLS/install_xcode_mas.sh"
 
 next_step "Create ~/dev"
 bash "$INSTALLS/setup_dev.sh"
 
-log_info "All done"
-log_ok "Workspace install complete. Open a new iTerm2 window to load the new shell."
-log_ok "Tip: run 'reload' inside zsh to re-source ~/.zshrc at any time."
+log_info "Manual scripts finished"
+log_ok "Script exits are not full restoration proof. Verify outcomes using docs/install/supervised-recovery-plan.md."
+log_wait "Native VPN, manual macOS extras, application first-open, and logout/login validation remain outside this manual route."
+log_wait "Review managed Git identity and startup hooks before opening a new interactive shell."
