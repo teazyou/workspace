@@ -146,16 +146,19 @@ class RecoveryTests(unittest.TestCase):
 
     def test_prompt_complete_neutral_and_draft_rejection(self):
         r = self.shell(self.prompt())
-        for value in (str(self.base/'workspace'), str(self.base/'workspace/docs/install/supervised-recovery-plan.md'), ORIGIN, 'a'*40, '/native/claude','/brew/codex'):
-            self.assertIn(value, r.stdout)
+        self.assertIn('Continue recovery in ~/workspace. Step 1 is complete.', r.stdout)
+        self.assertIn('Run the existing setup scripts directly in this session; do not delegate to agents.', r.stdout)
+        self.assertLess(len(r.stdout.split()), 80)
         self.assertNotIn('{{', r.stdout)
-        self.assertIn('Exact remaining sequence and acceptance', r.stdout)
+        self.assertIn('docs/install/supervised-recovery-plan.md', r.stdout)
         self.assertNotIn('gpt-', r.stdout)
         for content in (GUIDE.read_text().replace('Status: implemented candidate','Status: proposed'),
                         GUIDE.read_text().replace('<!-- recovery-prompt:end -->',''),
-                        GUIDE.read_text().replace('{{CODEX_ABSOLUTE_PATH}}','{{UNKNOWN}}'),
-                        GUIDE.read_text().replace('{{CODEX_ABSOLUTE_PATH}}','')):
+                        GUIDE.read_text().replace('Continue recovery in ~/workspace.', '{{UNKNOWN}}'),
+                        re.sub(r'(?s)(<!-- recovery-prompt:start -->).*?(<!-- recovery-prompt:end -->)', r'\1\n\2', GUIDE.read_text())):
             self.shell(self.prompt(content), ok=False)
+        self.shell(self.prompt().replace(ORIGIN, 'https://example.invalid/repo.git'), ok=False)
+        self.shell(self.prompt().replace('a'*40, 'short-revision'), ok=False)
 
     def make_repo(self):
         repo = self.base/'checkout'
@@ -373,6 +376,12 @@ class RecoveryTests(unittest.TestCase):
         r=self.shell(common)
         self.assertEqual(r.stdout.count('Step1done'),1)
         self.assertEqual(r.stdout.count('----- BEGIN RECOVERY PROMPT -----'),1)
+        context, prompt = r.stdout.split('----- BEGIN RECOVERY PROMPT -----')
+        prompt = prompt.split('----- END RECOVERY PROMPT -----')[0].strip()
+        for value in (str(workspace), str(guide), ORIGIN, 'a'*40, str(self.home/'.local/bin/claude'), str(prefix/'bin/codex')):
+            self.assertIn(value, context)
+            self.assertNotIn(value, prompt)
+        self.assertEqual(prompt, GUIDE.read_text().split('<!-- recovery-prompt:start -->\n```text\n')[1].split('\n```\n<!-- recovery-prompt:end -->')[0])
         self.assertNotIn('FULL_INSTALL_FORBIDDEN',r.stdout)
         self.assertEqual(log.read_text().splitlines(),['install_brew.sh --phase minimal','install_claude.sh --cli-only','install_brew.sh --phase minimal --verify-only'])
         self.script(prefix/'bin/codex','exit 1');self.shell(common,ok=False)

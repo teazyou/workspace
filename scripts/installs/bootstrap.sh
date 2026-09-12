@@ -158,11 +158,12 @@ minimum_handoff() {
     printf '\nStep1done: minimum applications and terminal agents are installed. Sign in to either Claude Code or a local Codex-capable ChatGPT session, then paste the prompt below.\n'
     echo 'Authentication, human first-open checks, and remaining setup are pending. No full installer was started.'
     echo 'Open Brave Browser yourself for account sign-in; choose/open an auth URL there if needed. No default-browser or browser-data changes are made.'
-    echo 'Desktop: Claude Code tab with Local selected, or a local Codex-capable ChatGPT project at the workspace. Ordinary chat/cloud does not prove local execution or delegation.'
+    echo 'Desktop: use a local coding session at the workspace. Ordinary chat/cloud does not prove local file and shell access.'
     echo 'Alternatively, run ONE of these in stock Terminal or iTerm, sign in, and paste the same prompt. One provider is sufficient:'
     printf 'cd %q && %q\n' "$WORKSPACE" "$claude"
     printf 'cd %q && %q\n' "$WORKSPACE" "$codex"
-    echo 'If the selected session lacks local workers, move the prompt to an installed CLI. If no accessible session supports delegation, remain in guidance mode and ask about enabling it or authorizing sequential direct execution.'
+    echo 'Run recovery directly in the main session, without agents. If local file or shell access is unavailable, use an installed CLI.'
+    printf '\nVerified handoff context:\nWorkspace: %s\nRecovery guide: %s\nTrusted origin: %s\nPublished bootstrap revision: %s\nNative Claude executable: %s\nCodex executable: %s\n' "$WORKSPACE" "$guide" "$REPO_URL" "$REVISION" "$claude" "$codex"
     printf '\n----- BEGIN RECOVERY PROMPT -----\n%s\n----- END RECOVERY PROMPT -----\n' "$prompt"
 }
 bootstrap_main() {
