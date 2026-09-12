@@ -40,6 +40,11 @@ passes straight through via `command git`. Implications:
 The matching aliases in the same file: `gst`→`gstatus.sh`, `gco`→`gcommit.sh`,
 `gpu`→`gpush.sh`, plus `gcreate`/`gdelete` (branch create/delete) and `gbranch`/`gclean`.
 
+`zsh/configs/git.zsh` sets the global Git author name to `teazyou` and email to
+`linhardt.michael@gmail.com` on shell startup. Apply immediately with
+`git config --global user.name teazyou` and
+`git config --global user.email linhardt.michael@gmail.com`.
+
 ---
 
 ## The git helper scripts (`scripts/git/`)

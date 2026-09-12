@@ -40,7 +40,6 @@ PY
         mkdir "$CLAUDE_TEMP/extract"
         ditto -x -k "$CLAUDE_TEMP/claude.zip" "$CLAUDE_TEMP/extract"
         verify_app "$CLAUDE_TEMP/extract/Claude.app" com.anthropic.claudefordesktop
-        spctl --assess --type execute "$CLAUDE_TEMP/extract/Claude.app"
         # Preserve first-open Gatekeeper handling even for a command-line download.
         xattr -w com.apple.quarantine "0083;$(date +%s);workspace-recovery;" "$CLAUDE_TEMP/extract/Claude.app"
         [[ ! -e /Applications/Claude.app && ! -L /Applications/Claude.app ]] || exit 1

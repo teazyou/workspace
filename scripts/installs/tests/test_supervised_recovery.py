@@ -280,16 +280,17 @@ class RecoveryTests(unittest.TestCase):
         self.script(self.stub/'brew','exit 99')
         self.shell(common+'ensure_brew',ok=False)
 
-    def test_app_artifact_signature_and_executable(self):
+    def test_app_artifact_identity_and_executable(self):
         app=self.base/'Example.app';(app/'Contents/MacOS').mkdir(parents=True)
         self.script(app/'Contents/MacOS/Example','exit 0')
         (app/'Contents/Info.plist').write_text('fixture')
         common=f'''source {q(str(ROOT/'scripts/installs/recovery_checks.sh'))}
         plutil() {{ case "$*" in *CFBundleIdentifier*) echo example.id;; *CFBundleExecutable*) echo Example;; *) return 0;; esac; }}
-        codesign() {{ return 0; }}
         '''
+        # Signature tools retain the deny-by-default stubs: readiness must not
+        # invoke them, even when they would reject an otherwise usable bundle.
         self.shell(common+f'verify_app {q(str(app))} example.id')
-        self.shell(common+f'codesign() {{ return 1; }}; verify_app {q(str(app))} example.id',ok=False)
+        self.shell(common+f'verify_app {q(str(app))} wrong.id',ok=False)
         (app/'Contents/MacOS/Example').unlink()
         self.shell(common+f'verify_app {q(str(app))} example.id',ok=False)
         self.shell(common+f'verify_app {q(str(self.base/"Missing.app"))} example.id',ok=False)

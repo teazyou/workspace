@@ -21,7 +21,7 @@ Purpose: restore the managed environment from `~/workspace`. Scripts and saved c
    curl -fsSL https://raw.githubusercontent.com/teazyou/workspace/master/scripts/installs/bootstrap.sh | bash
    ```
 
-2. **Bootstrap — minimum readiness.** Check prerequisites; install required foundations; obtain and validate one published revision at `~/workspace`; install minimum tools; verify readiness. Print `Step1done`, authentication/launch instructions, revision context, and `Read and execute <absolute prompt-file path>`. Exit. Remaining installation waits.
+2. **Bootstrap — minimum readiness.** Check prerequisites; install required foundations; obtain and validate one published revision at `~/workspace`; install minimum tools; verify readiness. In both phases, application readiness checks bundle identity and executable presence; CLI readiness checks versions. The scripts perform no application signature or Gatekeeper assessment. Normal macOS first-open handling remains. Print `Step1done`, authentication/launch instructions, revision context, and `Read and execute <absolute prompt-file path>`. Exit. Remaining installation waits.
 
 3. **User — handoff.** Choose either installed local AI CLI/provider; authenticate; open the workspace; paste the printed instruction. The AI reads `docs/install/recovery-prompt.md`. One provider sufficient; no model requirement. Session must have local file and command access.
 

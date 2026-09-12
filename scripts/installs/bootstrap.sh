@@ -150,6 +150,7 @@ minimum_handoff() {
     local guide="$WORKSPACE/docs/install/bootstrap-flow.md" claude="$HOME/.local/bin/claude" codex="$BREW_PREFIX/bin/codex" prompt
     # Require the process guide and valid handoff context before minimum installs.
     prompt=$(render_recovery_prompt "$guide" "$WORKSPACE" "$REPO_URL" "$REVISION" "$claude" "$codex") || { fail 'Recovery guide/prompt file missing/empty or handoff context invalid.'; return 1; }
+    # Package readiness checks app identity/executables and CLI versions only.
     /bin/bash "$INSTALLS/install_brew.sh" --phase minimal || return 1
     /bin/bash "$INSTALLS/install_claude.sh" --cli-only || return 1
     /bin/bash "$INSTALLS/install_brew.sh" --phase minimal --verify-only || return 1

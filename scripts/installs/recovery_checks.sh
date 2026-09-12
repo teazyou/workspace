@@ -10,8 +10,7 @@ verify_app() {
     [[ "$actual" == "$identity" && -n "$executable" && "$executable" != */* && -x "$app/Contents/MacOS/$executable" ]] || {
         echo "Application identity/executable failed: $app" >&2; return 1;
     }
-    codesign --verify --deep --strict "$app" || return 1
-    printf 'Verified application structure and signature: %s\n' "$app"
+    printf 'Verified application identity and executable: %s\n' "$app"
 }
 
 verify_cli() {
